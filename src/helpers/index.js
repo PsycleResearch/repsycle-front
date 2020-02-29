@@ -37,3 +37,8 @@ export function truncate(str, options = {length: null, ending: null}) {
         return str;
     }
 }
+
+//TODO
+export function translate(string) {
+    return string;
+}

@@ -1,6 +1,8 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
+import { Route } from 'react-router-dom';
+
 RestrictedRoute.propTypes = {
     user: PropTypes.object.isRequired,
     render: PropTypes.func,
@@ -8,7 +10,7 @@ RestrictedRoute.propTypes = {
     permissions: PropTypes.arrayOf(PropTypes.string)
 };
 
-export default function RestrictedRoute({
+export function RestrictedRoute({
     user, 
     component: Component, 
     render, 

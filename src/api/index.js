@@ -7,7 +7,7 @@ import axios from 'axios';
  * @param  {Function} onTokenRefreshSuccess
  * @return {Object}
  */
-export function getAxiosOauthInstance(apiURL, getRefreshToken, onTokenRefreshSuccess) {
+function getAxiosOauthInstance(apiURL, getRefreshToken, onTokenRefreshSuccess) {
     const http = axios.create({baseURL: apiURL});
 
     const isHandlerEnabled = (config={}) => {
@@ -47,3 +47,7 @@ export function getAxiosOauthInstance(apiURL, getRefreshToken, onTokenRefreshSuc
 
     return http;
 }
+
+export const api = {
+    getAxiosOauthInstance,
+};

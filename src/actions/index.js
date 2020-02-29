@@ -2,7 +2,15 @@ import urlJoin from 'url-join';
 
 import { getValueFromPath } from '../helpers';
 
-export function makeAction(type, ...argNames) {
+function getAPITypes(type) {
+    return {
+        'FETCHING': type + '_FETCHING',
+        'SUCCESS': type + '_SUCCESS',
+        'FAILED': type + '_FAILED'
+    };
+}
+
+function makeAction(type, ...argNames) {
     return (...args) => {
         const action = { type };
         
@@ -11,14 +19,6 @@ export function makeAction(type, ...argNames) {
         });
 
         return action;
-    };
-}
-
-export function getAPITypes(type) {
-    return {
-        'FETCHING': type + '_FETCHING',
-        'SUCCESS': type + '_SUCCESS',
-        'FAILED': type + '_FAILED'
     };
 }
 
@@ -31,7 +31,7 @@ export function getAPITypes(type) {
  * @param  {Function} callbackFailed    Optional callback on failed call
  * @return {Function}                   Generated action
  */
-export default function makeApiAction(http) {
+function makeApiAction(http) {
     return {
         makeApiAction: (obj = {type: null, method: 'get', endpoint: ''}) => {
             const { FETCHING, SUCCESS, FAILED } = getAPITypes(obj.type);
@@ -78,7 +78,7 @@ export default function makeApiAction(http) {
     };
 }
 
-export function makeCrudAction(type, endpoint='') {    
+function makeCrudAction(type, endpoint='') {    
     return {
         create: makeApiAction({
             type: type + '_CREATE', 
@@ -109,3 +109,17 @@ export function makeCrudAction(type, endpoint='') {
     };
 }
 
+export const types = {
+    getAPITypes,
+    AUTH_LOGIN: 'authLogin',
+    AUTH_LOGOUT: 'authLogout',
+    LANG_CHANGED: 'langChanged',
+    TOASTER_ADDED: 'toasterAdded',
+    TOASTER_REMOVED: 'toasterRemoved',
+};
+
+export const actions = {
+    makeAction,
+    makeApiAction,
+    makeCrudAction,
+};

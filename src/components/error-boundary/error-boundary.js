@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 
 import { classnames } from '../../common/classes';
-import { truncate } from '../../helpers';
+import { truncate, translate } from '../../helpers';
 
 export class ErrorBoundary extends Component {
     constructor(props) {
@@ -35,7 +35,7 @@ export class ErrorBoundary extends Component {
                             AD-LAB
                         </h5>
                         <span className="d-block mb-4">
-                            <FormattedMessage id="Une erreur est survenue." />
+                            {translate("Une erreur est survenue.")}
                         </span>
                         {error && (
                             <div className="text-muted text--small">
@@ -48,10 +48,7 @@ export class ErrorBoundary extends Component {
                                     })}
                                 </code>&nbsp;&nbsp;
                                 <button className="btn btn-more" onClick={() => this.setState({more: !more})}>
-                                    {more 
-                                        ? <FormattedMessage id="Moins" /> 
-                                        : <FormattedMessage id="Plus" />
-                                    }
+                                    {more ? translate("Moins") : translate("Plus")}
                                 </button>
                             </div>
                         )}
