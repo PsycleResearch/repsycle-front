@@ -11,7 +11,7 @@ RestrictedRoute.propTypes = {
 };
 
 export function RestrictedRoute({
-    user, 
+    user,
     component: Component, 
     render, 
     roles, 
