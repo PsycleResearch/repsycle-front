@@ -1,15 +1,19 @@
 {
   "name": "repsycle",
-  "version": "1.0.0",
-  "description": "Reusable front-end components",
-  "main": "./dist/index.js",
+  "version": "0.0.1",
+  "description": "Psycle Research front-end toolkit",
+  "source": "src/index.js",
+  "main": "dist/repsycle.js",
+  "exports": "./dist/repsycle.modern.js",
+  "module": "dist/repsycle.module.js",
+  "unpkg": "dist/repsycle.umd.js",
   "scripts": {
-    "start": "parcel watch ./src/index.js --out-dir ./dist",
-    "build": "parcel build ./src/index.js --global repsycle"
+    "dev": "microbundle watch",
+    "build": "microbundle",
+    "clean": "rm -rf dist/"
   },
   "dependencies": {
     "axios": "^0.19.2",
-    "bootstrap": "^4.4.1",
     "prop-types": "^15.7.2",
     "react": "^16.13.0",
     "react-router-dom": "^5.1.2",
@@ -24,14 +28,12 @@
   "devDependencies": {
     "autoprefixer": "^9.7.4",
     "classnames": "^2.2.6",
-    "install-peers": "^1.0.3",
-    "parcel-bundler": "^1.12.4",
-    "parcel-plugin-externals": "^0.3.1",
+    "microbundle": "^0.13.0",
     "sass": "^1.26.2"
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:PsycleResearch/repsycle.git"
+    "url": "git@github.com:PsycleResearch/repsycle-front.git"
   },
   "keywords": [
     "psycle",
@@ -44,7 +46,7 @@
   "author": "Psycle Research",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/PsycleResearch/repsycle/issues"
+    "url": "https://github.com/PsycleResearch/repsycle-front/issues"
   },
-  "homepage": "https://github.com/PsycleResearch/repsycle#readme"
+  "homepage": "https://github.com/PsycleResearch/repsycle-front#readme"
 }

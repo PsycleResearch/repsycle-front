@@ -26,10 +26,4 @@ coverage
 /docs
 docs-static/**/*.d.ts
 .cache/
-
-# exclude site except for site/docs/versions
-site/*
-site/docs/*
-!site/docs/
-!site/docs/versions/
-site/docs/versions/**/*.d.ts
+.parcel-cache

@@ -1,3 +1,6 @@
+import React from 'react';
+import * as draw from './draw.js';
+
 /**
  * Check if params has a value.
  * @param  {Any}  e Tested value
@@ -38,7 +41,14 @@ export function truncate(str, options = {length: null, ending: null}) {
     }
 }
 
-//TODO
-export function translate(string) {
-    return string;
+export function makeState(initialState, reducer, actions) {
+    return {
+        initialState,
+        context: React.createContext(initialState),
+        reducer,
+        actions: actions.reduce((acc, type) => ({
+            ...acc,
+            [type]: (d, payload) => d({type, payload})
+        }))
+    }
 }

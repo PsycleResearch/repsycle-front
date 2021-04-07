@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import classnames from 'classnames';
 
-import { classnames } from '../../common/classes';
-import { truncate, translate } from '../../helpers';
+import { truncate } from '../../helpers';
 
 export class ErrorBoundary extends Component {
     constructor(props) {
@@ -25,14 +25,14 @@ export class ErrorBoundary extends Component {
     }
 
     render() {
-        const { hasError, error, more } = this.state;
+        const { title, hasError, error, more } = this.state;
 
         if (hasError) {
             return (
                 <div className={classnames("error-boundary", "test")}>
                     <div className="error__content">
                         <h5 className="mb-2">
-                            AD-LAB
+                            {title}
                         </h5>
                         <span className="d-block mb-4">
                             {translate("Une erreur est survenue.")}
@@ -48,7 +48,7 @@ export class ErrorBoundary extends Component {
                                     })}
                                 </code>&nbsp;&nbsp;
                                 <button className="btn btn-more" onClick={() => this.setState({more: !more})}>
-                                    {more ? translate("Moins") : translate("Plus")}
+                                    {more ? "Moins" : "Plus"}
                                 </button>
                             </div>
                         )}

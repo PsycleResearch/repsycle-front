@@ -1,7 +1,2 @@
-import "./index.scss";
-
-export * from "./api";
-export * from "./helpers";
-export * from "./actions";
-export * from "./reducers";
-export * from "./components";
+export * as helpers from './helpers';
+export * as components from './components';
