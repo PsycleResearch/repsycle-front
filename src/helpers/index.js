@@ -1,5 +1,4 @@
 import React from 'react';
-import * as draw from './draw.js';
 
 /**
  * Check if params has a value.

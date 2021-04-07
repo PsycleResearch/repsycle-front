@@ -1,5 +1,5 @@
 {
-  "name": "repsycle",
+  "name": "@psycle/repsycle",
   "version": "0.0.1",
   "description": "Psycle Research front-end toolkit",
   "source": "src/index.js",
@@ -33,7 +33,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:PsycleResearch/repsycle-front.git"
+    "url": "git+ssh://git@github.com/PsycleResearch/repsycle-front.git"
   },
   "keywords": [
     "psycle",
@@ -44,7 +44,7 @@
     "theme"
   ],
   "author": "Psycle Research",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/PsycleResearch/repsycle-front/issues"
   },
