@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "microbundle watch",
     "build": "microbundle",
+    "publish": "npm run build && npm publish",
     "clean": "rm -rf dist/"
   },
   "dependencies": {
