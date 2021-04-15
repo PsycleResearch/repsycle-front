@@ -13,7 +13,7 @@
     "clean": "rm -rf dist/"
   },
   "dependencies": {
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "prop-types": "^15.7.2",
     "react": "^16.13.0",
     "react-router-dom": "^5.1.2",
