@@ -1,6 +1,6 @@
 {
   "name": "@psycle/repsycle",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Psycle Research front-end toolkit",
   "source": "src/index.js",
   "main": "dist/repsycle.js",
