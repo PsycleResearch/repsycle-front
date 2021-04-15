@@ -48,6 +48,6 @@ export function makeState(initialState, reducer, actions) {
         actions: actions.reduce((acc, type) => ({
             ...acc,
             [type]: (d, payload) => d({type, payload})
-        }))
+        }), [])
     }
 }
