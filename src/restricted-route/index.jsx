@@ -10,7 +10,7 @@ RestrictedRoute.propTypes = {
     permissions: PropTypes.arrayOf(PropTypes.string)
 };
 
-export function RestrictedRoute({
+export default function RestrictedRoute({
     user,
     component: Component, 
     render, 

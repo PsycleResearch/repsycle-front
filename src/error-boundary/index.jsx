@@ -1,10 +1,9 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import classnames from 'classnames';
 
-import { truncate } from '../../helpers';
+import { truncate } from '../helpers';
 
-export class ErrorBoundary extends Component {
+export default class ErrorBoundary extends Component {
     constructor(props) {
         super(props);
 
@@ -29,7 +28,7 @@ export class ErrorBoundary extends Component {
 
         if (hasError) {
             return (
-                <div className={classnames("error-boundary", "test")}>
+                <div className="error-boundary">
                     <div className="error__content">
                         <h5 className="mb-2">
                             {title}

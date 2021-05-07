@@ -51,3 +51,17 @@ export function makeState(initialState, reducer, actions) {
         }), [])
     }
 }
+
+export function formatBase64(base64, options = { removeHeader: false, contentType: "image/png" }) {
+    if (/^(data:.*;base64,)/.test(base64)) {
+        if (options.removeHeader) {
+            return base64.split(',')[1];
+        } else {
+            return base64;
+        }
+    } else if (options.removeHeader) {
+        return base64;
+    } else {
+        return `data:${options.contentType};base64, ${base64}`;
+    }
+}
