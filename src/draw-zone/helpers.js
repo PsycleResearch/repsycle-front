@@ -1,4 +1,4 @@
-export function setupDrawRect({drawSVG, svgWrapperRect, handlers = {}}) {
+export function setupDrawRect({elt, svgWrapperRect, handlers = {}}) {
     let startPosition;
     let overlayRect;
 
@@ -9,7 +9,7 @@ export function setupDrawRect({drawSVG, svgWrapperRect, handlers = {}}) {
         };
 
         if (!overlayRect) {
-            overlayRect = drawSVG.rect(0, 0)
+            overlayRect = elt.rect(0, 0)
                 .fill({opacity: 0.2}).stroke({color: '#000', width: 2, opacity: .5});
         }
 
@@ -39,7 +39,7 @@ export function setupDrawRect({drawSVG, svgWrapperRect, handlers = {}}) {
         }
 
         // Prevent drawing new rect on rect dragend...
-        if (e.target.parentNode === drawSVG.node) {
+        if (e.target.parentNode === elt.node) {
             return;
         }
 
@@ -54,7 +54,7 @@ export function setupDrawRect({drawSVG, svgWrapperRect, handlers = {}}) {
         }
 
         const rect = drawRect({
-            drawSVG,
+            elt,
             svgWrapperRect,
             x: currentPosition.x > startPosition.x ? startPosition.x : currentPosition.x,
             y: currentPosition.y > startPosition.y ? startPosition.y : currentPosition.y,
@@ -70,8 +70,8 @@ export function setupDrawRect({drawSVG, svgWrapperRect, handlers = {}}) {
 
     function handleClick(e) {
         // If click on main svg, and not an element, deselect everything.
-        if (e.target === drawSVG.node) {
-            drawSVG.each(function() {
+        if (e.target === elt.node) {
+            elt.each(function() {
                 this.fire('deselect');
             });
         }
@@ -79,22 +79,22 @@ export function setupDrawRect({drawSVG, svgWrapperRect, handlers = {}}) {
 
     return {
         on: () => {
-            drawSVG.on('mousedown', handleStartDrawing);
-            drawSVG.on('mousemove', handleDrawing);
-            drawSVG.on('mouseup', handleStopDrawing);
-            drawSVG.on('click', handleClick);
+            elt.on('mousedown', handleStartDrawing);
+            elt.on('mousemove', handleDrawing);
+            elt.on('mouseup', handleStopDrawing);
+            elt.on('click', handleClick);
         },
         off: () => {
-            drawSVG.off('mousedown', handleStartDrawing);
-            drawSVG.off('mousemove', handleDrawing);
-            drawSVG.off('mouseup', handleStopDrawing);
-            drawSVG.off('click', handleClick);
+            elt.off('mousedown', handleStartDrawing);
+            elt.off('mousemove', handleDrawing);
+            elt.off('mouseup', handleStopDrawing);
+            elt.off('click', handleClick);
         }
     }
 }
 
 export function drawRect({
-    drawSVG,
+    elt,
     svgWrapperRect,
     x, 
     y, 
@@ -104,17 +104,17 @@ export function drawRect({
     strokeColor = '#fff',
     handlers = {}
 }) {
-    if (!drawSVG || !svgWrapperRect) {
+    if (!elt || !svgWrapperRect) {
         return;
     }
 
-    const rect = drawSVG.rect(width, height);
+    const rect = elt.rect(width, height);
     rect.move(x, y);
     rect.fill({opacity: 0.2});
     rect.stroke({color: strokeColor, width: 2, opacity: 1});
     rect.css('touch-action', 'none');  // silence interactjs warning.
 
-    const removeButton = drawSVG.rect(10, 10);
+    const removeButton = elt.rect(10, 10);
     removeButton.move(x + width - 5, y - 5);
     removeButton.fill({color: '#F56565'});
     removeButton.stroke({color: '#fff', width: 1});
@@ -131,7 +131,7 @@ export function drawRect({
     // Custom events.
     rect.on('select', () => {
         // Deselect all 
-        drawSVG.each(function() {
+        elt.each(function() {
             this.fire('deselect');
         });
         rect.stroke({color: '#02A9C7'});

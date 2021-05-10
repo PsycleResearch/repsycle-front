@@ -15,11 +15,11 @@
     "dev": "esbuild src/index.js --watch --format=esm --bundle --minify --sourcemap --outfile=dist/repsycle.min.js --external:react",
     "build": "esbuild src/index.js --format=esm --bundle --minify --sourcemap --outfile=dist/repsycle.min.js --external:react",
     "release": "npm run build && npm publish",
-    "clean": "rm -rf build/"
+    "clean": "rm -rf build/",
+    "storybook": "start-storybook -p 6006",
+    "build-storybook": "build-storybook"
   },
   "dependencies": {
-    "@svgdotjs/svg.draggable.js": "^3.0.2",
-    "@svgdotjs/svg.js": "^3.0.16",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-router-dom": "^5.2.0"
@@ -30,6 +30,12 @@
     "react-router-dom": "^5.2.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.14.0",
+    "@storybook/addon-actions": "^6.2.9",
+    "@storybook/addon-essentials": "^6.2.9",
+    "@storybook/addon-links": "^6.2.9",
+    "@storybook/react": "^6.2.9",
+    "babel-loader": "^8.2.2",
     "esbuild": "^0.11.19"
   }
 }

@@ -1,155 +1,219 @@
 import React, { useRef, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { SVG } from '@svgdotjs/svg.js';
-import '@svgdotjs/svg.draggable.js';
 
-import { drawRect, setupDrawRect } from './helpers';
+export function Element({color}) {
+    return null;
+}
 
+export function Point({x, y, size = 5, fill="white", ...props}) {
+    const [_size, setSize] = useState();
+
+    useEffect(() => {
+        setSize(size);
+    }, []);
+
+    return (
+        <circle 
+            cx={x}
+            cy={y}
+            r={_size}
+            fill={fill}
+            onMouseEnter={() => setSize(size * 1.2)}
+            onMouseLeave={() => setSize(size)}
+            {...props}
+        />
+    );
+}
+
+export function Line({startX, startY, endX, endY, fill="white"}) {
+    return (
+        <line 
+            x1={startX} 
+            y1={startY}
+            x2={endX}
+            y2={endY}
+            stroke="white"
+            strokeWidth={2}
+        />
+    );
+}
+
+export function Rect({startX, startY, endX, endY, fill="white"}) {
+    const x1 = endX > startX ? startX : endX;
+    const y1 = endY > startY ? startY : endY;
+    const x2 = endX > startX ? endX : startX;
+    const y2 = endY > startY ? endY : startY;
+
+    return (
+        <rect
+            x={x1}
+            y={y1}
+            width={x2 - x1}
+            height={y2 - y1}
+            fill={fill}
+        />
+    );
+}
+
+export function Polygon({points, onPointClick}) {
+    return (
+        <React.Fragment>
+            {points.map((point, index) =>
+                <React.Fragment>
+                    {index > 0 &&
+                        <Line 
+                            startX={points[index - 1].x} 
+                            startY={points[index - 1].y}
+                            endX={point.x}
+                            endY={point.y}
+                        />
+                    }
+
+                    <Point 
+                        x={point.x}
+                        y={point.y}
+                        onClick={() => onPointClick(index)}
+                    />
+                </React.Fragment>
+            )}
+        </React.Fragment>
+    );
+}
+
+// TODO: absolute coordinates (percentage based)
 export default function DrawZone({
     children, 
     width,
     height,
+    mode = "rect",
     initialElements, 
     renderElement, 
     onChange
 }) {
-    // const svgWrapperRef = useRef(null);
-    // const [wrapperRect, setWrapperRect] = useState(null);
-    // const [svgElt, setSvgElt] = useState(null);
-    // const [elements, setElements] = useState([]);
+    const zone = useRef(null);
+    const [elements, setElements] = useState([]);
+    const [mouseDown, setMouseDown] = useState(false);
+    const [mouseStartPosition, setMouseStartPosition] = useState(null);
+    const [mouseEndPosition, setMouseEndPosition] = useState(null);
+    const [mousePosition, setMousePosition] = useState(null);
+    const [pendingShape, setPendingShape] = useState(null);
 
-    // const drawHandlers = {
-    //     onSelect: (elt) => setElements(old => [...old]),  // Trigger re-render
-    //     onDeselect: (elt) => setElements(old => [...old]),  // Trigger re-render
-    //     onRemove: (elt) => console.log(elt)
-    // };
+    function onMouseDown(e) {
+        setMouseDown(true);
+        setMouseStartPosition({x: e.clientX, y: e.clientY});
+    }
 
-    // function onChange(elements) {
-    //     setElements(elements);
+    function onMouseOver(e) {
+    }
 
-    //     // let payload = [];
+    function onMouseMove(e) {
+        // if (mouseDown) {
 
-    //     // drawSVG.children().forEach(element => {
-    //     //     if (element.data('crop') && !element.data('disabled')) {
-    //     //         const box = element.bbox();
+        // }
 
-    //     //         const getX = (x) => (x * originalImage.width) / svgWrapperRect.width;
-    //     //         const getY = (y) => (y * originalImage.height) / svgWrapperRect.height;
+        setMousePosition({x: e.clientX, y: e.clientY});
+    }
 
-    //     //         payload.push({
-    //     //             id: element.data('id'),
-    //     //             x1: getX(box.x),
-    //     //             y1: getY(box.y),
-    //     //             x2: getX(box.x2),
-    //     //             y2: getY(box.y2),
-    //     //             image_width: originalImage.width,
-    //     //             image_height: originalImage.height
-    //     //         });
-    //     //     }
-    //     // });
+    function onMouseUp(e) {
+        setMouseDown(false);
+        setMouseEndPosition({x: e.clientX, y: e.clientY});
 
-    //     if (onChange) {
-    //         onChange(elements);
-    //     }
-    // }
+        let shape = pendingShape;
+        if (!shape) {
+            shape = {coordinates: []};
+        }
 
-    // // Draw setup.
-    // useEffect(() => {
-    //     if (svgWrapperRef.current && width && height) {
-    //         const wrapperElt = svgWrapperRef.current;
-    //         wrapperElt.style.height = `${(wrapperElt.offsetWidth * image.height) / image.width}px`;
-    //         wrapperElt.style.backgroundImage = `url('${image.src}')`;
-    //         wrapperElt.style.backgroundSize = "cover";
+        if (mode === "rect") {
+            shape.coordinates = [
+                mouseStartPosition.x,
+                mouseStartPosition.y,
+                e.clientX,
+                e.clientY
+            ];
+            setElements(old => [...old, shape]);
+        } else if (mode === "poly") {
+            shape.coordinates.push({x: e.clientX, y: e.clientY});
+            setPendingShape(shape);
+        }
 
-    //         const rect = wrapperElt.getBoundingClientRect();
-    //         setWrapperRect({
-    //             x: rect.x,
-    //             y: rect.y,
-    //             bottom: rect.bottom,
-    //             left: rect.left,
-    //             right: rect.right,
-    //             top: rect.top,
-    //             width: rect.width,
-    //             height: (wrapperElt.offsetWidth * height) / width  // Make sure height is correct
-    //         });
+        setMouseStartPosition(null);    
+        setMousePosition(null);
+    }
 
-    //         if (svgElt) {
-    //             svgElt.remove();
-    //         }
-    //         setSvgElt(SVG().addTo("#svg-wrapper").size('100%', '100%'));
-    //     }
-    // }, [svgWrapperRef, width, height]);
-
-    // // Setup drawing event handlers.
-    // useEffect(() => {        
-    //     if (!wrapperRect|| !svgElt) {
-    //         return;
-    //     }
-
-    //     let drawSetup;
-    //     const handlers = {
-    //         ...drawHandlers,
-    //         onStopDrawing: (elt) => {
-    //             onElementsChange([...elements, elt])
-    //         }
-    //     };
-
-    //     drawSetup = setupDrawRect({
-    //         svgElt, 
-    //         wrapperRect, 
-    //         handlers
-    //     });
-    //     drawSetup.on();
-
-    //     return () => {
-    //         drawSetup.off();
-    //     };
-    // }, [svgElt, wrapperRect]);
-
-    // // Draw saved annotations.
-    // useEffect(() => {
-    //     if (!initialElements || !svgElt || !wrapperRect) {
-    //         return;
-    //     }
-
-    //     // Clear all before settings new ones.
-    //     drawSVG.clear();
-    //     onChange([]);
-
-    //     // setElements(initialElements);
-
-    //     // crops
-    //     //     .filter(c => c.image_width === originalImage.width && c.image_height === originalImage.height)
-    //     //     .forEach(c => {
-    //     //         const x = (c.x1 * svgWrapperRect.width) / originalImage.width;
-    //     //         const y = (c.y1 * svgWrapperRect.height) / originalImage.height;
-    //     //         const width = ((c.x2 * svgWrapperRect.width) / originalImage.width) - x;
-    //     //         const height = ((c.y2 * svgWrapperRect.height) / originalImage.height) - y;
-
-    //     //         const rect = drawRect({
-    //     //             drawSVG,
-    //     //             svgWrapperRect,
-    //     //             x,
-    //     //             y,
-    //     //             width,
-    //     //             height,
-    //     //             handlers: drawHandlers
-    //     //         });
-    //     //         rect.data('id', c.id);
-    //     //         onElementsChange([...elements, rect]);
-    //     //     });
-    // }, [initialElements, svgElt, wrapperRect]);
+    function onPointClick(index) {
+        // Only first point can be connected to close polygon.
+        if (mode === "poly" && index === 0) {
+            setElements(old => [...old, pendingShape]);
+            setPendingShape(null);
+        }
+    }
 
     return (
-        <div style={{width: "800px"}}>
-            <div 
-                id="svg-wrapper"
-                ref={svgWrapperRef}
-                className="w-100"
-                style={{cursor: "crosshair"}}
+        <div 
+            className="w-100"
+            style={{cursor: "crosshair", position: "relative"}}
+            ref={zone}
+            onMouseDown={onMouseDown}
+            onMouseOver={onMouseOver}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+        >
+            {children}
+
+            <svg 
+                style={{
+                    position: "absolute", 
+                    top: "0",
+                    left: "0",
+                    width: "100%", 
+                    height: "100%"
+                }}
             >
-                {children}
-            </div>
+                {elements.map((shape, index) =>
+                    mode === "poly" 
+                    ? (
+                        <Polygon 
+                            key={index} 
+                            points={shape.coordinates} 
+                        />
+                    ) : (
+                        <Rect 
+                            key={index}
+                            startX={shape.coordinates[0]}
+                            startY={shape.coordinates[1]}
+                            endX={shape.coordinates[2]}
+                            endY={shape.coordinates[3]}
+                        />
+                    )
+                )}
+
+                {mode === "rect" && mouseStartPosition && mousePosition &&
+                    <Rect 
+                        startX={mouseStartPosition.x}
+                        startY={mouseStartPosition.y}
+                        endX={mousePosition.x}
+                        endY={mousePosition.y}
+                    />
+                }
+
+                {pendingShape && mode === "poly" &&
+                    <React.Fragment>
+                        <Polygon 
+                            points={pendingShape.coordinates} 
+                            onPointClick={(index) => onPointClick(index)}
+                        />
+
+                        {mousePosition &&
+                            <Line 
+                                startX={pendingShape.coordinates[pendingShape.coordinates.length - 1].x} 
+                                startY={pendingShape.coordinates[pendingShape.coordinates.length - 1].y}
+                                endX={mousePosition.x}
+                                endY={mousePosition.y}
+                            />  
+                        }  
+                    </React.Fragment>
+                }
+            </svg>
         </div>
     );
 };
