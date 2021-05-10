@@ -72,8 +72,17 @@ export function Polygon({points, onPointClick}) {
                     <Point 
                         x={point.x}
                         y={point.y}
-                        onClick={() => onPointClick(index)}
+                        onClick={(e) => onPointClick(e, index)}
                     />
+
+                    {index === points.length - 1 &&
+                        <Line 
+                            startX={point.x} 
+                            startY={point.y}
+                            endX={points[0].x}
+                            endY={points[0].y}
+                        />
+                    }
                 </React.Fragment>
             )}
         </React.Fragment>
@@ -91,6 +100,7 @@ export default function DrawZone({
     onChange
 }) {
     const zone = useRef(null);
+    const [zoneRect, setZoneRect] = useState(null);
     const [elements, setElements] = useState([]);
     const [mouseDown, setMouseDown] = useState(false);
     const [mouseStartPosition, setMouseStartPosition] = useState(null);
@@ -98,9 +108,20 @@ export default function DrawZone({
     const [mousePosition, setMousePosition] = useState(null);
     const [pendingShape, setPendingShape] = useState(null);
 
+    function getEventCoordinates(e) {
+        if (!zoneRect) {
+            return;
+        }
+
+        return {
+            x: e.clientX - zoneRect.left,
+            y: e.clientY - zoneRect.top
+        };
+    }
+
     function onMouseDown(e) {
         setMouseDown(true);
-        setMouseStartPosition({x: e.clientX, y: e.clientY});
+        setMouseStartPosition(getEventCoordinates(e));
     }
 
     function onMouseOver(e) {
@@ -111,12 +132,18 @@ export default function DrawZone({
 
         // }
 
-        setMousePosition({x: e.clientX, y: e.clientY});
+        setMousePosition(getEventCoordinates(e));
     }
 
     function onMouseUp(e) {
+        const position = getEventCoordinates(e);
+        if (!position) {
+            return;
+        }
+
         setMouseDown(false);
-        setMouseEndPosition({x: e.clientX, y: e.clientY});
+
+        setMouseEndPosition(position);
 
         let shape = pendingShape;
         if (!shape) {
@@ -127,12 +154,12 @@ export default function DrawZone({
             shape.coordinates = [
                 mouseStartPosition.x,
                 mouseStartPosition.y,
-                e.clientX,
-                e.clientY
+                position.x,
+                position.y
             ];
             setElements(old => [...old, shape]);
         } else if (mode === "poly") {
-            shape.coordinates.push({x: e.clientX, y: e.clientY});
+            shape.coordinates.push(position);
             setPendingShape(shape);
         }
 
@@ -140,7 +167,10 @@ export default function DrawZone({
         setMousePosition(null);
     }
 
-    function onPointClick(index) {
+    function onPointClick(e, index) {
+        // Don't go to mouseUp
+        e.stopPropagation();
+
         // Only first point can be connected to close polygon.
         if (mode === "poly" && index === 0) {
             setElements(old => [...old, pendingShape]);
@@ -148,10 +178,19 @@ export default function DrawZone({
         }
     }
 
+    useEffect(() => {
+        if (zone.current) {
+            setZoneRect(zone.current.getBoundingClientRect());
+        }
+    }, [zone]);
+
     return (
         <div 
-            className="w-100"
-            style={{cursor: "crosshair", position: "relative"}}
+            style={{
+                cursor: "crosshair", 
+                position: "relative", 
+                display: "inline-block"
+            }}
             ref={zone}
             onMouseDown={onMouseDown}
             onMouseOver={onMouseOver}
@@ -187,7 +226,7 @@ export default function DrawZone({
                     )
                 )}
 
-                {mode === "rect" && mouseStartPosition && mousePosition &&
+                {mode === "rect" && mousePosition && mouseStartPosition &&
                     <Rect 
                         startX={mouseStartPosition.x}
                         startY={mouseStartPosition.y}
@@ -195,12 +234,11 @@ export default function DrawZone({
                         endY={mousePosition.y}
                     />
                 }
-
-                {pendingShape && mode === "poly" &&
+                {mode === "poly" && pendingShape && 
                     <React.Fragment>
                         <Polygon 
                             points={pendingShape.coordinates} 
-                            onPointClick={(index) => onPointClick(index)}
+                            onPointClick={(e, index) => onPointClick(e, index)}
                         />
 
                         {mousePosition &&
