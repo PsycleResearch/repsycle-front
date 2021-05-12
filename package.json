@@ -15,7 +15,7 @@
   "scripts": {
     "dev": "esbuild src/index.js --watch --format=esm --bundle --minify --sourcemap --outfile=dist/repsycle.min.js --external:react --external:react-dom --external:react-router --external:react-router-dom",
     "build": "esbuild src/index.js --format=esm --bundle --minify --sourcemap --outfile=dist/repsycle.min.js --external:react --external:react-dom --external:react-router --external:react-router-dom",
-    "release": "npm run build && npm publish",
+    "release": "yarn build && yarn publish",
     "clean": "rm -rf build/",
     "storybook": "start-storybook -p 6006",
     "build-storybook": "build-storybook"
