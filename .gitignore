@@ -1,29 +1,5 @@
-# macOS
 .DS_Store
-
-# IDEA
-*.iml
-*.ipr
-*.iws
-.idea/
-
-# Node
 node_modules
-npm-debug.log*
-lerna-debug.log
 package-lock.json
 yarn-error.log
-
-# Sass
-.sass-cache/
-
-# Repsycle
-build
-dist
-lib
-generated
-coverage
-/docs
-docs-static/**/*.d.ts
-.cache/
-.parcel-cache
+dist/

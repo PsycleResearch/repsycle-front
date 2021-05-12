@@ -1,3 +1,3 @@
-# repsycle-front
+# Repsycle
 
 Reusable front-end toolkit.
