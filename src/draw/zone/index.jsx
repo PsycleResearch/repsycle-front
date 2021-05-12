@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import classnames from 'classnames';
 import { SVG } from '@svgdotjs/svg.js';
 import '@svgdotjs/svg.draggable.js';
-import * as interact from 'interactjs';
+import interact from 'interactjs';
 
 function setupDrawRect({drawSVG, svgWrapperRect, handlers = {}}) {
     let startPosition;
@@ -385,6 +385,7 @@ export default function DrawZone({
                     {renderElementOptions && elements.map((elt, index) =>
                         elt.data('selected') === true &&
                             <div
+                                key={index}
                                 style={{
                                     position: "absolute",
                                     top: `${elt.y()}px`,
