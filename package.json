@@ -13,6 +13,7 @@
   "source": "./src/index.js",
   "main": "./dist/repsycle.min.js",
   "scripts": {
+    "postinstall": "install-peers",
     "dev": "esbuild src/index.js --watch --format=esm --bundle --minify --sourcemap --outfile=dist/repsycle.min.js --external:react --external:react-dom --external:react-router --external:react-router-dom",
     "build": "esbuild src/index.js --format=esm --bundle --minify --sourcemap --outfile=dist/repsycle.min.js --external:react --external:react-dom --external:react-router --external:react-router-dom",
     "release": "yarn build && yarn publish",
@@ -38,6 +39,7 @@
     "@storybook/addon-links": "^6.2.9",
     "@storybook/react": "^6.2.9",
     "babel-loader": "^8.2.2",
-    "esbuild": "^0.11.19"
+    "esbuild": "^0.11.19",
+    "install-peers-cli": "^2.2.0"
   }
 }
