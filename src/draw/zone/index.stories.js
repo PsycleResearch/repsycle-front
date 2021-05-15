@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import DrawZone from '.';
 
@@ -7,19 +7,17 @@ export default {
     component: DrawZone,
 };
 
-const Template = (args) => (
-    <DrawZone {...args} />
-);
+export function Base({}) {
+    const [elements, setElements] = useState([{
+        points: [{x: 0.5, y: 0.5}, {x: 1, y: 1}]
+    }]);
 
-export const Base = () => (
-    <DrawZone 
-        style={{width: "500px"}}
-        src="https://via.placeholder.com/500"
-        initialElements={[
-            [0.5, 0.5, 1, 1]
-        ]}
-        onChange={(elements) => console.log(elements)}
-    >
-
-    </DrawZone>
-);
+    return (
+        <DrawZone 
+            elements={elements}
+            onChange={(elements) => setElements(elements)}
+        >
+            <div style={{width: "500px", height: "500px", "backgroundColor": "blue"}}></div>
+        </DrawZone>
+    );
+};

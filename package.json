@@ -24,6 +24,7 @@
   "dependencies": {
     "@svgdotjs/svg.draggable.js": "^3.0.2",
     "@svgdotjs/svg.js": "^3.0.16",
+    "date-fns": "^2.21.3",
     "interactjs": "^1.9.20"
   },
   "peerDependencies": {

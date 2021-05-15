@@ -1,4 +1,6 @@
 import React from 'react';
+import formatDateFns from 'date-fns/format';
+import parseJSON from 'date-fns/parseJSON';
 
 /**
  * Check if params has a value.
@@ -50,6 +52,10 @@ export function makeState(initialState, reducer, actions) {
             [type]: (d, payload) => d({type, payload})
         }), [])
     }
+}
+
+export function formatDate(date, format) {
+    return formatDateFns(parseJSON(date), format);
 }
 
 export function formatBase64(base64, options = { removeHeader: false, contentType: "image/png" }) {
