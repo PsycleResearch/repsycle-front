@@ -6,7 +6,8 @@ import '@svgdotjs/svg.draggable.js';
 import interact from 'interactjs';
 
 export function useDraw(ref, props = {
-    onChange
+    onChange,
+    disabled
 }) {
     const [mode, setMode] = useState("mode");
     const [svg, setSvg] = useState(null);
@@ -54,8 +55,9 @@ export function useDraw(ref, props = {
 
     function drawRect({
         points,
-        disabled = false, 
-        strokeColor = '#fff'
+        disabled = props.disabled ? true : false, 
+        stroke = {color: '#fff', width: 2, opacity: 1},
+        fill = {color: '#000', opacity: 0.2}
     }) {
         if (!svg || !points || !points.length == 2) {
             return;
@@ -65,8 +67,8 @@ export function useDraw(ref, props = {
         rect.move(points[0].x, points[0].y);
         rect.width(Math.abs(points[1].x - points[0].x));
         rect.height(Math.abs(points[1].y - points[0].y));
-        rect.fill({opacity: 0.2});
-        rect.stroke({color: strokeColor, width: 2, opacity: 1});
+        rect.fill(fill);
+        rect.stroke(stroke);
         rect.css('touch-action', 'none');  // silence interactjs warning.
 
         // Custom events.
@@ -81,7 +83,7 @@ export function useDraw(ref, props = {
             onChange();
         });
         rect.on('deselect', () => {
-            rect.stroke({color: strokeColor});
+            rect.stroke(stroke);
             rect.data('selected', false);
 
             onChange();
@@ -261,11 +263,15 @@ export function useDraw(ref, props = {
         }
 
         svg.css({
-            cursor: 'crosshair',
+            cursor: !props.disabled && 'crosshair',
             position: 'absolute',
             top: '0',
             left: '0'
         });
+
+        if (props.disabled) {
+            return;
+        }
 
         svg.on('mousedown', onMouseDown);
         svg.on('mousemove', onMouseMove);
@@ -292,10 +298,11 @@ export function useDraw(ref, props = {
 export default function DrawZone({
     elements,
     onChange,
-    children
+    children,
+    disabled
 }) {
     const svgRef = useRef(null);
-    const {svg, draw} = useDraw(svgRef, {onChange});
+    const {svg, draw} = useDraw(svgRef, {onChange, disabled});
 
     useLayoutEffect(() => {
         if (svg && elements && elements.length !== svg.children().length) {
