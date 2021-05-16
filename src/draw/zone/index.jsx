@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef, useReducer} from 'react';
+import React, {useState, useEffect, useLayoutEffect, useRef, useReducer} from 'react';
 import PropTypes from 'prop-types';
 import classnames from 'classnames';
 import { SVG } from '@svgdotjs/svg.js';
@@ -12,6 +12,13 @@ export function useDraw(ref, props = {
     const [svg, setSvg] = useState(null);
     let startPosition;
     let overlayRect;
+
+    const resizeObserver = new ResizeObserver(function(entries) {
+        if (svg) {
+            svg.remove();
+        }
+        setSvg(SVG().addTo(ref.current).size('100%', '100%'));
+    });
 
     function getRelativeCoordinates(points) {
         const svgRect = svg.node.getBoundingClientRect();
@@ -236,20 +243,19 @@ export function useDraw(ref, props = {
         }
     }
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!ref.current) {
             return;
         }
 
-        if (svg) {
-            svg.remove();
-        }
+        resizeObserver.observe(ref.current);
 
-        const _svg = SVG().addTo(ref.current).size('100%', '100%');
-        setSvg(_svg);
+        return () => {
+            resizeObserver.unobserve(ref.current);
+        }
     }, [ref]);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!svg) {
             return;
         }
@@ -291,7 +297,7 @@ export default function DrawZone({
     const svgRef = useRef(null);
     const {svg, draw} = useDraw(svgRef, {onChange});
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (svg && elements && elements.length !== svg.children().length) {
             svg.clear();
             elements.forEach(element => draw(element));
@@ -310,9 +316,6 @@ export default function DrawZone({
             </div>
         </div>
     );
-
-    
-    ;
 };
 
 DrawZone.displayName = 'DrawZone';
