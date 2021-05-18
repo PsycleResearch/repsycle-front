@@ -4,6 +4,7 @@ import classnames from 'classnames';
 import { SVG } from '@svgdotjs/svg.js';
 import '@svgdotjs/svg.draggable.js';
 import interact from 'interactjs';
+import { uuid4 } from '../../helpers.js';
 
 export function useDraw(ref, props = {
     onChange,
@@ -47,7 +48,9 @@ export function useDraw(ref, props = {
                     points: getAbsoluteCoordinates([
                         {x: box.x, y: box.y},
                         {x: box.x2, y: box.y2}
-                    ])
+                    ]),
+                    selected: elt.data('selected'),
+                    id: elt.data('id')
                 };
             }));
         }
@@ -57,7 +60,8 @@ export function useDraw(ref, props = {
         points,
         disabled = props.disabled ? true : false, 
         stroke = {color: '#fff', width: 2, opacity: 1},
-        fill = {color: '#000', opacity: 0.2}
+        fill = {color: '#000', opacity: 0.2},
+        id = null
     }) {
         if (!svg || !points || !points.length == 2) {
             return;
@@ -164,6 +168,7 @@ export function useDraw(ref, props = {
         }
 
         rect.data('disabled', disabled);
+        rect.data('id', id || uuid4());
 
         return rect;
     }
@@ -304,10 +309,32 @@ export default function DrawZone({
     const svgRef = useRef(null);
     const {svg, draw} = useDraw(svgRef, {onChange, disabled});
 
-    useLayoutEffect(() => {
-        if (svg && elements && elements.length !== svg.children().length) {
+    function update() {
+        if (!elements) {
+            svg.clear();
+            return;
+        }
+
+        if (elements.length !== svg.children().length) {
             svg.clear();
             elements.forEach(element => draw(element));
+            return;
+        }
+
+        // Selectively redraw elements.
+        svg.children().forEach(child => {
+            // Strange bug, can't use find
+            const element = elements.filter(elt => elt.id === child.data('id'))[0];
+            if (element && element.stroke !== child.stroke()) {
+                child.remove();
+                draw(element);
+            }
+        });
+    }
+
+    useLayoutEffect(() => {
+        if (svg) {
+            update();
         }
     }, [svg, elements]);
 
@@ -315,9 +342,7 @@ export default function DrawZone({
         <div style={{display: "inline-block"}}>
             <div 
                 ref={svgRef}
-                style={{                        
-                    position: "relative"
-                }}
+                style={{position: "relative"}}
             >
                 {children}
             </div>

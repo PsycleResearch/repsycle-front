@@ -2,21 +2,18 @@ import React from 'react';
 import formatDateFns from 'date-fns/format';
 import parseJSON from 'date-fns/parseJSON';
 
-/**
- * Check if params has a value.
- * @param  {Any}  e Tested value
- * @return {Boolean}   True if tested value is not undefined nor null.
- */
+export function uuid4() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
 export function hasValue(e) {
     return typeof e !== 'undefined' && e !== null;
 }
 
-/**
- * Returns value for object's path.
- * @param {Object} object
- * @param {String} keyPath
- * @returns {*}
- */
 export function getValueFromPath(object, keyPath) {
     try {
         return keyPath.split('.').reduce((o, i) => o[i], object);
@@ -25,12 +22,6 @@ export function getValueFromPath(object, keyPath) {
     }
 }
 
-/**
- * Truncate a string to desired length and ending
- * @param  {String} str
- * @param  {Object} options
- * @return {String}
- */
 export function truncate(str, options = {length: null, ending: null}) {
     let length = options.length || 10;
     let ending = options.ending || "...";

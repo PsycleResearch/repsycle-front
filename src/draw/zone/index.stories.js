@@ -16,7 +16,6 @@ export function Base({}) {
         <DrawZone 
             elements={elements}
             onChange={(elements) => setElements(elements)}
-            disabled
         >
             <div style={{width: "500px", height: "500px", "backgroundColor": "blue"}}></div>
 
