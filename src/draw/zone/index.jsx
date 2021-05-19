@@ -322,14 +322,14 @@ export default function DrawZone({
         }
 
         // Selectively redraw elements.
-        svg.children().forEach(child => {
-            // Strange bug, can't use find
-            const element = elements.filter(elt => elt.id === child.data('id'))[0];
-            if (element && element.stroke !== child.stroke()) {
-                child.remove();
-                draw(element);
-            }
-        });
+        // svg.children().forEach(child => {
+        //     // Strange bug, can't use find
+        //     const element = elements.filter(elt => elt.id === child.data('id'))[0];
+        //     if (element && element.stroke !== child.stroke()) {
+        //         child.remove();
+        //         draw(element);
+        //     }
+        // });
     }
 
     useLayoutEffect(() => {
