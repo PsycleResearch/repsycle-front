@@ -13,7 +13,7 @@
   "source": "./src/index.js",
   "main": "./dist/repsycle.min.js",
   "scripts": {
-    "postinstall": "install-peers",
+    "install-peers": "install-peers",
     "dev": "esbuild src/index.js --watch --format=esm --bundle --minify --sourcemap --outfile=dist/repsycle.min.js --external:react --external:react-dom --external:react-router --external:react-router-dom",
     "build": "esbuild src/index.js --format=esm --bundle --minify --sourcemap --outfile=dist/repsycle.min.js --external:react --external:react-dom --external:react-router --external:react-router-dom",
     "release": "yarn build && yarn publish",
