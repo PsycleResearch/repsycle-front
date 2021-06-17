@@ -40,7 +40,7 @@ export function Base({}) {
                     />
                 }
             >
-                {/*{elements.map((element, index) =>
+                {elements.map((element, index) =>
                     <div
                         key={index}
                         style={{
@@ -56,7 +56,7 @@ export function Base({}) {
                             supprimer
                         </button>
                     </div>
-                )}*/}
+                )}
             </DrawZone>
         </div>
     );
