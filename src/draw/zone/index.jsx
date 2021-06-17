@@ -64,9 +64,9 @@ export function useDraw(ref, props = {
         }
 
         const rect = svg.rect(0, 0)
-        rect.move(points[0].x, points[0].y);
-        rect.width(Math.abs(points[1].x - points[0].x));
-        rect.height(Math.abs(points[1].y - points[0].y));
+        rect.move(`${points[0].x * 100}%`, `${points[0].y * 100}%`);
+        rect.width(`${Math.abs(points[1].x - points[0].x) * 100}%`);
+        rect.height(`${Math.abs(points[1].y - points[0].y) * 100}%`);
         rect.fill(fill);
         rect.stroke(stroke);
         rect.css('touch-action', 'none');  // silence interactjs warning.
@@ -104,12 +104,16 @@ export function useDraw(ref, props = {
                     edges: { left: true, right: true, bottom: true, top: true },
                     listeners: {
                         move (event) {
-                            event.target.instance.width(event.rect.width);
-                            event.target.instance.height(event.rect.height);
+                            const svgRect = svg.node.getBoundingClientRect();
+
+                            event.target.instance.width(`${(event.rect.width / svgRect.width)*100}%`);
+                            event.target.instance.height(`${(event.rect.height / svgRect.height)*100}%`);
 
                             // translate when resizing from top or left edges
-                            event.target.instance.x(event.target.instance.x() + event.deltaRect.left);
-                            event.target.instance.y(event.target.instance.y() + event.deltaRect.top);
+                            const x = (parseFloat(event.target.instance.x()) / 100) * svgRect.width;
+                            const y = (parseFloat(event.target.instance.y()) / 100) * svgRect.height;
+                            event.target.instance.x(`${((x + event.deltaRect.left) / svgRect.width)*100}%`);
+                            event.target.instance.y(`${((y + event.deltaRect.top) / svgRect.height)*100}%`);
 
                             onChange();
                         }
@@ -129,8 +133,13 @@ export function useDraw(ref, props = {
                             event.target.instance.fire('select');
                         },
                         move (event) {
-                            event.target.instance.x(event.target.instance.x() + event.dx);
-                            event.target.instance.y(event.target.instance.y() + event.dy);
+                            const svgRect = svg.node.getBoundingClientRect();
+
+                            const x = (parseFloat(event.target.instance.x()) / 100) * svgRect.width;
+                            const y = (parseFloat(event.target.instance.y()) / 100) * svgRect.height;
+
+                            event.target.instance.x(`${((x + event.dx) / svgRect.width)*100}%`);
+                            event.target.instance.y(`${((y + event.dy) / svgRect.height)*100}%`);
 
                             onChange();
                         }
@@ -249,12 +258,12 @@ export function useDraw(ref, props = {
 
             const rect = drawRect({points: [
                 {
-                    x: Math.min(startPosition.x, currentPosition.x),
-                    y: Math.min(startPosition.y, currentPosition.y)
+                    x: Math.min(startPosition.x, currentPosition.x) / svgRect.width,
+                    y: Math.min(startPosition.y, currentPosition.y) / svgRect.height
                 },
                 {
-                    x: Math.max(startPosition.x, currentPosition.x),
-                    y: Math.max(startPosition.y, currentPosition.y)
+                    x: Math.max(startPosition.x, currentPosition.x) / svgRect.width,
+                    y: Math.max(startPosition.y, currentPosition.y) / svgRect.height
                 }
             ]});
 
@@ -342,10 +351,7 @@ export function useDraw(ref, props = {
 
     return {
         svg,
-        draw: (props) => drawRect({
-            ...props,
-            points: getRelativeCoordinates(props.points)
-        })
+        draw: (props) => drawRect(props)
     }
 }
 
@@ -365,9 +371,8 @@ export default function DrawZone({
 
     useLayoutEffect(() => {
         if (svg) {
-            svg.clear();
-
             if (elements.length !== svg.children().length) {
+                svg.clear();
                 elements.forEach(element => draw(element));
                 return;
             }
