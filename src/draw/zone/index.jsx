@@ -6,7 +6,7 @@ import '@svgdotjs/svg.draggable.js';
 import interact from 'interactjs';
 import { uuid4 } from '../../helpers.js';
 
-export function useDraw(ref, props = {
+export function useDraw(ref, src, props = {
     onChange,
     disabled,
     mode,
@@ -297,19 +297,21 @@ export function useDraw(ref, props = {
             return;
         }
 
-        ref.current.parentNode.style.width = `${ref.current.clientWidth}px`;
-        ref.current.parentNode.style.height = `${ref.current.clientHeight}px`;
-
-        setOriginalSize({
-            width: ref.current.clientWidth,
-            height: ref.current.clientHeight
-        });
+        const image = new Image();
+        image.onload = () => {
+            setOriginalSize({
+                width: image.naturalWidth,
+                height: image.naturalHeight
+            });
+        }
+        image.src = src;
+        ref.current.style.background = `url('${src}') center center / 100% 100% no-repeat`;
 
         if (svg) {
             svg.node.remove();
         }
         setSvg(SVG().addTo(ref.current).size("100%", "100%"));
-    }, [ref]);
+    }, [ref, src]);
 
     useEffect(() => {
         if (originalSize && props.scale) {
@@ -356,18 +358,17 @@ export function useDraw(ref, props = {
 }
 
 export default function DrawZone({
+    src,
     elements,
     onChange,
     children,
     disabled,
-    style,
     mode = "draw",
-    scale,
-    renderBackground
+    scale
 }) {
     const svgRef = useRef(null);
     const bgRef = useRef(null);
-    const {svg, draw} = useDraw(svgRef, {onChange, disabled, mode, scale});
+    const {svg, draw} = useDraw(svgRef, src, {onChange, disabled, mode, scale});
 
     useLayoutEffect(() => {
         if (svg) {
@@ -390,9 +391,15 @@ export default function DrawZone({
     }, [svg, elements]);
 
     return (
-        <div style={{overflow: "hidden", backgroundColor: "#eee", ...style}}>
+        <div 
+            style={{
+                width: "100%", 
+                height: "100%", 
+                overflow: "hidden", 
+                backgroundColor: "#eee"
+            }}
+        >
             <div ref={svgRef}>
-                {renderBackground && renderBackground()}
                 {children}
             </div>
         </div>
