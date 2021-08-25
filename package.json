@@ -1,6 +1,6 @@
 {
   "name": "@psycle/repsycle",
-  "version": "0.0.6",
+  "version": "0.0.7-beta.1",
   "description": "Psycle Research front-end toolkit",
   "author": "Psycle Research",
   "keywords": [
@@ -10,12 +10,11 @@
   "license": "MIT",
   "homepage": "https://github.com/PsycleResearch/repsycle-front#readme",
   "repository": "psycleresearch/repsycle-front",
-  "source": "./src/index.js",
   "main": "./dist/repsycle.min.js",
   "scripts": {
     "install-peers": "install-peers",
-    "dev": "esbuild src/index.js --watch --format=esm --bundle --minify --sourcemap --outfile=dist/repsycle.min.js --external:react --external:react-dom --external:react-router --external:react-router-dom",
-    "build": "esbuild src/index.js --format=esm --bundle --minify --sourcemap --outfile=dist/repsycle.min.js --external:react --external:react-dom --external:react-router --external:react-router-dom",
+    "dev": "webpack --mode=development",
+    "build": "webpack --mode=production",
     "release": "yarn build && yarn publish",
     "clean": "rm -rf build/",
     "storybook": "start-storybook -p 6006",
@@ -35,12 +34,15 @@
   },
   "devDependencies": {
     "@babel/core": "^7.14.0",
+    "@babel/preset-env": "^7.15.0",
+    "@babel/preset-react": "^7.14.5",
     "@storybook/addon-actions": "^6.2.9",
     "@storybook/addon-essentials": "^6.2.9",
     "@storybook/addon-links": "^6.2.9",
     "@storybook/react": "^6.2.9",
     "babel-loader": "^8.2.2",
-    "esbuild": "^0.11.19",
-    "install-peers-cli": "^2.2.0"
+    "install-peers-cli": "^2.2.0",
+    "webpack": "^5.51.1",
+    "webpack-cli": "^4.8.0"
   }
 }
