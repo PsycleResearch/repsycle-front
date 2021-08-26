@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import DrawZone from '.';
 
 export default {
-    title: 'Components/Draw/Zone',
+    title: 'Components/DrawZone',
     component: DrawZone,
 };
 

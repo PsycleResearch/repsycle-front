@@ -1,43 +1,49 @@
 import React, {useState, useEffect, useLayoutEffect, useRef, useReducer} from 'react';
 import PropTypes from 'prop-types';
-import classnames from 'classnames';
-import { SVG } from '@svgdotjs/svg.js';
+import { SVG, Rect } from '@svgdotjs/svg.js';
 import '@svgdotjs/svg.draggable.js';
 import interact from 'interactjs';
-import { uuid4 } from '../../helpers.js';
+import { uuid4 } from '../helpers';
 
-export function useDraw(ref, src, props = {
-    onChange,
-    disabled,
-    mode,
-    scale
+interface Point {
+    x: number;
+    y: number;
+}
+export function useDraw(ref: any, src: string, props: {
+    onChange: Function;
+    disabled: boolean;
+    mode: string;
+    scale: number;
 }) {
     const [svg, setSvg] = useState(null);
     const [originalSize, setOriginalSize] = useState(null);
-    let startPosition;
-    let overlayRect;
-    let dragging;
+    let startPosition: Point | null;
+    let overlayRect: Rect | undefined;
+    let dragging: boolean;
 
-    function getRelativeCoordinates(points) {
+    function getRelativeCoordinates(points: Point[]): Point[] {
+        //@ts-ignore
         const svgRect = svg.node.getBoundingClientRect();
 
         return points.map(({x, y}) => ({
-            x: parseFloat(x) * svgRect.width,
-            y: parseFloat(y) * svgRect.height
+            x: x * svgRect.width,
+            y: y * svgRect.height
         }));
     }
 
-    function getAbsoluteCoordinates(points) {
+    function getAbsoluteCoordinates(points: Point[]) {
+        //@ts-ignore
         const svgRect = svg.node.getBoundingClientRect();
 
         return points.map(({x, y}) => ({
-            x: parseFloat(x) / svgRect.width,
-            y: parseFloat(y) / svgRect.height
+            x: x / svgRect.width,
+            y: y / svgRect.height
         }));
     }
 
     function onChange() {
         if (svg && props.onChange) {
+            //@ts-ignore
             props.onChange(svg.children().map(elt => {
                 const box = elt.bbox();
                 return {
@@ -58,14 +64,25 @@ export function useDraw(ref, src, props = {
         stroke = {color: '#fff', width: 2, opacity: 1},
         fill = {color: '#000', opacity: 0.2},
         id = null
+    }: {
+        points: Point[];
+        disabled?: boolean;
+        stroke?: object;
+        fill?: object;
+        id?: string | null;
     }) {
+        //@ts-ignore
         if (!svg || !points || !points.length == 2) {
             return;
         }
 
-        const rect = svg.rect(0, 0)
+        //@ts-ignore
+        const rect = svg.rect(0, 0);
+        //@ts-ignore
         rect.move(`${points[0].x * 100}%`, `${points[0].y * 100}%`);
+        //@ts-ignore
         rect.width(`${Math.abs(points[1].x - points[0].x) * 100}%`);
+        //@ts-ignore
         rect.height(`${Math.abs(points[1].y - points[0].y) * 100}%`);
         rect.fill(fill);
         rect.stroke(stroke);
@@ -74,7 +91,9 @@ export function useDraw(ref, src, props = {
         // Custom events.
         rect.on('select', () => {
             // Deselect all 
+            //@ts-ignore
             svg.each(function() {
+                //@ts-ignore
                 this.fire('deselect');
             });
             rect.stroke({color: '#02A9C7'});
@@ -92,10 +111,10 @@ export function useDraw(ref, src, props = {
         if (!disabled) {
             rect.css('cursor', 'move');
 
-            rect.on('click', (e) => {
+            rect.on('click', (e: any) => {
                 rect.fire('select');
             });
-            rect.on('mousedown', (e) => {
+            rect.on('mousedown', (e: any) => {
                 e.stopPropagation();
             })
 
@@ -104,6 +123,7 @@ export function useDraw(ref, src, props = {
                     edges: { left: true, right: true, bottom: true, top: true },
                     listeners: {
                         move (event) {
+                            //@ts-ignore
                             const svgRect = svg.node.getBoundingClientRect();
 
                             event.target.instance.width(`${(event.rect.width / svgRect.width)*100}%`);
@@ -133,6 +153,7 @@ export function useDraw(ref, src, props = {
                             event.target.instance.fire('select');
                         },
                         move (event) {
+                            //@ts-ignore
                             const svgRect = svg.node.getBoundingClientRect();
 
                             const x = (parseFloat(event.target.instance.x()) / 100) * svgRect.width;
@@ -165,8 +186,9 @@ export function useDraw(ref, src, props = {
         return rect;
     }
 
-    function onMouseDown(e) {
+    function onMouseDown(e: any) {
         if (props.mode === "draw") {
+            //@ts-ignore
             const svgRect = svg.node.getBoundingClientRect();
 
             startPosition = {
@@ -175,9 +197,11 @@ export function useDraw(ref, src, props = {
             };
 
             if (!overlayRect) {
+                //@ts-ignore
                 overlayRect = svg.rect(0, 0)
                     .fill({opacity: 0.2}).stroke({color: '#000', width: 2, opacity: .5});
             }
+            //@ts-ignore
             overlayRect.move(startPosition.x, startPosition.y);
         } else if (props.mode === "move") {
             startPosition = {
@@ -185,23 +209,31 @@ export function useDraw(ref, src, props = {
                 y: e.clientY
             };
             dragging = true;
+            //@ts-ignore
             svg.css({
                 cursor: 'grabbing',
             });
         }
     }
 
-    function onMouseMove(e) {
+    function onMouseMove(e: any) {
+        if (!startPosition) {
+            return;
+        }
+
         if (props.mode === "draw") {
+            //@ts-ignore
             if (!svg.node.contains(e.target)) {
+                //@ts-ignore
                 overlayRect = undefined;
                 return;                
             }
 
             if (overlayRect) {
+                //@ts-ignore
                 const svgRect = svg.node.getBoundingClientRect();
 
-                const currentPosition = {
+                const currentPosition: Point = {
                     x: e.clientX - svgRect.left,
                     y: e.clientY - svgRect.top
                 };
@@ -214,6 +246,7 @@ export function useDraw(ref, src, props = {
                 overlayRect.height(Math.abs(currentPosition.y - startPosition.y));
             }
         } else if (props.mode === "move" && dragging) {
+            //@ts-ignore
             if (!svg.node.contains(e.target)) {
                 dragging = false;
                 return;
@@ -225,11 +258,12 @@ export function useDraw(ref, src, props = {
             };
             const translationX = currentPosition.x - startPosition.x;
             const translationY = currentPosition.y - startPosition.y;
+            //@ts-ignore
             svg.node.parentNode.style.transform = `translate(${translationX}px, ${translationY}px)`;
         }
     }
 
-    function onMouseUp(e) {
+    function onMouseUp(e: any) {
         if (props.mode === "draw") {
             if (!startPosition) {
                 return;
@@ -241,10 +275,12 @@ export function useDraw(ref, src, props = {
             }
 
             // Prevent drawing new rect on rect dragend...
+            //@ts-ignore
             if (e.target.parentNode === svg.node) {
                 return;
             }
 
+            //@ts-ignore
             const svgRect = svg.node.getBoundingClientRect();
             const currentPosition = {
                 x: e.clientX - svgRect.left,
@@ -269,12 +305,18 @@ export function useDraw(ref, src, props = {
 
             onChange();
         } else if (props.mode === "move" && dragging) {
+            //@ts-ignore
             const parentRect = svg.node.parentNode.parentNode.getBoundingClientRect();
+            //@ts-ignore
             const svgRect = svg.node.parentNode.getBoundingClientRect();
 
+            //@ts-ignore
             svg.node.parentNode.style.left = `${svgRect.left - parentRect.left}px`;
+            //@ts-ignore
             svg.node.parentNode.style.top = `${svgRect.top - parentRect.top}px`;
+            //@ts-ignore
             svg.node.parentNode.style.transform = null;
+            //@ts-ignore
             svg.css({cursor: 'grab'});
 
             dragging = false;
@@ -283,10 +325,13 @@ export function useDraw(ref, src, props = {
         startPosition = null;
     }
 
-    function onClick(e) {
+    function onClick(e: any) {
         // If click on main svg, and not an element, deselect everything.
+        //@ts-ignore
         if (e.target === svg.node) {
+            //@ts-ignore
             svg.each(function() {
+                //@ts-ignore
                 this.fire('deselect');
             });
         }
@@ -300,7 +345,9 @@ export function useDraw(ref, src, props = {
         const image = new Image();
         image.onload = () => {
             setOriginalSize({
+                //@ts-ignore
                 width: image.naturalWidth,
+                //@ts-ignore
                 height: image.naturalHeight
             });
         }
@@ -308,14 +355,18 @@ export function useDraw(ref, src, props = {
         ref.current.style.background = `url('${src}') center center / 100% 100% no-repeat`;
 
         if (svg) {
+            //@ts-ignore
             svg.node.remove();
         }
+        //@ts-ignore
         setSvg(SVG().addTo(ref.current).size("100%", "100%"));
     }, [ref, src]);
 
     useEffect(() => {
         if (originalSize && props.scale) {
+            //@ts-ignore
             ref.current.style.width = `${originalSize.width * props.scale}px`;
+            //@ts-ignore
             ref.current.style.height = `${originalSize.height * props.scale}px`;
         }
     }, [ref, originalSize, props.scale]);
@@ -325,27 +376,36 @@ export function useDraw(ref, src, props = {
             return;
         }
 
+        //@ts-ignore
         svg.css({
             cursor: !props.disabled && (props.mode === 'draw' ? 'crosshair' : 'grab'),
             position: 'absolute',
             top: '0',
             left: '0'
         });
+        //@ts-ignore
         svg.node.parentNode.style.position = "relative";
+        //@ts-ignore
         svg.node.parentNode.style.userSelect = "none";
 
         if (props.disabled) {
             return;
         }
 
+        //@ts-ignore
         svg.on('mousedown', onMouseDown);
+        //@ts-ignore
         svg.on('mouseup', onMouseUp);
+        //@ts-ignore
         svg.on('click', onClick);
         window.addEventListener('mousemove', onMouseMove);
 
         return () => {
+            //@ts-ignore
             svg.off('mousedown', onMouseDown);
+            //@ts-ignore
             svg.off('mouseup', onMouseUp);
+            //@ts-ignore
             svg.off('click', onClick);
             window.removeEventListener('mousemove', onMouseMove);
         }
@@ -353,8 +413,18 @@ export function useDraw(ref, src, props = {
 
     return {
         svg,
-        draw: (props) => drawRect(props)
+        draw: (props: any) => drawRect(props)
     }
+}
+
+export interface DrawZoneProps {
+    children: React.ReactNode;
+    src: string;
+    elements: object[];
+    onChange: () => void;
+    disabled: boolean;
+    mode: string;
+    scale: number;
 }
 
 export default function DrawZone({
@@ -365,14 +435,16 @@ export default function DrawZone({
     disabled,
     mode = "draw",
     scale
-}) {
+}: DrawZoneProps): JSX.Element {
     const svgRef = useRef(null);
     const bgRef = useRef(null);
     const {svg, draw} = useDraw(svgRef, src, {onChange, disabled, mode, scale});
 
     useLayoutEffect(() => {
         if (svg) {
+            //@ts-ignore
             if (elements.length !== svg.children().length) {
+                //@ts-ignore
                 svg.clear();
                 elements.forEach(element => draw(element));
                 return;
@@ -404,12 +476,4 @@ export default function DrawZone({
             </div>
         </div>
     );
-};
-
-DrawZone.displayName = 'DrawZone';
-
-DrawZone.propTypes = {
-    src: PropTypes.string,
-    elements: PropTypes.array,
-    onSubmit: PropTypes.func
 };

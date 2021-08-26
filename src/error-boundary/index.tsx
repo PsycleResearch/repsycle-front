@@ -1,25 +1,25 @@
 import React, { Component } from 'react';
-import PropTypes from 'prop-types';
 
 import { truncate } from '../helpers';
 
-export default class ErrorBoundary extends Component {
-    constructor(props) {
+export default class ErrorBoundary extends Component<{}, { [key: string]: any }> {
+    constructor(props: any) {
         super(props);
 
         this.state = {
+            title: null,
             hasError: false,
             error: null,
             more: false,
         };
     }
 
-    static getDerivedStateFromError(error) {
+    static getDerivedStateFromError(error: any) {
         // Update state so the next render will show the fallback UI.
         return { hasError: true };
     }
 
-    componentDidCatch(error) {
+    componentDidCatch(error: any) {
         this.setState({ error });
     }
 
@@ -34,7 +34,7 @@ export default class ErrorBoundary extends Component {
                             {title}
                         </h5>
                         <span className="d-block mb-4">
-                            {translate("Une erreur est survenue.")}
+                            Une erreur est survenue.
                         </span>
                         {error && (
                             <div className="text-muted text--small">
@@ -59,6 +59,3 @@ export default class ErrorBoundary extends Component {
         return this.props.children;
     }
 }
-
-ErrorBoundary.propTypes = {
-};

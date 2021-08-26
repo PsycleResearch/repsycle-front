@@ -10,19 +10,24 @@ export function uuid4() {
     });
 }
 
-export function hasValue(e) {
+export function hasValue(e: any): boolean {
     return typeof e !== 'undefined' && e !== null;
 }
 
-export function getValueFromPath(object, keyPath) {
+export function getValueFromPath(object: object, keyPath: string): any {
     try {
-        return keyPath.split('.').reduce((o, i) => o[i], object);
+        //@ts-ignore
+        return keyPath.split('.').reduce((o: object, i: string) => o[i], object);
     } catch (error) {
         return undefined;
     }
 }
 
-export function truncate(str, options = {length: null, ending: null}) {
+interface TruncateOptions {
+    length?: number | null;
+    ending?: string | null;
+}
+export function truncate(str: string, options: TruncateOptions = {length: null, ending: null}): string {
     let length = options.length || 10;
     let ending = options.ending || "...";
 
@@ -33,23 +38,27 @@ export function truncate(str, options = {length: null, ending: null}) {
     }
 }
 
-export function makeState(initialState, reducer, actions) {
+export function makeState(initialState: object, reducer: () => any, actions: string[]): object {
     return {
         initialState,
         context: React.createContext(initialState),
         reducer,
         actions: actions.reduce((acc, type) => ({
             ...acc,
-            [type]: (d, payload) => d({type, payload})
+            [type]: (d: (obj: object) => any, payload?: object) => d({type, payload})
         }), [])
     }
 }
 
-export function formatDate(date, format) {
+export function formatDate(date: Date, format: string): string {
     return formatDateFns(parseJSON(date), format);
 }
 
-export function formatBase64(base64, options = { removeHeader: false, contentType: "image/png" }) {
+interface FormatBase64Options {
+    removeHeader?: boolean;
+    contentType?: string;
+}
+export function formatBase64(base64: string, options: FormatBase64Options = { removeHeader: false, contentType: "image/png" }): string {
     if (/^(data:.*;base64,)/.test(base64)) {
         if (options.removeHeader) {
             return base64.split(',')[1];
