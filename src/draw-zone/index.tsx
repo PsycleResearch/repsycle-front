@@ -14,6 +14,7 @@ export function useDraw(ref: any, src: string, props: {
     disabled: boolean;
     mode: string;
     scale: number;
+    drawOnMouseDown?: boolean;
 }) {
     const [svg, setSvg] = useState(null);
     const [originalSize, setOriginalSize] = useState(null);
@@ -289,7 +290,12 @@ export function useDraw(ref: any, src: string, props: {
 
             // Prevent adding very small rects (mis-clicks).
             if (Math.abs(currentPosition.x - startPosition.x) <= 2) {
-                return;
+                if (props.drawOnMouseDown) {
+                    currentPosition.x = startPosition.x + 50;
+                    currentPosition.y = startPosition.y + 50;
+                } else {
+                    return;
+                }
             }
 
             const rect = drawRect({points: [
@@ -425,6 +431,7 @@ export interface DrawZoneProps {
     disabled: boolean;
     mode: string;
     scale: number;
+    drawOnMouseDown?: boolean;
 }
 
 export default function DrawZone({
@@ -434,11 +441,12 @@ export default function DrawZone({
     children,
     disabled,
     mode = "draw",
-    scale
+    scale,
+    drawOnMouseDown
 }: DrawZoneProps): JSX.Element {
     const svgRef = useRef(null);
     const bgRef = useRef(null);
-    const {svg, draw} = useDraw(svgRef, src, {onChange, disabled, mode, scale});
+    const {svg, draw} = useDraw(svgRef, src, {onChange, disabled, mode, scale, drawOnMouseDown});
 
     useLayoutEffect(() => {
         if (svg) {

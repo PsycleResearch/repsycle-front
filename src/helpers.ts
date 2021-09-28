@@ -38,15 +38,11 @@ export function truncate(str: string, options: TruncateOptions = {length: null, 
     }
 }
 
-export function makeState(initialState: object, reducer: () => any, actions: string[]): object {
+export function makeState(initialState: object, reducer: (state: object, action: any) => object, actions: string[]): object {
     return {
         initialState,
         context: React.createContext(initialState),
-        reducer,
-        actions: actions.reduce((acc, type) => ({
-            ...acc,
-            [type]: (d: (obj: object) => any, payload?: object) => d({type, payload})
-        }), [])
+        reducer
     }
 }
 
