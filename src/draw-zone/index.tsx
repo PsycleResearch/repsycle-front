@@ -188,7 +188,7 @@ export function useDraw(ref: any, src: string, props: {
     }
 
     function onMouseDown(e: any) {
-        if (props.mode === "draw") {
+        if (props.mode === "draw" && !props.disabled) {
             //@ts-ignore
             const svgRect = svg.node.getBoundingClientRect();
 
@@ -222,7 +222,7 @@ export function useDraw(ref: any, src: string, props: {
             return;
         }
 
-        if (props.mode === "draw") {
+        if (props.mode === "draw" && !props.disabled) {
             //@ts-ignore
             if (!svg.node.contains(e.target)) {
                 //@ts-ignore
@@ -265,7 +265,7 @@ export function useDraw(ref: any, src: string, props: {
     }
 
     function onMouseUp(e: any) {
-        if (props.mode === "draw") {
+        if (props.mode === "draw" && !props.disabled) {
             if (!startPosition) {
                 return;
             }
@@ -384,7 +384,7 @@ export function useDraw(ref: any, src: string, props: {
 
         //@ts-ignore
         svg.css({
-            cursor: !props.disabled && (props.mode === 'draw' ? 'crosshair' : 'grab'),
+            cursor: props.mode === 'draw' && !props.disabled ? 'crosshair' : 'grab',
             position: 'absolute',
             top: '0',
             left: '0'
@@ -393,10 +393,6 @@ export function useDraw(ref: any, src: string, props: {
         svg.node.parentNode.style.position = "relative";
         //@ts-ignore
         svg.node.parentNode.style.userSelect = "none";
-
-        if (props.disabled) {
-            return;
-        }
 
         //@ts-ignore
         svg.on('mousedown', onMouseDown);
