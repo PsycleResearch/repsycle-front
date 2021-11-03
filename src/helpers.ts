@@ -14,10 +14,9 @@ export function hasValue(e: any): boolean {
     return typeof e !== 'undefined' && e !== null;
 }
 
-export function getValueFromPath(object: object, keyPath: string): any {
+export function getValueFromPath(object: any, keyPath: string): any {
     try {
-        //@ts-ignore
-        return keyPath.split('.').reduce((o: object, i: string) => o[i], object);
+        return keyPath.split('.').reduce((o: any, i: string) => o[i], object);
     } catch (error) {
         return undefined;
     }
