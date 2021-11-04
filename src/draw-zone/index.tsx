@@ -3,6 +3,10 @@ import { SVG, Rect, Svg } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.draggable.js'
 import interact from 'interactjs'
 import { uuid4 } from '../helpers'
+import { useMousePosition } from '../hooks'
+import { isTouchDevice } from '../utils'
+
+export type DrawZoneMode = 'draw' | 'move'
 
 interface Size {
     width: number
@@ -18,15 +22,13 @@ export interface ChangedElement {
     points: Point[]
 }
 
-type ExtendedCSSStyleName = CSSStyleName | 'touch-action'
-
 export function useDraw(
     ref: React.RefObject<HTMLElement>,
     src: string,
     props: {
         onChange: (elements: Array<ChangedElement>) => void
         disabled: boolean
-        mode: DrawZoneProps['mode']
+        mode: DrawZoneMode
         scale: number
         drawOnMouseDown?: boolean
     },
@@ -62,17 +64,20 @@ export function useDraw(
     function onChange() {
         if (svg && props.onChange) {
             props.onChange(
-                svg.children().map((elt) => {
-                    const box = elt.bbox()
-                    return {
-                        points: getAbsoluteCoordinates([
-                            { x: box.x, y: box.y },
-                            { x: box.x2, y: box.y2 },
-                        ]),
-                        selected: elt.data('selected') as boolean,
-                        id: elt.data('id'),
-                    }
-                }),
+                svg
+                    .children()
+                    .filter((e) => !e.attr('data-marker'))
+                    .map((elt) => {
+                        const box = elt.bbox()
+                        return {
+                            points: getAbsoluteCoordinates([
+                                { x: box.x, y: box.y },
+                                { x: box.x2, y: box.y2 },
+                            ]),
+                            selected: elt.data('selected') as boolean,
+                            id: elt.data('id'),
+                        }
+                    }),
             )
         }
     }
@@ -270,9 +275,7 @@ export function useDraw(
     }
 
     function onMouseMove(e: any) {
-        if (!svg || !startPosition) {
-            return
-        }
+        if (!svg || !startPosition) return
 
         if (props.mode === 'draw' && !props.disabled) {
             if (!svg.node.contains(e.target)) {
@@ -439,7 +442,8 @@ export function useDraw(
             svg.node.remove()
         }
 
-        setSvg(SVG().addTo(ref.current).size('100%', '100%'))
+        const newSvg = SVG().addTo(ref.current).size('100%', '100%')
+        setSvg(newSvg)
     }, [ref, src])
 
     useEffect(() => {
@@ -501,9 +505,10 @@ export interface DrawZoneProps {
     elements: object[]
     onChange: (elements: ChangedElement[]) => void
     disabled?: boolean
-    mode: 'draw' | 'move'
+    mode: DrawZoneMode
     scale: number
     drawOnMouseDown?: boolean
+    showMarker?: boolean
 }
 
 export default function DrawZone({
@@ -511,23 +516,54 @@ export default function DrawZone({
     elements,
     onChange,
     children,
-    disabled,
+    disabled = false,
     mode = 'draw',
     scale,
     drawOnMouseDown,
+    showMarker = false,
 }: DrawZoneProps): JSX.Element {
     const svgRef = useRef<HTMLDivElement>(null)
     const { svg, draw } = useDraw(svgRef, src, {
         onChange,
-        disabled: false,
+        disabled,
         mode,
         scale,
         drawOnMouseDown,
     })
+    const { clientX, clientY } = useMousePosition()
+    const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
+
+    useEffect(() => {
+        if (isTouchDevice) return
+
+        const handleMouseEnter = () => setCanMarkerBeVisible(true)
+        const handleMouseLeave = () => setCanMarkerBeVisible(false)
+
+        if (svgRef.current) {
+            svgRef.current.addEventListener('mouseenter', handleMouseEnter)
+            svgRef.current.addEventListener('mouseleave', handleMouseLeave)
+        }
+
+        return () => {
+            if (svgRef.current) {
+                svgRef.current.removeEventListener(
+                    'mouseenter',
+                    handleMouseEnter,
+                )
+                svgRef.current.removeEventListener(
+                    'mouseleave',
+                    handleMouseLeave,
+                )
+            }
+        }
+    }, [])
 
     useLayoutEffect(() => {
         if (svg) {
-            if (elements.length !== svg.children().length) {
+            if (
+                elements.length !==
+                svg.children().filter((c) => !c.attr('data-marker')).length
+            ) {
                 svg.clear()
                 elements.forEach((element) => draw(element))
                 return
@@ -552,8 +588,15 @@ export default function DrawZone({
                 height: '100%',
                 overflow: 'hidden',
                 backgroundColor: '#eee',
+                position: 'relative',
             }}
         >
+            {canMarkerBeVisible && showMarker && (
+                <>
+                    <div style={{ position: 'absolute', top: '0', bottom: '0', left: clientX - (svgRef.current?.getBoundingClientRect().left || 0) , width: '2px', backgroundColor: 'black', zIndex: 20, pointerEvents: 'none' }} />
+                    <div style={{ position: 'absolute', left: '0', right: '0', top: clientY - (svgRef.current?.getBoundingClientRect().top || 0), height: '2px', backgroundColor: 'black', zIndex: 20, pointerEvents: 'none' }} />
+                </>
+            )}
             <div ref={svgRef}>{children}</div>
         </div>
     )

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 
-import DrawZone, { ChangedElement } from '.'
+import DrawZone, { ChangedElement, DrawZoneMode } from '.'
 
 export default {
     title: 'Components/DrawZone',
@@ -9,7 +9,7 @@ export default {
 
 export function Base({}) {
     const [scale, setScale] = useState(1)
-    const [mode, setMode] = useState<'draw' | 'move'>('draw')
+    const [mode, setMode] = useState<DrawZoneMode>('draw')
     const [elements, setElements] = useState<
         Array<Pick<ChangedElement, 'points'>>
     >([
@@ -20,6 +20,7 @@ export function Base({}) {
             ],
         },
     ])
+    const [showMarker, setShowMarker] = useState(false)
 
     return (
         <div>
@@ -37,6 +38,9 @@ export function Base({}) {
                 >
                     {mode === 'draw' ? 'Bouger' : 'Dessiner'}
                 </button>
+                <button onClick={() => setShowMarker((s) => !s)}>
+                    {showMarker ? 'Cacher' : 'Afficher'} marqueur
+                </button>
             </div>
             <DrawZone
                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/250px-Image_created_with_a_mobile_phone.png"
@@ -44,6 +48,7 @@ export function Base({}) {
                 onChange={(elements: ChangedElement[]) => setElements(elements)}
                 scale={scale}
                 mode={mode}
+                showMarker={showMarker}
             >
                 {elements.map((element, index) => (
                     <div
