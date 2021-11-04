@@ -10,6 +10,7 @@ export default {
 export function Base({}) {
     const [scale, setScale] = useState(1)
     const [mode, setMode] = useState<DrawZoneMode>('draw')
+    const [move, setMove] = useState(false)
     const [elements, setElements] = useState<
         Array<Pick<ChangedElement, 'points'>>
     >([
@@ -33,11 +34,12 @@ export function Base({}) {
                 </button>
                 <button
                     onClick={() =>
-                        setMode((old) => (old === 'draw' ? 'move' : 'draw'))
+                        setMode((old) => (old === 'draw' ? 'path' : 'draw'))
                     }
                 >
-                    {mode === 'draw' ? 'Bouger' : 'Dessiner'}
+                    {mode === 'draw' ? 'Tracer' : 'Dessiner'}
                 </button>
+                <button onClick={() => setMove(m => !m)}>{move ? 'Déplacer actif' : 'Déplacer inactif'}</button>
                 <button onClick={() => setShowMarker((s) => !s)}>
                     {showMarker ? 'Cacher' : 'Afficher'} marqueur
                 </button>
@@ -47,7 +49,7 @@ export function Base({}) {
                 elements={elements}
                 onChange={(elements: ChangedElement[]) => setElements(elements)}
                 scale={scale}
-                mode={mode}
+                mode={move ? 'move' : mode}
                 showMarker={showMarker}
             >
                 {elements.map((element, index) => (

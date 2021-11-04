@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
-import { SVG, Rect, Svg } from '@svgdotjs/svg.js'
+import { SVG, Rect, Svg, Polygon, Polyline, ArrayXY } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.draggable.js'
 import interact from 'interactjs'
 import { uuid4 } from '../helpers'
 import { useMousePosition } from '../hooks'
 import { isTouchDevice } from '../utils'
 
-export type DrawZoneMode = 'draw' | 'move'
+export type DrawZoneMode = 'draw' | 'path' | 'move'
 
 interface Size {
     width: number
@@ -37,6 +37,8 @@ export function useDraw(
     const [originalSize, setOriginalSize] = useState<Size>()
     let startPosition: Point | null
     let overlayRect: Rect | undefined
+    let poly: Polyline | undefined
+    let tmpPoly: Polyline | undefined
     let dragging: boolean
 
     function getRelativeCoordinates(points: Point[]): Point[] {
@@ -68,6 +70,25 @@ export function useDraw(
                     .children()
                     .filter((e) => !e.attr('data-marker'))
                     .map((elt) => {
+                        console.log(
+                            'instance',
+                            elt instanceof Rect,
+                            elt instanceof Polyline,
+                        )
+                        if (elt instanceof Polyline) {
+                            const polyline = elt as Polyline
+
+                            return {
+                                points: getAbsoluteCoordinates(
+                                    polyline
+                                        .plot()
+                                        .map((p) => ({ x: p[0], y: p[1] })),
+                                ),
+                                selected: polyline.data('selected') as boolean,
+                                id: polyline.data('id'),
+                            }
+                        }
+
                         const box = elt.bbox()
                         return {
                             points: getAbsoluteCoordinates([
@@ -243,6 +264,73 @@ export function useDraw(
         return rect
     }
 
+    function drawPoly({
+        points,
+        disabled = props.disabled ? true : false,
+        stroke = { color: '#fff', width: 2, opacity: 1 },
+        fill = { color: '#000', opacity: 0.2 },
+        id = null,
+    }: {
+        points: Point[]
+        disabled?: boolean
+        stroke?: object
+        fill?: object
+        id?: string | null
+    }) {
+        if (!svg || !points || points.length < 2) {
+            return
+        }
+
+        const poly = svg.polygon(
+            /*gon*/ points.map((point) => [point.x, point.y]),
+            //points.map((p) => `${p.x * 100}%,${p.y * 100}%`).join(' '),
+        )
+
+        poly.move(points[0].x * 100, points[0].y * 100)
+
+        poly.fill(fill)
+        poly.stroke(stroke)
+        poly.css('touch-action', 'none') // silence interactjs warning.
+
+        poly.width(100)
+        poly.height(100)
+
+        // Custom events.
+        poly.on('select', () => {
+            // Deselect all
+
+            svg.each(function (this: Svg) {
+                this.fire('deselect')
+            })
+            poly.stroke({ color: '#02A9C7' })
+            poly.data('selected', true)
+
+            onChange()
+        })
+        poly.on('deselect', () => {
+            poly.stroke(stroke)
+            poly.data('selected', false)
+
+            onChange()
+        })
+
+        if (!disabled) {
+            poly.css('cursor', 'move')
+
+            poly.on('click', (e: any) => {
+                poly.fire('select')
+            })
+            poly.on('mousedown', (e: any) => {
+                e.stopPropagation()
+            })
+        }
+
+        poly.data('disabled', disabled)
+        poly.data('id', id || uuid4())
+
+        return poly
+    }
+
     function onMouseDown(e: any) {
         if (!svg) return
         if (props.mode === 'draw' && !props.disabled) {
@@ -324,6 +412,32 @@ export function useDraw(
                     'transform',
                     `translate(${translationX}px, ${translationY}px)`,
                 )
+        } else if (props.mode === 'path') {
+            const svgRect = svg.node.getBoundingClientRect()
+
+            const currentPosition: Point = {
+                x: e.clientX - svgRect.left,
+                y: e.clientY - svgRect.top,
+            }
+
+            if (tmpPoly) {
+                tmpPoly.remove()
+                tmpPoly = undefined
+            }
+
+            const prev = poly
+                ? [...poly.plot()]
+                : [[startPosition.x, startPosition.y] as ArrayXY]
+
+            tmpPoly = svg
+                .polyline([...prev, [currentPosition.x, currentPosition.y]])
+                .fill('none')
+                .stroke({
+                    color: '#f06',
+                    width: 4,
+                    linecap: 'round',
+                    linejoin: 'round',
+                })
         }
     }
 
@@ -407,14 +521,80 @@ export function useDraw(
             }
         }
 
-        startPosition = null
+        if (props.mode !== 'path') startPosition = null
     }
 
     function onClick(e: any) {
         if (!svg) return
 
-        // If click on main svg, and not an element, deselect everything.
+        if (props.mode === 'path') {
+            const svgRect = svg.node.getBoundingClientRect()
 
+            console.log('click', tmpPoly)
+
+            if (!tmpPoly) {
+                startPosition = {
+                    x: e.clientX - svgRect.left,
+                    y: e.clientY - svgRect.top,
+                }
+            } else if (startPosition && tmpPoly) {
+                const currentPosition = {
+                    x: e.clientX - svgRect.left,
+                    y: e.clientY - svgRect.top,
+                }
+
+                const prev = poly
+                    ? [...poly.plot()]
+                    : [[startPosition.x, startPosition.y] as ArrayXY]
+
+                
+                if (tmpPoly) {
+                    tmpPoly.remove()
+                    tmpPoly = undefined
+                }
+
+                if (poly) {
+                    poly.remove()
+                    poly = undefined
+                }
+
+                const start = prev[0]
+                if (
+                    prev.length > 2 &&
+                    Math.abs(currentPosition.x - start[0]) <= 10 &&
+                    Math.abs(currentPosition.y - start[1]) <= 10
+                ) {
+                    startPosition = null
+                    const svgRect = svg.node.getBoundingClientRect()
+
+                    drawPoly({
+                        points: prev.map(([x, y]) => ({
+                            x: x / svgRect.width,
+                            y: y / svgRect.height,
+                        })),
+                    })
+
+                    onChange()
+                } else {
+                    poly = svg
+                        .polyline([
+                            ...prev,
+                            [currentPosition.x, currentPosition.y],
+                        ])
+                        .fill('none')
+                        .stroke({
+                            color: '#f06',
+                            width: 4,
+                            linecap: 'round',
+                            linejoin: 'round',
+                        })
+
+                    startPosition = currentPosition
+                }
+            }
+        }
+
+        // If click on main svg, and not an element, deselect everything.
         if (e.target === svg.node) {
             svg.each(function (this: Svg) {
                 this.fire('deselect')
@@ -442,7 +622,7 @@ export function useDraw(
             svg.node.remove()
         }
 
-        const newSvg = SVG().addTo(ref.current).size('100%', '100%')
+        const newSvg = SVG().addTo(ref.current).size('100%', '100%')//.viewbox(0, 0, 100, 100)
         setSvg(newSvg)
     }, [ref, src])
 
@@ -495,14 +675,17 @@ export function useDraw(
 
     return {
         svg,
-        draw: (props: any) => drawRect(props),
+        draw: ({ points }: { points: Array<Point> }) => {
+            if (points.length === 2) drawRect({ points })
+            else drawPoly({ points })
+        },
     }
 }
 
 export interface DrawZoneProps {
     children: React.ReactNode
     src: string
-    elements: object[]
+    elements: Pick<ChangedElement, 'points'>[]
     onChange: (elements: ChangedElement[]) => void
     disabled?: boolean
     mode: DrawZoneMode
@@ -593,8 +776,36 @@ export default function DrawZone({
         >
             {canMarkerBeVisible && showMarker && (
                 <>
-                    <div style={{ position: 'absolute', top: '0', bottom: '0', left: clientX - (svgRef.current?.getBoundingClientRect().left || 0) , width: '2px', backgroundColor: 'black', zIndex: 20, pointerEvents: 'none' }} />
-                    <div style={{ position: 'absolute', left: '0', right: '0', top: clientY - (svgRef.current?.getBoundingClientRect().top || 0), height: '2px', backgroundColor: 'black', zIndex: 20, pointerEvents: 'none' }} />
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: '0',
+                            bottom: '0',
+                            left:
+                                clientX -
+                                (svgRef.current?.getBoundingClientRect().left ||
+                                    0),
+                            width: '2px',
+                            backgroundColor: 'black',
+                            zIndex: 20,
+                            pointerEvents: 'none',
+                        }}
+                    />
+                    <div
+                        style={{
+                            position: 'absolute',
+                            left: '0',
+                            right: '0',
+                            top:
+                                clientY -
+                                (svgRef.current?.getBoundingClientRect().top ||
+                                    0),
+                            height: '2px',
+                            backgroundColor: 'black',
+                            zIndex: 20,
+                            pointerEvents: 'none',
+                        }}
+                    />
                 </>
             )}
             <div ref={svgRef}>{children}</div>
