@@ -70,20 +70,13 @@ export function useDraw(
                     .children()
                     .filter((e) => !e.attr('data-marker'))
                     .map((elt) => {
-                        console.log(
-                            'instance',
-                            elt instanceof Rect,
-                            elt instanceof Polyline,
-                        )
-                        if (elt instanceof Polyline) {
-                            const polyline = elt as Polyline
+                        if (elt instanceof Polygon) {
+                            const polyline = elt as Polygon
 
                             return {
-                                points: getAbsoluteCoordinates(
-                                    polyline
-                                        .plot()
-                                        .map((p) => ({ x: p[0], y: p[1] })),
-                                ),
+                                points: polyline
+                                    .plot()
+                                    .map((p) => ({ x: p[0] / 100, y: p[1] / 100 })),
                                 selected: polyline.data('selected') as boolean,
                                 id: polyline.data('id'),
                             }
@@ -91,10 +84,10 @@ export function useDraw(
 
                         const box = elt.bbox()
                         return {
-                            points: getAbsoluteCoordinates([
-                                { x: box.x, y: box.y },
-                                { x: box.x2, y: box.y2 },
-                            ]),
+                            points: [
+                                { x: box.x / 100, y: box.y / 100 },
+                                { x: box.x2 / 100, y: box.y2 / 100 },
+                            ],
                             selected: elt.data('selected') as boolean,
                             id: elt.data('id'),
                         }
@@ -282,18 +275,12 @@ export function useDraw(
         }
 
         const poly = svg.polygon(
-            /*gon*/ points.map((point) => [point.x, point.y]),
-            //points.map((p) => `${p.x * 100}%,${p.y * 100}%`).join(' '),
+            points.map((point) => [point.x * 100, point.y * 100]),
         )
-
-        poly.move(points[0].x * 100, points[0].y * 100)
 
         poly.fill(fill)
         poly.stroke(stroke)
         poly.css('touch-action', 'none') // silence interactjs warning.
-
-        poly.width(100)
-        poly.height(100)
 
         // Custom events.
         poly.on('select', () => {
@@ -547,7 +534,6 @@ export function useDraw(
                     ? [...poly.plot()]
                     : [[startPosition.x, startPosition.y] as ArrayXY]
 
-                
                 if (tmpPoly) {
                     tmpPoly.remove()
                     tmpPoly = undefined
@@ -565,12 +551,11 @@ export function useDraw(
                     Math.abs(currentPosition.y - start[1]) <= 10
                 ) {
                     startPosition = null
-                    const svgRect = svg.node.getBoundingClientRect()
 
                     drawPoly({
                         points: prev.map(([x, y]) => ({
-                            x: x / svgRect.width,
-                            y: y / svgRect.height,
+                            x: x,
+                            y: y,
                         })),
                     })
 
@@ -622,7 +607,13 @@ export function useDraw(
             svg.node.remove()
         }
 
-        const newSvg = SVG().addTo(ref.current).size('100%', '100%')//.viewbox(0, 0, 100, 100)
+        const newSvg = SVG()
+            .addTo(ref.current)
+            .size('100%', '100%')
+            .viewbox(0, 0, 100, 100)
+            .attr({
+                preserveAspectRatio: 'none',
+            })
         setSvg(newSvg)
     }, [ref, src])
 

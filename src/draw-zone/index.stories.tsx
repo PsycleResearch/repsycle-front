@@ -20,6 +20,13 @@ export function Base({}) {
                 { x: 1, y: 1 },
             ],
         },
+        {
+            points: [
+                { x: 0, y: 0 },
+                { x: 0.5, y: 0.5 },
+                { x: 0.25, y: 1 },
+            ],
+        },
     ])
     const [showMarker, setShowMarker] = useState(false)
 
@@ -39,7 +46,9 @@ export function Base({}) {
                 >
                     {mode === 'draw' ? 'Tracer' : 'Dessiner'}
                 </button>
-                <button onClick={() => setMove(m => !m)}>{move ? 'Déplacer actif' : 'Déplacer inactif'}</button>
+                <button onClick={() => setMove((m) => !m)}>
+                    {move ? 'Déplacer actif' : 'Déplacer inactif'}
+                </button>
                 <button onClick={() => setShowMarker((s) => !s)}>
                     {showMarker ? 'Cacher' : 'Afficher'} marqueur
                 </button>
@@ -63,11 +72,15 @@ export function Base({}) {
                         }}
                     >
                         <button
-                            onClick={() =>
+                            onClick={() => {
+                                console.log(
+                                    'elements',
+                                    elements.filter((_, idx) => index !== idx),
+                                )
                                 setElements(
                                     elements.filter((_, idx) => index !== idx),
                                 )
-                            }
+                            }}
                         >
                             supprimer
                         </button>
