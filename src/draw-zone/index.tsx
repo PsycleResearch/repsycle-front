@@ -310,6 +310,104 @@ export function useDraw(
             poly.on('mousedown', (e: any) => {
                 e.stopPropagation()
             })
+
+            // TODO: Adapt to polygon
+            interact(poly.node)
+                .resizable({
+                    edges: { left: true, right: true, bottom: true, top: true },
+                    listeners: {
+                        move(event) {
+                            const svgRect = svg.node.getBoundingClientRect()
+
+                            event.target.instance.width(
+                                `${(event.rect.width / svgRect.width) * 100}%`,
+                            )
+                            event.target.instance.height(
+                                `${
+                                    (event.rect.height / svgRect.height) * 100
+                                }%`,
+                            )
+
+                            // translate when resizing from top or left edges
+                            const x =
+                                (parseFloat(event.target.instance.x()) / 100) *
+                                svgRect.width
+                            const y =
+                                (parseFloat(event.target.instance.y()) / 100) *
+                                svgRect.height
+                            event.target.instance.x(
+                                `${
+                                    ((x + event.deltaRect.left) /
+                                        svgRect.width) *
+                                    100
+                                }%`,
+                            )
+                            event.target.instance.y(
+                                `${
+                                    ((y + event.deltaRect.top) /
+                                        svgRect.height) *
+                                    100
+                                }%`,
+                            )
+
+                            onChange()
+                        },
+                    },
+                    modifiers: [
+                        interact.modifiers.restrictEdges({
+                            outer: 'parent',
+                        }),
+                        interact.modifiers.restrictSize({
+                            min: { width: 20, height: 20 },
+                        }),
+                    ],
+                })
+                .draggable({
+                    listeners: {
+                        start(event) {
+                            event.target.instance.fire('select')
+                        },
+                        move(event) {
+                            const svgRect = svg.node.getBoundingClientRect()
+
+                            const x =
+                                (parseFloat(event.target.instance.x()) / 100) *
+                                svgRect.width
+                            const y =
+                                (parseFloat(event.target.instance.y()) / 100) *
+                                svgRect.height
+
+                            event.target.instance.x(
+                                `${((x + event.dx) / svgRect.width) * 100}%`,
+                            )
+                            event.target.instance.y(
+                                `${((y + event.dy) / svgRect.height) * 100}%`,
+                            )
+
+                            onChange()
+                        },
+                    },
+                    modifiers: [
+                        interact.modifiers.restrictRect({
+                            restriction: 'parent',
+                        }),
+                    ],
+                    cursorChecker: (
+                        action,
+                        interactable,
+                        element,
+                        interacting,
+                    ) => {
+                        switch (action.axis) {
+                            case 'x':
+                                return 'ew-resize'
+                            case 'y':
+                                return 'ns-resize'
+                            default:
+                                return interacting ? 'grabbing' : 'move'
+                        }
+                    },
+                })
         }
 
         poly.data('disabled', disabled)
@@ -328,6 +426,8 @@ export function useDraw(
                 y: e.clientY - svgRect.top,
             }
 
+            console.log('start', startPosition)
+
             if (!overlayRect) {
                 overlayRect = svg
                     .rect(0, 0)
@@ -335,7 +435,7 @@ export function useDraw(
                     .stroke({ color: '#000', width: 2, opacity: 0.5 })
             }
 
-            overlayRect.move(startPosition.x, startPosition.y)
+            overlayRect.move(startPosition.x / svgRect.width, startPosition.y / svgRect.height)
         } else if (props.mode === 'move') {
             startPosition = {
                 x: e.clientX,
@@ -366,18 +466,17 @@ export function useDraw(
                     y: e.clientY - svgRect.top,
                 }
 
-                overlayRect.move(
-                    currentPosition.x > startPosition.x
-                        ? startPosition.x
-                        : currentPosition.x,
-                    currentPosition.y > startPosition.y
-                        ? startPosition.y
-                        : currentPosition.y,
-                )
-                overlayRect.width(Math.abs(currentPosition.x - startPosition.x))
-                overlayRect.height(
-                    Math.abs(currentPosition.y - startPosition.y),
-                )
+                const minX = Math.min(startPosition.x, currentPosition.x) / svgRect.width
+                const minY = Math.min(startPosition.y, currentPosition.y) / svgRect.height
+                const maxX = Math.max(startPosition.x, currentPosition.x) / svgRect.width
+                const maxY = Math.max(startPosition.y, currentPosition.y) / svgRect.height
+
+                const width = Math.abs(maxX - minX)
+                const height = Math.abs(maxY - minY)
+
+                overlayRect.move(`${minX * 100}%`, `${minY * 100}%`)
+                overlayRect.width(`${width * 100}%`)
+                overlayRect.height(`${height * 100}%`)
             }
         } else if (props.mode === 'move' && dragging) {
             if (!svg.node.contains(e.target)) {
@@ -414,10 +513,12 @@ export function useDraw(
 
             const prev = poly
                 ? [...poly.plot()]
-                : [[startPosition.x, startPosition.y] as ArrayXY]
+                : [[startPosition.x / svgRect.width * 100, startPosition.y / svgRect.height * 100] as ArrayXY]
+
+            console.log('prev', prev)
 
             tmpPoly = svg
-                .polyline([...prev, [currentPosition.x, currentPosition.y]])
+                .polyline([...prev, [currentPosition.x / svgRect.width * 100, currentPosition.y / svgRect.height * 100]])
                 .fill('none')
                 .stroke({
                     color: '#f06',
@@ -532,7 +633,7 @@ export function useDraw(
 
                 const prev = poly
                     ? [...poly.plot()]
-                    : [[startPosition.x, startPosition.y] as ArrayXY]
+                    : [[startPosition.x / svgRect.width * 100, startPosition.y / svgRect.height * 100] as ArrayXY]
 
                 if (tmpPoly) {
                     tmpPoly.remove()
@@ -547,15 +648,17 @@ export function useDraw(
                 const start = prev[0]
                 if (
                     prev.length > 2 &&
-                    Math.abs(currentPosition.x - start[0]) <= 10 &&
-                    Math.abs(currentPosition.y - start[1]) <= 10
+                    Math.abs(currentPosition.x / svgRect.width * 100 - start[0]) <= 10 &&
+                    Math.abs(currentPosition.y / svgRect.height * 100 - start[1]) <= 10
                 ) {
                     startPosition = null
 
+                    console.log('draw', prev)
+
                     drawPoly({
                         points: prev.map(([x, y]) => ({
-                            x: x,
-                            y: y,
+                            x: x / 100,
+                            y: y / 100,
                         })),
                     })
 
@@ -564,15 +667,8 @@ export function useDraw(
                     poly = svg
                         .polyline([
                             ...prev,
-                            [currentPosition.x, currentPosition.y],
-                        ])
-                        .fill('none')
-                        .stroke({
-                            color: '#f06',
-                            width: 4,
-                            linecap: 'round',
-                            linejoin: 'round',
-                        })
+                            [currentPosition.x / svgRect.width * 100, currentPosition.y / svgRect.height * 100],
+                        ]).hide()
 
                     startPosition = currentPosition
                 }
