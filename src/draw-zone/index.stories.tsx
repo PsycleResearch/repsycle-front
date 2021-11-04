@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 
-import DrawZone from '.'
+import DrawZone, { ChangedElement } from '.'
 
 export default {
     title: 'Components/DrawZone',
@@ -9,8 +9,10 @@ export default {
 
 export function Base({}) {
     const [scale, setScale] = useState(1)
-    const [mode, setMode] = useState('draw')
-    const [elements, setElements] = useState([
+    const [mode, setMode] = useState<'draw' | 'move'>('draw')
+    const [elements, setElements] = useState<
+        Array<Pick<ChangedElement, 'points'>>
+    >([
         {
             points: [
                 { x: 0.5, y: 0.5 },
@@ -39,7 +41,7 @@ export function Base({}) {
             <DrawZone
                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/250px-Image_created_with_a_mobile_phone.png"
                 elements={elements}
-                onChange={(elements) => setElements(elements)}
+                onChange={(elements: ChangedElement[]) => setElements(elements)}
                 scale={scale}
                 mode={mode}
             >
@@ -48,7 +50,7 @@ export function Base({}) {
                         key={index}
                         style={{
                             position: 'absolute',
-                            zIndex: '10',
+                            zIndex: 10,
                             top: `${element.points[0].y * 100}%`,
                             left: `${element.points[0].x * 100}%`,
                         }}

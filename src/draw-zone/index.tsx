@@ -12,6 +12,11 @@ interface Point {
     x: number
     y: number
 }
+export interface ChangedElement {
+    id: string
+    selected: boolean
+    points: Point[]
+}
 
 type ExtendedCSSStyleName = CSSStyleName | 'touch-action'
 
@@ -19,7 +24,7 @@ export function useDraw(
     ref: React.RefObject<HTMLElement>,
     src: string,
     props: {
-        onChange: Function
+        onChange: (elements: Array<ChangedElement>) => void
         disabled: boolean
         mode: DrawZoneProps['mode']
         scale: number
@@ -64,7 +69,7 @@ export function useDraw(
                             { x: box.x, y: box.y },
                             { x: box.x2, y: box.y2 },
                         ]),
-                        selected: elt.data('selected'),
+                        selected: elt.data('selected') as boolean,
                         id: elt.data('id'),
                     }
                 }),
@@ -98,7 +103,7 @@ export function useDraw(
         rect.height(`${Math.abs(points[1].y - points[0].y) * 100}%`)
         rect.fill(fill)
         rect.stroke(stroke)
-        rect.css<ExtendedCSSStyleName>('touch-action', 'none') // silence interactjs warning.
+        rect.css('touch-action', 'none') // silence interactjs warning.
 
         // Custom events.
         rect.on('select', () => {
@@ -494,8 +499,8 @@ export interface DrawZoneProps {
     children: React.ReactNode
     src: string
     elements: object[]
-    onChange: () => void
-    disabled: boolean
+    onChange: (elements: ChangedElement[]) => void
+    disabled?: boolean
     mode: 'draw' | 'move'
     scale: number
     drawOnMouseDown?: boolean
@@ -514,7 +519,7 @@ export default function DrawZone({
     const svgRef = useRef<HTMLDivElement>(null)
     const { svg, draw } = useDraw(svgRef, src, {
         onChange,
-        disabled,
+        disabled: false,
         mode,
         scale,
         drawOnMouseDown,
