@@ -53,28 +53,6 @@ export function useDraw(
     let tmpPoly: Polyline | undefined
     let dragging: boolean
 
-    function getRelativeCoordinates(points: Point[]): Point[] {
-        if (!svg) return points
-
-        const svgRect = svg?.node.getBoundingClientRect()
-
-        return points.map(({ x, y }) => ({
-            x: x * svgRect.width,
-            y: y * svgRect.height,
-        }))
-    }
-
-    function getAbsoluteCoordinates(points: Point[]) {
-        if (!svg) return points
-
-        const svgRect = svg.node.getBoundingClientRect()
-
-        return points.map(({ x, y }) => ({
-            x: x / svgRect.width,
-            y: y / svgRect.height,
-        }))
-    }
-
     function onChange() {
         if (svg && props.onChange) {
             props.onChange(
@@ -304,10 +282,8 @@ export function useDraw(
         function applyTransforms(event: any) {
             if (!svg) return
 
-            rootMatrix = svg.node.getScreenCTM() as DOMMatrix
-
             transformedPoints = originalPoints.map((point) => {
-                return point.matrixTransform(rootMatrix as DOMMatrix)
+                return point.matrixTransform(rootMatrix)
             })
 
             interact('.point-handle').draggable({
@@ -335,14 +311,18 @@ export function useDraw(
             onChange()
 
             if (!disabled) {
-                handles.length = 0 // Reset handles
+                handles.forEach(h => h.remove())
+                originalPoints.length = 0 // Reset points
+                transformedPoints.length = 0 // Reset points
+                rootMatrix = svg.node.getScreenCTM() as DOMMatrix
 
                 circle = svg
                     .defs()
                     .attr('data-draw-ignore', true)
-                    .circle(10)
+                    .circle('8px')
+                    .center(0, 0)
                     .fill({ opacity: 0.4, color: '#fff' })
-                    .stroke({ width: 4, color: '#fff' })
+                    .stroke({ width: 2, color: '#fff' })
                     .id('point-handle')
 
                 for (let i = 0; i < poly.node.points.numberOfItems; i++) {
@@ -388,28 +368,20 @@ export function useDraw(
                         onend: function (event) {
                             const svgRect = svg.node.getBoundingClientRect()
 
-                            const handle = handles.find(
-                                (h) => h === event.target,
-                            )
-                            const index = handles.indexOf(event.target)
-
-                            poly.node.points.replaceItem(
-                                transformedPoints[index],
-                                index,
-                            )
-
+                            console.log('onend', handles, event.target)
+                            
+                            const index = Number(event.target.getAttribute('data-index'))
+                            
                             const currentPlot = [...poly.plot()]
+
+                            console.log('transformed', transformedPoints)
 
                             const newPlot: ArrayXY[] = [
                                 ...currentPlot.slice(0, index),
                                 [
-                                    (transformedPoints[index].x /
-                                        svgRect.width) *
-                                        100,
-                                    (transformedPoints[index].y /
-                                        svgRect.height) *
-                                        100,
-                                ],
+                                    Number(event.target.getAttribute('x')),
+                                    Number(event.target.getAttribute('y'))
+                                ] as ArrayXY,
                                 ...currentPlot.slice(index + 1),
                             ]
 
@@ -418,12 +390,17 @@ export function useDraw(
                             svg.node.setAttribute('class', '')
                             onChange()
                         },
-                        snap: {
-                            targets: originalPoints,
-                            range: 10,
-                            relativePoints: [{ x: 0.5, y: 0.5 }],
-                        },
-                        restrict: { restriction: svg.node },
+                        modifiers: [
+                            interact.modifiers.restrict({
+                                restriction: 'parent',
+                                elementRect: {
+                                    top: 0,
+                                    left: 0,
+                                    bottom: 1,
+                                    right: 1,
+                                },
+                            }),
+                        ],
                     } as DraggableOptions)
                     .styleCursor(false)
 
@@ -434,18 +411,22 @@ export function useDraw(
             poly.stroke(stroke)
             poly.data('selected', false)
 
+            /*
+            interact('.point-handle').unset()
+
             interact(svg.node)
                 .off('mousedown', applyTransforms)
                 .off('touchstart', applyTransforms)
 
-            handles.forEach((handle) => {
-                handle.remove()
-            })
+            
+            handles.forEach(h => h.remove())
+            originalPoints.length = 0 // Reset points
+            transformedPoints.length = 0 // Reset points
 
             document.removeEventListener('dragstart', preventDrag)
 
             circle?.remove()
-
+            */
             onChange()
         })
 
@@ -676,7 +657,7 @@ export function useDraw(
                 }
             }
 
-            const rect = drawRect({
+            drawRect({
                 points: [
                     {
                         x:
@@ -906,6 +887,7 @@ export interface DrawZoneProps {
     scale: number
     drawOnMouseDown?: boolean
     showMarker?: boolean
+    forceDraw: boolean
 }
 
 export default function DrawZone({
@@ -918,6 +900,7 @@ export default function DrawZone({
     scale,
     drawOnMouseDown,
     showMarker = false,
+    forceDraw,
 }: DrawZoneProps): JSX.Element {
     const svgRef = useRef<HTMLDivElement>(null)
     const { svg, draw } = useDraw(svgRef, src, {
@@ -958,8 +941,8 @@ export default function DrawZone({
     useLayoutEffect(() => {
         if (svg) {
             if (
-                elements.length !==
-                svg.children().filter((c) => !c.attr('data-draw-ignore')).length
+                (elements.length !==
+                svg.children().filter((c) => !c.attr('data-draw-ignore')).length) || forceDraw
             ) {
                 svg.clear()
                 elements.forEach((element) => draw(element))
@@ -976,7 +959,7 @@ export default function DrawZone({
             //     }
             // });
         }
-    }, [svg, elements])
+    }, [svg, elements, forceDraw])
 
     return (
         <div

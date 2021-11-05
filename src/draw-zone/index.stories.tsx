@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 import DrawZone, { ChangedElement, DrawZoneMode } from '.'
 
@@ -11,6 +11,7 @@ export function Base({}) {
     const [scale, setScale] = useState(1)
     const [mode, setMode] = useState<DrawZoneMode>('draw')
     const [move, setMove] = useState(false)
+    const [forceDraw, setForceDraw] = useState(false)
     const [elements, setElements] = useState<
         Array<Pick<ChangedElement, 'points'>>
     >([
@@ -47,6 +48,10 @@ export function Base({}) {
     ])
     const [showMarker, setShowMarker] = useState(false)
 
+    useEffect(() => {
+        console.log('elements', elements)
+    }, [elements])
+
     return (
         <div>
             <div>
@@ -69,6 +74,10 @@ export function Base({}) {
                 <button onClick={() => setShowMarker((s) => !s)}>
                     {showMarker ? 'Cacher' : 'Afficher'} marqueur
                 </button>
+                <button onClick={() => {
+                    setForceDraw(true)
+                    setTimeout(() => setForceDraw(false), 250)
+                }}>Force draw</button>
             </div>
             <DrawZone
                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/250px-Image_created_with_a_mobile_phone.png"
@@ -77,6 +86,7 @@ export function Base({}) {
                 scale={scale}
                 mode={move ? 'move' : mode}
                 showMarker={showMarker}
+                forceDraw={forceDraw}
             >
                 {elements.map((element, index) => (
                     <div
