@@ -1,6 +1,6 @@
 import React from 'react'
-import formatDateFns from 'date-fns/format'
-import parseJSON from 'date-fns/parseJSON'
+//import formatDateFns from 'date-fns/format'
+//import parseJSON from 'date-fns/parseJSON'
 
 export function uuid4() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(
@@ -55,9 +55,11 @@ export function makeState(
     }
 }
 
+/*
 export function formatDate(date: Date, format: string): string {
     return formatDateFns(parseJSON(date), format)
 }
+*/
 
 interface FormatBase64Options {
     removeHeader?: boolean

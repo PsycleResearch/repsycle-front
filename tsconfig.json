@@ -16,6 +16,7 @@
         "isolatedModules": true,
         "jsx": "react",
         "declaration": true,
+        "declarationDir": ".",
         "outDir": "./dist"
     },
     "include": ["typings.d.ts", "src/**/*"],

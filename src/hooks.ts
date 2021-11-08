@@ -10,12 +10,13 @@ export function useMousePosition() {
     }
 
     useAnimationFrame(() => {
-        window.addEventListener('mousemove', updatePosition, false)
-        window.addEventListener('mouseenter', updatePosition, false)
+        if (!global.window) return
+        global.window.addEventListener('mousemove', updatePosition, false)
+        global.window.addEventListener('mouseenter', updatePosition, false)
 
         return () => {
-            window.removeEventListener('mousemove', updatePosition)
-            window.removeEventListener('mouseenter', updatePosition)
+            global.window.removeEventListener('mousemove', updatePosition)
+            global.window.removeEventListener('mouseenter', updatePosition)
         }
     })
 
