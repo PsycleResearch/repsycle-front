@@ -12,9 +12,7 @@ export function Base({}) {
     const [mode, setMode] = useState<DrawZoneMode>('draw')
     const [move, setMove] = useState(false)
     const [forceDraw, setForceDraw] = useState(false)
-    const [elements, setElements] = useState<
-        Array<Pick<ChangedElement, 'points'>>
-    >([
+    const [elements, setElements] = useState<Array<Partial<ChangedElement>>>([
         /*
         {
             points: [
@@ -37,14 +35,15 @@ export function Base({}) {
             ],
         },
         */
-       {
+        {
+            id: 'aze1',
             points: [
                 { x: 0.2, y: 0.2 },
                 { x: 0.2, y: 0.8 },
                 { x: 0.8, y: 0.8 },
                 { x: 0.8, y: 0.2 },
-            ]
-       }
+            ],
+        },
     ])
     const [showMarker, setShowMarker] = useState(false)
 
@@ -74,10 +73,14 @@ export function Base({}) {
                 <button onClick={() => setShowMarker((s) => !s)}>
                     {showMarker ? 'Cacher' : 'Afficher'} marqueur
                 </button>
-                <button onClick={() => {
-                    setForceDraw(true)
-                    setTimeout(() => setForceDraw(false), 250)
-                }}>Force draw</button>
+                <button
+                    onClick={() => {
+                        setForceDraw(true)
+                        setTimeout(() => setForceDraw(false), 250)
+                    }}
+                >
+                    Force draw
+                </button>
             </div>
             <DrawZone
                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/250px-Image_created_with_a_mobile_phone.png"
@@ -88,31 +91,58 @@ export function Base({}) {
                 showMarker={showMarker}
                 forceDraw={forceDraw}
             >
-                {elements.map((element, index) => (
-                    <div
-                        key={index}
-                        style={{
-                            position: 'absolute',
-                            zIndex: 10,
-                            top: `${element.points[0].y * 100}%`,
-                            left: `${element.points[0].x * 100}%`,
-                        }}
-                    >
-                        <button
-                            onClick={() => {
-                                console.log(
-                                    'elements',
-                                    elements.filter((_, idx) => index !== idx),
-                                )
-                                setElements(
-                                    elements.filter((_, idx) => index !== idx),
-                                )
+                {elements.map((element, index) => {
+                    const elem = element as ChangedElement
+                    return (
+                        <div
+                            key={index}
+                            style={{
+                                position: 'absolute',
+                                zIndex: 10,
+                                top: elem.rect
+                                    ? `${elem.rect.y}%`
+                                    : `${elem.points[0].y * 100}%`,
+                                left: elem.rect
+                                    ? `${elem.rect.x}%`
+                                    : `${elem.points[0].x * 100}%`,
+                                border:
+                                    elem.rect && elem.selected
+                                        ? '1px dashed black'
+                                        : 'none',
+                                width:
+                                    elem.rect && elem.selected
+                                        ? `${elem.rect.width}%`
+                                        : 'auto',
+                                height:
+                                    elem.rect && elem.selected
+                                        ? `${elem.rect.height}%`
+                                        : 'auto',
+                                pointerEvents: 'none',
                             }}
                         >
-                            supprimer
-                        </button>
-                    </div>
-                ))}
+                            <button
+                                style={{
+                                    pointerEvents: 'auto',
+                                }}
+                                onClick={() => {
+                                    console.log(
+                                        'elements',
+                                        elements.filter(
+                                            (_, idx) => index !== idx,
+                                        ),
+                                    )
+                                    setElements(
+                                        elements.filter(
+                                            (_, idx) => index !== idx,
+                                        ),
+                                    )
+                                }}
+                            >
+                                supprimer
+                            </button>
+                        </div>
+                    )
+                })}
             </DrawZone>
         </div>
     )

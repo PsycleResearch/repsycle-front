@@ -7,6 +7,7 @@ import {
     Polyline,
     ArrayXY,
     Circle,
+    Use,
 } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.draggable.js'
 import interact from 'interactjs'
@@ -18,20 +19,25 @@ import { isTouchDevice } from '../utils'
 export type DrawZoneMode = 'draw' | 'path' | 'move'
 
 interface Size {
-    width: number
-    height: number
+    readonly width: number
+    readonly height: number
 }
 interface Point {
-    x: number
-    y: number
+    readonly x: number
+    readonly y: number
 }
 export interface ChangedElement {
-    id: string
-    selected: boolean
-    points: Point[]
+    readonly id: string
+    readonly selected: boolean
+    readonly points: Point[]
+    readonly rect: {
+        readonly height: number
+        readonly width: number
+        readonly x: number
+        readonly y: number
+    }
 }
 
-const sns = 'http://www.w3.org/2000/svg'
 const xns = 'http://www.w3.org/1999/xlink'
 
 export function useDraw(
@@ -60,16 +66,31 @@ export function useDraw(
                     .children()
                     .filter((e) => !e.attr('data-draw-ignore'))
                     .map((elt) => {
+                        const svgRect = svg.node.getBoundingClientRect()
+                        const elementRect = elt.node.getBoundingClientRect()
+
+                        const rect: ChangedElement['rect'] = {
+                            height: (elementRect.height / svgRect.height) * 100,
+                            width: (elementRect.width / svgRect.width) * 100,
+                            x:
+                                ((elementRect.x - svgRect.x) / svgRect.width) *
+                                100,
+                            y:
+                                ((elementRect.y - svgRect.y) / svgRect.height) *
+                                100,
+                        }
+
                         if (elt instanceof Polygon) {
-                            const polyline = elt as Polygon
+                            const polygon = elt as Polygon
 
                             return {
-                                points: polyline.plot().map((p) => ({
+                                points: polygon.plot().map((p) => ({
                                     x: p[0] / 100,
                                     y: p[1] / 100,
                                 })),
-                                selected: polyline.data('selected') as boolean,
-                                id: polyline.data('id'),
+                                rect: rect,
+                                selected: polygon.data('selected') as boolean,
+                                id: polygon.data('id'),
                             }
                         }
 
@@ -79,11 +100,47 @@ export function useDraw(
                                 { x: box.x / 100, y: box.y / 100 },
                                 { x: box.x2 / 100, y: box.y2 / 100 },
                             ],
+                            rect: rect,
                             selected: elt.data('selected') as boolean,
                             id: elt.data('id'),
                         }
                     }),
             )
+        }
+    }
+
+    function onDelKeyPress(this: SVGElement, event: Event) {
+        const e = event as KeyboardEvent
+        console.log('event', e)
+        if (e.defaultPrevented) return
+        if (e.key === 'Delete') {
+            e.preventDefault()
+            this.remove()
+
+            onChange()
+        }
+    }
+
+    function onAbortPathDrawing(this: Node, event: Event) {
+        const e = event as KeyboardEvent
+
+        if (e.defaultPrevented) return
+        if (e.key === 'Escape') {
+            e.preventDefault()
+
+            if (tmpPoly) {
+                tmpPoly.remove()
+                tmpPoly = undefined
+            }
+
+            if (poly) {
+                poly.remove()
+                poly = undefined
+            }
+
+            startPosition = null
+
+            window.removeEventListener('keydown', onAbortPathDrawing)
         }
     }
 
@@ -120,14 +177,15 @@ export function useDraw(
             // Deselect all
 
             svg.each(function (this: Svg) {
-                this.fire('deselect')
+                this.fire('deselect', { inst: rect })
             })
             rect.stroke({ color: '#02A9C7' })
             rect.data('selected', true)
 
             onChange()
         })
-        rect.on('deselect', () => {
+        rect.on('deselect', (e) => {
+            if ((e as any).detail?.inst === rect) return
             rect.stroke(stroke)
             rect.data('selected', false)
 
@@ -261,6 +319,7 @@ export function useDraw(
         fill?: { color: string; opacity: number }
         id?: string | null
     }) {
+        console.log('draw')
         if (!svg || !points || points.length < 2) {
             return
         }
@@ -273,47 +332,35 @@ export function useDraw(
         poly.stroke(stroke)
         poly.css('touch-action', 'none') // silence interactjs warning.
 
-        let handles: SVGUseElement[] = []
+        let handles: Use[] = []
         let rootMatrix: DOMMatrix
         const originalPoints: DOMPoint[] = []
-        let transformedPoints: DOMPoint[] = []
         let circle: Circle
 
-        function applyTransforms(event: any) {
-            if (!svg) return
-
-            transformedPoints = originalPoints.map((point) => {
-                return point.matrixTransform(rootMatrix)
-            })
-
-            interact('.point-handle').draggable({
-                snap: {
-                    targets: transformedPoints,
-                    range: 20 * Math.max(rootMatrix.a, rootMatrix.d),
-                },
-            } as DraggableOptions)
-        }
-
         const preventDrag = (event: DragEvent) => {
+            console.log('preventDrag')
             event.preventDefault()
         }
 
+        const polyDelKeyPress = onDelKeyPress.bind(poly.node)
+
         // Custom events.
         poly.on('select', () => {
+            if (poly.data('selected') === true) return
+            console.log('select')
             // Deselect all
 
             svg.each(function (this: Svg) {
-                this.fire('deselect')
+                this.fire('deselect', { inst: poly })
             })
             poly.stroke({ color: '#02A9C7' })
             poly.data('selected', true)
-
-            onChange()
+            window.addEventListener('keydown', polyDelKeyPress, true)
 
             if (!disabled) {
-                handles.forEach(h => h.remove())
+                handles.forEach((h) => h.remove())
+                handles.length = 0
                 originalPoints.length = 0 // Reset points
-                transformedPoints.length = 0 // Reset points
                 rootMatrix = svg.node.getScreenCTM() as DOMMatrix
 
                 circle = svg
@@ -326,35 +373,26 @@ export function useDraw(
                     .id('point-handle')
 
                 for (let i = 0; i < poly.node.points.numberOfItems; i++) {
-                    const handle = document.createElementNS(sns, 'use')
                     const point = poly.node.points.getItem(i)
-                    const newPoint = svg.node.createSVGPoint()
-
-                    handle.setAttributeNS(xns, 'href', '#point-handle')
-                    handle.setAttribute('class', 'point-handle')
-                    handle.setAttribute('data-draw-ignore', 'true')
-
-                    handle.x.baseVal.value = newPoint.x = point.x
-                    handle.y.baseVal.value = newPoint.y = point.y
-
-                    handle.setAttribute('data-index', i.toString())
-
-                    originalPoints.push(newPoint)
-
-                    svg.node.appendChild(handle)
+                    const handle = svg
+                        .use(circle)
+                        .attr('href', '#point-handle', xns)
+                        .addClass('point-handle')
+                        .data('draw-ignore', true)
+                        .x(point.x)
+                        .y(point.y)
+                        .data('index', i)
                     handles.push(handle)
                 }
-
-                interact(svg.node)
-                    .on('mousedown', applyTransforms)
-                    .on('touchstart', applyTransforms)
 
                 interact('.point-handle')
                     .draggable({
                         onstart: function (event) {
+                            console.log('onstart')
                             svg.node.setAttribute('class', 'dragging')
                         },
                         onmove: function (event) {
+                            console.log('onmove')
                             const i =
                                 event.target.getAttribute('data-index') | 0
                             const point = poly.node.points.getItem(i)
@@ -366,21 +404,18 @@ export function useDraw(
                             event.target.y.baseVal.value = point.y
                         },
                         onend: function (event) {
-                            const svgRect = svg.node.getBoundingClientRect()
+                            console.log('onend')
+                            const index = Number(
+                                event.target.getAttribute('data-index') || 0,
+                            )
 
-                            console.log('onend', handles, event.target)
-                            
-                            const index = Number(event.target.getAttribute('data-index'))
-                            
                             const currentPlot = [...poly.plot()]
-
-                            console.log('transformed', transformedPoints)
 
                             const newPlot: ArrayXY[] = [
                                 ...currentPlot.slice(0, index),
                                 [
                                     Number(event.target.getAttribute('x')),
-                                    Number(event.target.getAttribute('y'))
+                                    Number(event.target.getAttribute('y')),
                                 ] as ArrayXY,
                                 ...currentPlot.slice(index + 1),
                             ]
@@ -406,27 +441,24 @@ export function useDraw(
 
                 document.addEventListener('dragstart', preventDrag)
             }
+
+            onChange()
         })
-        poly.on('deselect', () => {
+        poly.on('deselect', (e) => {
+            if ((e as any).detail?.inst === poly) return
             poly.stroke(stroke)
             poly.data('selected', false)
 
-            /*
             interact('.point-handle').unset()
 
-            interact(svg.node)
-                .off('mousedown', applyTransforms)
-                .off('touchstart', applyTransforms)
-
-            
-            handles.forEach(h => h.remove())
+            handles.forEach((h) => h.remove())
             originalPoints.length = 0 // Reset points
-            transformedPoints.length = 0 // Reset points
 
             document.removeEventListener('dragstart', preventDrag)
+            window.removeEventListener('keydown', polyDelKeyPress)
 
             circle?.remove()
-            */
+
             onChange()
         })
 
@@ -434,8 +466,10 @@ export function useDraw(
             poly.css('cursor', 'move')
 
             poly.on('click', (e: any) => {
+                console.log('click')
                 poly.fire('select')
             })
+            /*
             poly.on('mousedown', (e: any) => {
                 e.stopPropagation()
             })
@@ -485,6 +519,7 @@ export function useDraw(
                     }
                 },
             })
+            */
         }
 
         poly.data('disabled', disabled)
@@ -706,9 +741,22 @@ export function useDraw(
     }
 
     function onClick(e: any) {
+        console.log('svg click')
         if (!svg) return
 
-        if (props.mode === 'path') {
+        // If click on main svg, and not an element, deselect everything.
+        if (e.target === svg.node) {
+            svg.each(function (this: Svg) {
+                this.fire('deselect')
+            })
+            onChange()
+        }
+
+        if (
+            svg.children().filter((c) => c.data('selected') === true).length ===
+                0 &&
+            props.mode === 'path'
+        ) {
             const svgRect = svg.node.getBoundingClientRect()
 
             if (!tmpPoly) {
@@ -716,6 +764,8 @@ export function useDraw(
                     x: e.clientX - svgRect.left,
                     y: e.clientY - svgRect.top,
                 }
+
+                window.addEventListener('keydown', onAbortPathDrawing)
             } else if (startPosition && tmpPoly) {
                 const currentPosition = {
                     x: e.clientX - svgRect.left,
@@ -760,6 +810,8 @@ export function useDraw(
                         })),
                     })
 
+                    window.removeEventListener('keydown', onAbortPathDrawing)
+
                     onChange()
                 } else {
                     poly = svg
@@ -775,13 +827,6 @@ export function useDraw(
                     startPosition = currentPosition
                 }
             }
-        }
-
-        // If click on main svg, and not an element, deselect everything.
-        if (e.target === svg.node) {
-            svg.each(function (this: Svg) {
-                this.fire('deselect')
-            })
         }
     }
 
@@ -846,25 +891,15 @@ export function useDraw(
             })
         }
 
-        /*
         svg.on('mousedown', onMouseDown)
-
         svg.on('mouseup', onMouseUp)
-        */
         svg.on('click', onClick)
-        /*
         window.addEventListener('mousemove', onMouseMove)
-        */
         return () => {
-            /*
             svg.off('mousedown', onMouseDown)
-
             svg.off('mouseup', onMouseUp)
-            */
             svg.off('click', onClick)
-            /*
             window.removeEventListener('mousemove', onMouseMove)
-            */
         }
     }, [svg, props.mode])
 
@@ -880,7 +915,7 @@ export function useDraw(
 export interface DrawZoneProps {
     children: React.ReactNode
     src: string
-    elements: Pick<ChangedElement, 'points'>[]
+    elements: Partial<ChangedElement>[]
     onChange: (elements: ChangedElement[]) => void
     disabled?: boolean
     mode: DrawZoneMode
@@ -939,13 +974,16 @@ export default function DrawZone({
     }, [])
 
     useLayoutEffect(() => {
+        console.log('layout')
         if (svg) {
             if (
-                (elements.length !==
-                svg.children().filter((c) => !c.attr('data-draw-ignore')).length) || forceDraw
+                elements.length !==
+                    svg.children().filter((c) => !c.attr('data-draw-ignore'))
+                        .length ||
+                forceDraw
             ) {
                 svg.clear()
-                elements.forEach((element) => draw(element))
+                elements.forEach((element) => draw(element as ChangedElement))
                 return
             }
 
