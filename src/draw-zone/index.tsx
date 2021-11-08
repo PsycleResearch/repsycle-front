@@ -122,11 +122,9 @@ export function useDraw(
     }
 
     function onDelKeyPress(this: SVGElement, event: KeyboardEvent) {
-        console.log('event', event)
         if (event.defaultPrevented) return
         if (event.key === 'Delete') {
             event.preventDefault()
-            console.log('id', this.dataset['id'])
             props.remove(this.dataset['id'] as string)
         }
     }
@@ -209,7 +207,7 @@ export function useDraw(
                 circle = svg
                     .defs()
                     .attr('data-draw-ignore', true)
-                    .circle(7)
+                    .circle(3)
                     .center(0, 0)
                     .fill({ opacity: 1, color: blue })
                     .stroke({ width: 1, color: '#fff' })
@@ -377,7 +375,6 @@ export function useDraw(
         fill?: { color: string; opacity: number }
         id?: string | null
     }) {
-        console.log('draw')
         if (!svg || !points || points.length < 2) {
             return
         }
@@ -399,7 +396,6 @@ export function useDraw(
         // Custom events.
         poly.on('select', () => {
             if (poly.data('selected') === true) return
-            console.log('select')
             // Deselect all
 
             svg.each(function (this: Svg) {
@@ -417,7 +413,7 @@ export function useDraw(
                 circle = svg
                     .defs()
                     .attr('data-draw-ignore', true)
-                    .circle(7)
+                    .circle(3)
                     .center(0, 0)
                     .fill({ opacity: 1, color: blue })
                     .stroke({ width: 1, color: '#fff' })
@@ -445,11 +441,9 @@ export function useDraw(
                 interact('.point-handle')
                     .draggable({
                         onstart: function (event) {
-                            console.log('onstart')
                             svg.node.setAttribute('class', 'dragging')
                         },
                         onmove: function (event) {
-                            console.log('onmove')
                             const i =
                                 event.target.getAttribute('data-index') | 0
                             const point = poly.node.points.getItem(i)
@@ -461,7 +455,6 @@ export function useDraw(
                             event.target.y.baseVal.value = point.y
                         },
                         onend: function (event) {
-                            console.log('onend')
                             const index = Number(
                                 event.target.getAttribute('data-index') || 0,
                             )
@@ -520,7 +513,6 @@ export function useDraw(
             poly.css('cursor', 'move')
 
             poly.on('click', (e: Event) => {
-                console.log('click')
                 poly.fire('select')
             })
 
@@ -826,7 +818,6 @@ export function useDraw(
 
     function onClick(e: globalThis.MouseEvent) {
         if (e.defaultPrevented) return
-        console.log('svg click')
         if (!svg) return
 
         // If click on main svg, and not an element, deselect everything.
@@ -868,11 +859,6 @@ export function useDraw(
                           ] as ArrayXY,
                       ]
 
-                if (tmpPoly) {
-                    tmpPoly.remove()
-                    tmpPoly = undefined
-                }
-
                 if (poly) {
                     poly.remove()
                     poly = undefined
@@ -888,6 +874,11 @@ export function useDraw(
                         (currentPosition.y / svgRect.height) * 100 - start[1],
                     ) <= 10
                 ) {
+                    if (tmpPoly) {
+                        tmpPoly.remove()
+                        tmpPoly = undefined
+                    }
+
                     startPosition = null
 
                     drawPoly({
@@ -1065,7 +1056,6 @@ export default function DrawZone({
     }, [])
 
     useLayoutEffect(() => {
-        console.log('layout')
         if (svg) {
             if (
                 elements.length !==
@@ -1073,6 +1063,7 @@ export default function DrawZone({
                         .length ||
                 forceDraw
             ) {
+                console.log('layout')
                 svg.clear()
                 elements.forEach((element) => draw(element as ChangedElement))
                 return
