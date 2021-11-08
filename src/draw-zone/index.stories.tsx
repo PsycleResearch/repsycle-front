@@ -86,6 +86,7 @@ export function Base({}) {
                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/250px-Image_created_with_a_mobile_phone.png"
                 elements={elements}
                 onChange={(elements: ChangedElement[]) => setElements(elements)}
+                remove={(id) => setElements(el => el.filter(e => e.id !== id))}
                 scale={scale}
                 mode={move ? 'move' : mode}
                 showMarker={showMarker}

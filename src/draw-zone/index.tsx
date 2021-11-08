@@ -39,12 +39,24 @@ export interface ChangedElement {
 }
 
 const xns = 'http://www.w3.org/1999/xlink'
+const blue = '#2BB1FD'
+
+function getRectCoords(rect: Rect) {
+    const bbox = rect.bbox()
+    return [
+        { x: bbox.x, y: bbox.y },
+        { x: bbox.x, y: bbox.y2 },
+        { x: bbox.x2, y: bbox.y2 },
+        { x: bbox.x2, y: bbox.y },
+    ]
+}
 
 export function useDraw(
     ref: React.RefObject<HTMLElement>,
     src: string,
     props: {
         onChange: (elements: Array<ChangedElement>) => void
+        remove: (id: string) => void
         disabled: boolean
         mode: DrawZoneMode
         scale: number
@@ -109,24 +121,20 @@ export function useDraw(
         }
     }
 
-    function onDelKeyPress(this: SVGElement, event: Event) {
-        const e = event as KeyboardEvent
-        console.log('event', e)
-        if (e.defaultPrevented) return
-        if (e.key === 'Delete') {
-            e.preventDefault()
-            this.remove()
-
-            onChange()
+    function onDelKeyPress(this: SVGElement, event: KeyboardEvent) {
+        console.log('event', event)
+        if (event.defaultPrevented) return
+        if (event.key === 'Delete') {
+            event.preventDefault()
+            console.log('id', this.dataset['id'])
+            props.remove(this.dataset['id'] as string)
         }
     }
 
-    function onAbortPathDrawing(this: Node, event: Event) {
-        const e = event as KeyboardEvent
-
-        if (e.defaultPrevented) return
-        if (e.key === 'Escape') {
-            e.preventDefault()
+    function onAbortPathDrawing(this: Window, event: KeyboardEvent) {
+        if (event.defaultPrevented) return
+        if (event.key === 'Escape') {
+            event.preventDefault()
 
             if (tmpPoly) {
                 tmpPoly.remove()
@@ -139,9 +147,11 @@ export function useDraw(
             }
 
             startPosition = null
-
-            window.removeEventListener('keydown', onAbortPathDrawing)
         }
+    }
+
+    const preventDrag = (event: DragEvent) => {
+        event.preventDefault()
     }
 
     function drawRect({
@@ -172,6 +182,11 @@ export function useDraw(
         rect.stroke(stroke)
         rect.css('touch-action', 'none') // silence interactjs warning.
 
+        const rectDelKeyPress = onDelKeyPress.bind(rect.node)
+
+        let circle: Circle
+        let handles: Use[] = []
+
         // Custom events.
         rect.on('select', () => {
             // Deselect all
@@ -179,15 +194,55 @@ export function useDraw(
             svg.each(function (this: Svg) {
                 this.fire('deselect', { inst: rect })
             })
-            rect.stroke({ color: '#02A9C7' })
+            rect.stroke({ color: blue })
             rect.data('selected', true)
 
             onChange()
+
+            const coords = getRectCoords(rect)
+
+            if (!disabled) {
+                window.addEventListener('keydown', rectDelKeyPress, {
+                    once: true,
+                })
+
+                circle = svg
+                    .defs()
+                    .attr('data-draw-ignore', true)
+                    .circle(7)
+                    .center(0, 0)
+                    .fill({ opacity: 1, color: blue })
+                    .stroke({ width: 1, color: '#fff' })
+                    .id('point-handle')
+
+                for (let i = 0; i < coords.length; i++) {
+                    const point = coords[i]
+                    const handle = svg
+                        .use(circle as Circle)
+                        .attr('pointer-events', 'none')
+                        .css('pointerEvents', 'none')
+                        .attr('href', '#point-handle', xns)
+                        .addClass('point-handle')
+                        .data('draw-ignore', true)
+                        .x(point.x)
+                        .y(point.y)
+                        .data('index', i)
+
+                    handles.push(handle)
+                }
+            }
         })
         rect.on('deselect', (e) => {
             if ((e as any).detail?.inst === rect) return
             rect.stroke(stroke)
             rect.data('selected', false)
+
+            circle?.remove()
+            interact('.point-handle').unset()
+            handles.forEach((h) => h.remove())
+            document.removeEventListener('dragstart', preventDrag)
+
+            window.removeEventListener('keydown', rectDelKeyPress)
 
             onChange()
         })
@@ -207,6 +262,8 @@ export function useDraw(
                     edges: { left: true, right: true, bottom: true, top: true },
                     listeners: {
                         move(event) {
+                            handles.forEach((h) => h.remove())
+
                             const svgRect = svg.node.getBoundingClientRect()
 
                             event.target.instance.width(
@@ -256,6 +313,7 @@ export function useDraw(
                     listeners: {
                         start(event) {
                             event.target.instance.fire('select')
+                            handles.forEach((h) => h.remove())
                         },
                         move(event) {
                             const svgRect = svg.node.getBoundingClientRect()
@@ -332,15 +390,9 @@ export function useDraw(
         poly.stroke(stroke)
         poly.css('touch-action', 'none') // silence interactjs warning.
 
+        let circle: Circle
         let handles: Use[] = []
         let rootMatrix: DOMMatrix
-        const originalPoints: DOMPoint[] = []
-        let circle: Circle
-
-        const preventDrag = (event: DragEvent) => {
-            console.log('preventDrag')
-            event.preventDefault()
-        }
 
         const polyDelKeyPress = onDelKeyPress.bind(poly.node)
 
@@ -353,35 +405,40 @@ export function useDraw(
             svg.each(function (this: Svg) {
                 this.fire('deselect', { inst: poly })
             })
-            poly.stroke({ color: '#02A9C7' })
+            poly.stroke({ color: blue })
             poly.data('selected', true)
-            window.addEventListener('keydown', polyDelKeyPress, true)
+            window.addEventListener('keydown', polyDelKeyPress, { once: true })
 
             if (!disabled) {
                 handles.forEach((h) => h.remove())
                 handles.length = 0
-                originalPoints.length = 0 // Reset points
                 rootMatrix = svg.node.getScreenCTM() as DOMMatrix
 
                 circle = svg
                     .defs()
                     .attr('data-draw-ignore', true)
-                    .circle('8px')
+                    .circle(7)
                     .center(0, 0)
-                    .fill({ opacity: 0.4, color: '#fff' })
-                    .stroke({ width: 2, color: '#fff' })
+                    .fill({ opacity: 1, color: blue })
+                    .stroke({ width: 1, color: '#fff' })
                     .id('point-handle')
 
                 for (let i = 0; i < poly.node.points.numberOfItems; i++) {
                     const point = poly.node.points.getItem(i)
                     const handle = svg
-                        .use(circle)
+                        .use(circle as Circle)
                         .attr('href', '#point-handle', xns)
                         .addClass('point-handle')
                         .data('draw-ignore', true)
                         .x(point.x)
                         .y(point.y)
                         .data('index', i)
+
+                    handle.on('mousedown', function mousedown(event) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    })
+
                     handles.push(handle)
                 }
 
@@ -449,15 +506,12 @@ export function useDraw(
             poly.stroke(stroke)
             poly.data('selected', false)
 
-            interact('.point-handle').unset()
-
-            handles.forEach((h) => h.remove())
-            originalPoints.length = 0 // Reset points
-
-            document.removeEventListener('dragstart', preventDrag)
-            window.removeEventListener('keydown', polyDelKeyPress)
-
             circle?.remove()
+            interact('.point-handle').unset()
+            handles.forEach((h) => h.remove())
+            document.removeEventListener('dragstart', preventDrag)
+
+            window.removeEventListener('keydown', polyDelKeyPress)
 
             onChange()
         })
@@ -465,24 +519,23 @@ export function useDraw(
         if (!disabled) {
             poly.css('cursor', 'move')
 
-            poly.on('click', (e: any) => {
+            poly.on('click', (e: Event) => {
                 console.log('click')
                 poly.fire('select')
             })
-            /*
-            poly.on('mousedown', (e: any) => {
+
+            poly.on('mousedown', (e: Event) => {
                 e.stopPropagation()
             })
 
             interact(poly.node).draggable({
                 listeners: {
                     start(event) {
-                        event.target.instance.fire('select')
-                    },
-                    move(event) {
                         handles.forEach((handle) => {
                             handle.remove()
                         })
+                    },
+                    move(event) {
                         const svgRect = svg.node.getBoundingClientRect()
 
                         const x =
@@ -500,6 +553,30 @@ export function useDraw(
                         )
 
                         onChange()
+                    },
+                    end(event) {
+                        for (
+                            let i = 0;
+                            i < poly.node.points.numberOfItems;
+                            i++
+                        ) {
+                            const point = poly.node.points.getItem(i)
+                            const handle = svg
+                                .use(circle as Circle)
+                                .attr('href', '#point-handle', xns)
+                                .addClass('point-handle')
+                                .data('draw-ignore', true)
+                                .x(point.x)
+                                .y(point.y)
+                                .data('index', i)
+
+                            handle.on('mousedown', function mousedown(event) {
+                                event.preventDefault()
+                                event.stopPropagation()
+                            })
+
+                            handles.push(handle)
+                        }
                     },
                 },
                 modifiers: [
@@ -519,7 +596,6 @@ export function useDraw(
                     }
                 },
             })
-            */
         }
 
         poly.data('disabled', disabled)
@@ -528,8 +604,10 @@ export function useDraw(
         return poly
     }
 
-    function onMouseDown(e: any) {
+    function onMouseDown(e: globalThis.MouseEvent) {
+        if (e.defaultPrevented) return
         if (!svg) return
+
         if (props.mode === 'draw' && !props.disabled) {
             const svgRect = svg.node.getBoundingClientRect()
 
@@ -549,6 +627,8 @@ export function useDraw(
                 startPosition.x / svgRect.width,
                 startPosition.y / svgRect.height,
             )
+
+            e.preventDefault()
         } else if (props.mode === 'move') {
             startPosition = {
                 x: e.clientX,
@@ -559,14 +639,17 @@ export function useDraw(
             svg.css({
                 cursor: 'grabbing',
             })
+
+            e.preventDefault()
         }
     }
 
-    function onMouseMove(e: any) {
+    function onMouseMove(this: Window, e: globalThis.MouseEvent) {
+        if (e.defaultPrevented) return
         if (!svg || !startPosition) return
 
         if (props.mode === 'draw' && !props.disabled) {
-            if (!svg.node.contains(e.target)) {
+            if (!svg.node.contains(e.target as Node)) {
                 overlayRect = undefined
                 return
             }
@@ -598,7 +681,7 @@ export function useDraw(
                 overlayRect.height(`${height * 100}%`)
             }
         } else if (props.mode === 'move' && dragging) {
-            if (!svg.node.contains(e.target)) {
+            if (!svg.node.contains(e.target as Node)) {
                 dragging = false
                 return
             }
@@ -657,7 +740,8 @@ export function useDraw(
         }
     }
 
-    function onMouseUp(e: any) {
+    function onMouseUp(e: globalThis.MouseEvent) {
+        if (e.defaultPrevented) return
         if (!svg) return
 
         if (props.mode === 'draw' && !props.disabled) {
@@ -672,7 +756,7 @@ export function useDraw(
 
             // Prevent drawing new rect on rect dragend...
 
-            if (e.target.parentNode === svg.node) {
+            if ((e.target as Node | null)?.parentNode === svg.node) {
                 return
             }
 
@@ -740,7 +824,8 @@ export function useDraw(
         if (props.mode !== 'path') startPosition = null
     }
 
-    function onClick(e: any) {
+    function onClick(e: globalThis.MouseEvent) {
+        if (e.defaultPrevented) return
         console.log('svg click')
         if (!svg) return
 
@@ -765,7 +850,9 @@ export function useDraw(
                     y: e.clientY - svgRect.top,
                 }
 
-                window.addEventListener('keydown', onAbortPathDrawing)
+                window.addEventListener('keydown', onAbortPathDrawing, {
+                    once: true,
+                })
             } else if (startPosition && tmpPoly) {
                 const currentPosition = {
                     x: e.clientX - svgRect.left,
@@ -858,6 +945,7 @@ export function useDraw(
                 preserveAspectRatio: 'none',
                 'xmlns:xlink': xns,
             })
+
         setSvg(newSvg)
     }, [ref, src])
 
@@ -891,23 +979,23 @@ export function useDraw(
             })
         }
 
-        svg.on('mousedown', onMouseDown)
-        svg.on('mouseup', onMouseUp)
-        svg.on('click', onClick)
+        svg.on('mousedown', onMouseDown as unknown as EventListener)
+        svg.on('mouseup', onMouseUp as unknown as EventListener)
+        svg.on('click', onClick as unknown as EventListener)
         window.addEventListener('mousemove', onMouseMove)
         return () => {
-            svg.off('mousedown', onMouseDown)
-            svg.off('mouseup', onMouseUp)
-            svg.off('click', onClick)
+            svg.off('mousedown', onMouseDown as unknown as EventListener)
+            svg.off('mouseup', onMouseUp as unknown as EventListener)
+            svg.off('click', onClick as unknown as EventListener)
             window.removeEventListener('mousemove', onMouseMove)
         }
     }, [svg, props.mode])
 
     return {
         svg,
-        draw: ({ points }: { points: Array<Point> }) => {
-            if (points.length === 2) drawRect({ points })
-            else drawPoly({ points })
+        draw: ({ points, id }: { points: Array<Point>; id: string }) => {
+            if (points.length === 2) drawRect({ points, id })
+            else drawPoly({ points, id })
         },
     }
 }
@@ -917,6 +1005,7 @@ export interface DrawZoneProps {
     src: string
     elements: Partial<ChangedElement>[]
     onChange: (elements: ChangedElement[]) => void
+    remove: (id: string) => void
     disabled?: boolean
     mode: DrawZoneMode
     scale: number
@@ -929,6 +1018,7 @@ export default function DrawZone({
     src,
     elements,
     onChange,
+    remove,
     children,
     disabled = false,
     mode = 'draw',
@@ -940,6 +1030,7 @@ export default function DrawZone({
     const svgRef = useRef<HTMLDivElement>(null)
     const { svg, draw } = useDraw(svgRef, src, {
         onChange,
+        remove,
         disabled,
         mode,
         scale,
@@ -1009,41 +1100,43 @@ export default function DrawZone({
                 position: 'relative',
             }}
         >
-            {canMarkerBeVisible && showMarker && (
-                <>
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: '0',
-                            bottom: '0',
-                            left:
-                                clientX -
-                                (svgRef.current?.getBoundingClientRect().left ||
-                                    0),
-                            width: '2px',
-                            backgroundColor: 'black',
-                            zIndex: 20,
-                            pointerEvents: 'none',
-                        }}
-                    />
-                    <div
-                        style={{
-                            position: 'absolute',
-                            left: '0',
-                            right: '0',
-                            top:
-                                clientY -
-                                (svgRef.current?.getBoundingClientRect().top ||
-                                    0),
-                            height: '2px',
-                            backgroundColor: 'black',
-                            zIndex: 20,
-                            pointerEvents: 'none',
-                        }}
-                    />
-                </>
-            )}
-            <div ref={svgRef}>{children}</div>
+            <div ref={svgRef}>
+                {canMarkerBeVisible && showMarker && (
+                    <>
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: '0',
+                                bottom: '0',
+                                left:
+                                    clientX -
+                                    (svgRef.current?.getBoundingClientRect()
+                                        .left || 0),
+                                width: '1px',
+                                backgroundColor: 'black',
+                                zIndex: 20,
+                                pointerEvents: 'none',
+                            }}
+                        />
+                        <div
+                            style={{
+                                position: 'absolute',
+                                left: '0',
+                                right: '0',
+                                top:
+                                    clientY -
+                                    (svgRef.current?.getBoundingClientRect()
+                                        .top || 0),
+                                height: '1px',
+                                backgroundColor: 'black',
+                                zIndex: 20,
+                                pointerEvents: 'none',
+                            }}
+                        />
+                    </>
+                )}
+                {children}
+            </div>
         </div>
     )
 }
