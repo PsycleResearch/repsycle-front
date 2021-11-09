@@ -129,6 +129,14 @@ export function useDraw(
         }
     }
 
+    function onEscKeyPress(this: SVGElement, event: KeyboardEvent) {
+        if (event.defaultPrevented) return
+        if (event.key === 'Escape') {
+            event.preventDefault()
+            this.dispatchEvent(new Event('deselect'))
+        }
+    }
+
     function onAbortPathDrawing(this: Window, event: KeyboardEvent) {
         if (event.defaultPrevented) return
         if (event.key === 'Escape') {
@@ -181,6 +189,7 @@ export function useDraw(
         rect.css('touch-action', 'none') // silence interactjs warning.
 
         const rectDelKeyPress = onDelKeyPress.bind(rect.node)
+        const rectEscKeyPress = onEscKeyPress.bind(rect.node)
 
         let circle: Circle
         let handles: Use[] = []
@@ -200,7 +209,12 @@ export function useDraw(
             const coords = getRectCoords(rect)
 
             if (!disabled) {
+                handles.forEach((h) => h.remove())
+                handles.length = 0
                 window.addEventListener('keydown', rectDelKeyPress, {
+                    once: true,
+                })
+                window.addEventListener('keydown', rectEscKeyPress, {
                     once: true,
                 })
 
@@ -241,6 +255,7 @@ export function useDraw(
             document.removeEventListener('dragstart', preventDrag)
 
             window.removeEventListener('keydown', rectDelKeyPress)
+            window.removeEventListener('keydown', rectEscKeyPress)
 
             onChange()
         })
@@ -260,8 +275,6 @@ export function useDraw(
                     edges: { left: true, right: true, bottom: true, top: true },
                     listeners: {
                         move(event) {
-                            handles.forEach((h) => h.remove())
-
                             const svgRect = svg.node.getBoundingClientRect()
 
                             event.target.instance.width(
@@ -295,6 +308,12 @@ export function useDraw(
                                 }%`,
                             )
 
+                            const coords = getRectCoords(event.target.instance)
+                            handles.forEach((h) => {
+                                h.x(coords[h.data('index')].x)
+                                h.y(coords[h.data('index')].y)
+                            })
+
                             onChange()
                         },
                     },
@@ -311,9 +330,9 @@ export function useDraw(
                     listeners: {
                         start(event) {
                             event.target.instance.fire('select')
-                            handles.forEach((h) => h.remove())
                         },
                         move(event) {
+                            console.log('trigger')
                             const svgRect = svg.node.getBoundingClientRect()
 
                             const x =
@@ -329,6 +348,26 @@ export function useDraw(
                             event.target.instance.y(
                                 `${((y + event.dy) / svgRect.height) * 100}%`,
                             )
+
+                            handles.forEach((h) => {
+                                const x =
+                                    (parseFloat(h.x() as string) / 100) *
+                                    svgRect.width
+                                const y =
+                                    (parseFloat(h.y() as string) / 100) *
+                                    svgRect.height
+
+                                h.x(
+                                    `${
+                                        ((x + event.dx) / svgRect.width) * 100
+                                    }%`,
+                                )
+                                h.y(
+                                    `${
+                                        ((y + event.dy) / svgRect.height) * 100
+                                    }%`,
+                                )
+                            })
 
                             onChange()
                         },
@@ -392,6 +431,7 @@ export function useDraw(
         let rootMatrix: DOMMatrix
 
         const polyDelKeyPress = onDelKeyPress.bind(poly.node)
+        const polyEscKeyPress = onEscKeyPress.bind(poly.node)
 
         // Custom events.
         poly.on('select', () => {
@@ -404,6 +444,7 @@ export function useDraw(
             poly.stroke({ color: blue })
             poly.data('selected', true)
             window.addEventListener('keydown', polyDelKeyPress, { once: true })
+            window.addEventListener('keydown', polyEscKeyPress, { once: true })
 
             if (!disabled) {
                 handles.forEach((h) => h.remove())
@@ -505,6 +546,7 @@ export function useDraw(
             document.removeEventListener('dragstart', preventDrag)
 
             window.removeEventListener('keydown', polyDelKeyPress)
+            window.removeEventListener('keydown', polyEscKeyPress)
 
             onChange()
         })
@@ -725,7 +767,7 @@ export function useDraw(
                 .fill('none')
                 .stroke({
                     color: '#f06',
-                    width: 4,
+                    width: 1,
                     linecap: 'round',
                     linejoin: 'round',
                 })
@@ -1068,16 +1110,6 @@ export default function DrawZone({
                 elements.forEach((element) => draw(element as ChangedElement))
                 return
             }
-
-            // Selectively redraw elements.
-            // svg.children().forEach(child => {
-            //     // Strange bug, can't use find
-            //     const element = elements.filter(elt => elt.id === child.data('id'))[0];
-            //     if (element && element.stroke !== child.stroke()) {
-            //         child.remove();
-            //         draw(element);
-            //     }
-            // });
         }
     }, [svg, elements, forceDraw])
 
