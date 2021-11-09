@@ -634,21 +634,11 @@ export function useDraw(
                         })
                     },
                     move(event) {
-                        const svgRect = svg.node.getBoundingClientRect()
+                        const x = parseFloat(event.target.instance.x())
+                        const y = parseFloat(event.target.instance.y())
 
-                        const x =
-                            (parseFloat(event.target.instance.x()) / 100) *
-                            svgRect.width
-                        const y =
-                            (parseFloat(event.target.instance.y()) / 100) *
-                            svgRect.height
-
-                        event.target.instance.x(
-                            ((x + event.dx) / svgRect.width) * 100,
-                        )
-                        event.target.instance.y(
-                            ((y + event.dy) / svgRect.height) * 100,
-                        )
+                        event.target.instance.x(x + event.dx)
+                        event.target.instance.y(y + event.dy)
 
                         onChange()
                     },
@@ -818,21 +808,10 @@ export function useDraw(
 
             const prev = poly
                 ? [...poly.plot()]
-                : [
-                      [
-                          startPosition.x,
-                          startPosition.y,
-                      ] as ArrayXY,
-                  ]
+                : [[startPosition.x, startPosition.y] as ArrayXY]
 
             tmpPoly = svg
-                .polyline([
-                    ...prev,
-                    [
-                        currentPosition.x,
-                        currentPosition.y,
-                    ],
-                ])
+                .polyline([...prev, [currentPosition.x, currentPosition.y]])
                 .fill('none')
                 .stroke({
                     color: '#f06',
@@ -964,12 +943,7 @@ export function useDraw(
 
                 const prev = poly
                     ? [...poly.plot()]
-                    : [
-                          [
-                              startPosition.x,
-                              startPosition.y,
-                          ] as ArrayXY,
-                      ]
+                    : [[startPosition.x, startPosition.y] as ArrayXY]
 
                 if (poly) {
                     poly.remove()
@@ -979,12 +953,8 @@ export function useDraw(
                 const start = prev[0]
                 if (
                     prev.length > 2 &&
-                    Math.abs(
-                        currentPosition.x - start[0],
-                    ) <= 10 &&
-                    Math.abs(
-                        currentPosition.y - start[1],
-                    ) <= 10
+                    Math.abs(currentPosition.x - start[0]) <= 10 &&
+                    Math.abs(currentPosition.y - start[1]) <= 10
                 ) {
                     if (tmpPoly) {
                         tmpPoly.remove()
@@ -1008,10 +978,7 @@ export function useDraw(
                     poly = svg
                         .polygon([
                             ...prev,
-                            [
-                                currentPosition.x,
-                                currentPosition.y,
-                            ],
+                            [currentPosition.x, currentPosition.y],
                         ])
                         .fill({
                             color: '#f06',
