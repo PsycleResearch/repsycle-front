@@ -57,7 +57,6 @@ export function Rects({}) {
                 scale={scale}
                 mode={move ? 'move' : mode}
                 showMarker={showMarker}
-                forceDraw={forceDraw}
             >
                 {elements.map((element, index) => {
                     const elem = element as ChangedElement
@@ -189,7 +188,6 @@ export function Polygons({}) {
                 scale={scale}
                 mode={move ? 'move' : mode}
                 showMarker={showMarker}
-                forceDraw={forceDraw}
             >
                 {elements.map((element, index) => {
                     const elem = element as ChangedElement

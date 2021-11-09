@@ -63,6 +63,26 @@ export function useDraw(
     let tmpPoly: Polyline | undefined
     let dragging: boolean
 
+    function getRelativeCoordinates(points: Point[]): Point[] {
+        if (!svg) return points
+        const svgRect = svg.node.getBoundingClientRect();
+
+        return points.map(({x, y}) => ({
+            x: x * svgRect.width,
+            y: y * svgRect.height
+        }));
+    }
+
+    function getAbsoluteCoordinates(points: Point[]) {
+        if (!svg) return points
+        const svgRect = svg.node.getBoundingClientRect();
+
+        return points.map(({x, y}) => ({
+            x: x / svgRect.width,
+            y: y / svgRect.height
+        }));
+    }
+
     function onChange() {
         if (svg && props.onChange) {
             props.onChange(
@@ -88,10 +108,10 @@ export function useDraw(
                             const polygon = elt as Polygon
 
                             return {
-                                points: polygon.plot().map((p) => ({
-                                    x: p[0] / 100,
-                                    y: p[1] / 100,
-                                })),
+                                points: getAbsoluteCoordinates(polygon.plot().map((p) => ({
+                                    x: p[0],
+                                    y: p[1],
+                                }))),
                                 rect: rect,
                                 selected: polygon.data('selected') as boolean,
                                 id: polygon.data('id'),
@@ -100,10 +120,10 @@ export function useDraw(
 
                         const box = elt.bbox()
                         return {
-                            points: [
-                                { x: box.x / 100, y: box.y / 100 },
-                                { x: box.x2 / 100, y: box.y2 / 100 },
-                            ],
+                            points: getAbsoluteCoordinates([
+                                { x: box.x, y: box.y },
+                                { x: box.x2, y: box.y2 },
+                            ]),
                             rect: rect,
                             selected: elt.data('selected') as boolean,
                             id: elt.data('id'),
@@ -250,7 +270,7 @@ export function useDraw(
                 circle = svg
                     .defs()
                     .attr('data-draw-ignore', true)
-                    .circle(3)
+                    .circle(7)
                     .center(0, 0)
                     .fill({ opacity: 1, color: blue })
                     .stroke({ width: 1, color: '#fff' })
@@ -483,7 +503,7 @@ export function useDraw(
                 circle = svg
                     .defs()
                     .attr('data-draw-ignore', true)
-                    .circle(3)
+                    .circle(7)
                     .center(0, 0)
                     .fill({ opacity: 1, color: blue })
                     .stroke({ width: 1, color: '#fff' })
@@ -1014,9 +1034,9 @@ export function useDraw(
         const newSvg = SVG()
             .addTo(ref.current)
             .size('100%', '100%')
-            .viewbox(0, 0, 100, 100)
+            //.viewbox(0, 0, 100, 100)
             .attr({
-                preserveAspectRatio: 'none',
+                //preserveAspectRatio: 'none',
                 'xmlns:xlink': xns,
             })
 
@@ -1028,6 +1048,12 @@ export function useDraw(
             ref.current.style.width = `${originalSize.width * props.scale}px`
 
             ref.current.style.height = `${originalSize.height * props.scale}px`
+
+            if (svg) {
+                svg.each(function (this: Svg) {
+                    this.fire('deselect')
+                })
+            }
         }
     }, [ref, originalSize, props.scale])
 
@@ -1085,7 +1111,6 @@ export interface DrawZoneProps {
     scale: number
     drawOnMouseDown?: boolean
     showMarker?: boolean
-    forceDraw: boolean
 }
 
 export default function DrawZone({
@@ -1099,7 +1124,6 @@ export default function DrawZone({
     scale,
     drawOnMouseDown,
     showMarker = false,
-    forceDraw,
 }: DrawZoneProps): JSX.Element {
     const svgRef = useRef<HTMLDivElement>(null)
     const { svg, draw } = useDraw(svgRef, src, {
@@ -1143,8 +1167,7 @@ export default function DrawZone({
             if (
                 elements.length !==
                     svg.children().filter((c) => !c.attr('data-draw-ignore'))
-                        .length ||
-                forceDraw
+                        .length
             ) {
                 console.log('layout')
                 svg.clear()
@@ -1152,7 +1175,7 @@ export default function DrawZone({
                 return
             }
         }
-    }, [svg, elements, forceDraw])
+    }, [svg, elements])
 
     return (
         <div
