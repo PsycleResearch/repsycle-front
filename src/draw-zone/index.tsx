@@ -801,6 +801,7 @@ export function useDraw(
                     linejoin: 'round',
                     dasharray: '5,5',
                 })
+                .attr('data-draw-ignore', true)
         }
     }
 
@@ -982,6 +983,7 @@ export function useDraw(
                             linecap: 'round',
                             linejoin: 'round',
                         })
+                        .attr('data-draw-ignore', true)
 
                     startPosition = currentPosition
                 }
