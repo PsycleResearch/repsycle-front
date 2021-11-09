@@ -60,7 +60,7 @@ export function useDraw(
         mode: DrawZoneMode
         scale: number
         drawOnMouseDown?: boolean
-        setImageLoaded: Dispatch<SetStateAction<boolean>>
+        setForceRedraw: Dispatch<SetStateAction<boolean>>
     },
 ) {
     const [svg, setSvg] = useState<Svg>()
@@ -162,7 +162,9 @@ export function useDraw(
     function onEnterKeyPress(this: Window, event: KeyboardEvent) {
         if (event.defaultPrevented) return
         if (event.key === 'Enter') {
-            if (!poly) return
+            if (!svg || !poly) return
+
+            const svgRect = svg.node.getBoundingClientRect()
             const plot = poly.plot()
 
             if (plot.length < 3) return
@@ -181,8 +183,8 @@ export function useDraw(
 
             drawPoly({
                 points: plot.map(([x, y]) => ({
-                    x: x / 100,
-                    y: y / 100,
+                    x: x / svgRect.width,
+                    y: y / svgRect.height,
                 })),
             })
 
@@ -700,6 +702,11 @@ export function useDraw(
         return poly
     }
 
+    const draw = ({ points, id }: { points: Array<Point>; id: string }) => {
+        if (points.length === 2) drawRect({ points, id })
+        else drawPoly({ points, id })
+    }
+
     function onMouseDown(e: globalThis.MouseEvent) {
         if (e.defaultPrevented) return
         if (!svg) return
@@ -813,8 +820,8 @@ export function useDraw(
                 ? [...poly.plot()]
                 : [
                       [
-                          (startPosition.x / svgRect.width) * 100,
-                          (startPosition.y / svgRect.height) * 100,
+                          startPosition.x,
+                          startPosition.y,
                       ] as ArrayXY,
                   ]
 
@@ -822,8 +829,8 @@ export function useDraw(
                 .polyline([
                     ...prev,
                     [
-                        (currentPosition.x / svgRect.width) * 100,
-                        (currentPosition.y / svgRect.height) * 100,
+                        currentPosition.x,
+                        currentPosition.y,
                     ],
                 ])
                 .fill('none')
@@ -959,8 +966,8 @@ export function useDraw(
                     ? [...poly.plot()]
                     : [
                           [
-                              (startPosition.x / svgRect.width) * 100,
-                              (startPosition.y / svgRect.height) * 100,
+                              startPosition.x,
+                              startPosition.y,
                           ] as ArrayXY,
                       ]
 
@@ -973,10 +980,10 @@ export function useDraw(
                 if (
                     prev.length > 2 &&
                     Math.abs(
-                        (currentPosition.x / svgRect.width) * 100 - start[0],
+                        currentPosition.x - start[0],
                     ) <= 10 &&
                     Math.abs(
-                        (currentPosition.y / svgRect.height) * 100 - start[1],
+                        currentPosition.y - start[1],
                     ) <= 10
                 ) {
                     if (tmpPoly) {
@@ -988,8 +995,8 @@ export function useDraw(
 
                     drawPoly({
                         points: prev.map(([x, y]) => ({
-                            x: x / 100,
-                            y: y / 100,
+                            x: x / svgRect.width,
+                            y: y / svgRect.height,
                         })),
                     })
 
@@ -1002,8 +1009,8 @@ export function useDraw(
                         .polygon([
                             ...prev,
                             [
-                                (currentPosition.x / svgRect.width) * 100,
-                                (currentPosition.y / svgRect.height) * 100,
+                                currentPosition.x,
+                                currentPosition.y,
                             ],
                         ])
                         .fill({
@@ -1029,15 +1036,12 @@ export function useDraw(
             return
         }
 
-        props.setImageLoaded(false)
         const image = new Image()
         image.onload = () => {
             setOriginalSize({
                 width: image.naturalWidth,
                 height: image.naturalHeight,
             })
-
-            props.setImageLoaded(true)
         }
         image.src = src
         ref.current.style.background = `url('${src}') center center / 100% 100% no-repeat`
@@ -1064,14 +1068,9 @@ export function useDraw(
 
             ref.current.style.height = `${originalSize.height * props.scale}px`
 
-            // TODO: Fix the fact that all polygon y are set to 0 on forst render.
-            /*
             if (svg) {
-                svg.each(function (this: Svg) {
-                    this.fire('deselect')
-                })
+                props.setForceRedraw(true)
             }
-            */
         }
     }, [ref, originalSize, props.scale])
 
@@ -1112,10 +1111,7 @@ export function useDraw(
 
     return {
         svg,
-        draw: ({ points, id }: { points: Array<Point>; id: string }) => {
-            if (points.length === 2) drawRect({ points, id })
-            else drawPoly({ points, id })
-        },
+        draw,
     }
 }
 
@@ -1145,7 +1141,7 @@ export default function DrawZone({
     showMarker = false,
 }: DrawZoneProps): JSX.Element {
     const svgRef = useRef<HTMLDivElement>(null)
-    const [imageLoaded, setImageLoaded] = useState(false)
+    const [forceRedraw, setForceRedraw] = useState(false)
     const { svg, draw } = useDraw(svgRef, src, {
         onChange,
         remove,
@@ -1153,7 +1149,7 @@ export default function DrawZone({
         mode,
         scale,
         drawOnMouseDown,
-        setImageLoaded,
+        setForceRedraw,
     })
     const { clientX, clientY } = useMousePosition()
     const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
@@ -1189,16 +1185,16 @@ export default function DrawZone({
                 elements.length !==
                     svg.children().filter((c) => !c.attr('data-draw-ignore'))
                         .length ||
-                imageLoaded
+                forceRedraw
             ) {
                 svg.clear()
                 elements.forEach((element) => draw(element as ChangedElement))
 
-                if (imageLoaded) setImageLoaded(false)
+                if (forceRedraw) setForceRedraw(false)
                 return
             }
         }
-    }, [svg, elements, imageLoaded])
+    }, [svg, elements, forceRedraw])
 
     return (
         <div
