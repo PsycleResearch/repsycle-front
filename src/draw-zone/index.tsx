@@ -1049,7 +1049,7 @@ export function useDraw(
 
         svg.css({
             cursor:
-                props.mode === 'draw' && !props.disabled ? 'crosshair' : 'grab',
+                props.mode === 'move' && !props.disabled ? 'grab' : 'crosshair',
             position: 'absolute',
             top: '0',
             left: '0',
@@ -1164,13 +1164,17 @@ export default function DrawZone({
         }
     }, [svg, elements, forceRedraw])
 
+    const width = svgRef.current?.getBoundingClientRect().width
+    const height = svgRef.current?.getBoundingClientRect().height
+    const left = clientX - (svgRef.current?.getBoundingClientRect().left || 0)
+    const top = clientY - (svgRef.current?.getBoundingClientRect().top || 0)
+
     return (
         <div
             style={{
                 width: '100%',
                 height: '100%',
                 overflow: 'hidden',
-                backgroundColor: '#eee',
                 position: 'relative',
             }}
         >
@@ -1182,29 +1186,31 @@ export default function DrawZone({
                                 position: 'absolute',
                                 top: '0',
                                 bottom: '0',
-                                left:
-                                    clientX -
-                                    (svgRef.current?.getBoundingClientRect()
-                                        .left || 0),
+                                transform: `translate3d(${left}px, 0px, 0px)`,
                                 width: '1px',
-                                backgroundColor: 'black',
+                                background: `url(${src}) ${
+                                    left * -1
+                                }px 0% / ${width}px ${height}px, #fff`,
+                                backgroundBlendMode: 'difference',
                                 zIndex: 20,
                                 pointerEvents: 'none',
+                                willChange: 'transform, background',
                             }}
                         />
                         <div
                             style={{
                                 position: 'absolute',
-                                left: '0',
+                                transform: `translate3d(0px, ${top}px, 0px)`,
                                 right: '0',
-                                top:
-                                    clientY -
-                                    (svgRef.current?.getBoundingClientRect()
-                                        .top || 0),
+                                left: '0',
                                 height: '1px',
-                                backgroundColor: 'black',
+                                background: `url(${src}) 0% ${
+                                    top * -1
+                                }px / ${width}px ${height}px, #fff`,
+                                backgroundBlendMode: 'difference',
                                 zIndex: 20,
                                 pointerEvents: 'none',
+                                willChange: 'transform, background',
                             }}
                         />
                     </>
