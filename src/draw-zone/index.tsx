@@ -727,6 +727,7 @@ export function useDraw(
                 x: e.clientX,
                 y: e.clientY,
             }
+
             dragging = true
 
             svg.css({
@@ -778,6 +779,9 @@ export function useDraw(
                 dragging = false
                 return
             }
+            const parent = svg.parent()
+
+            if (!parent) return
 
             const currentPosition = {
                 x: e.clientX,
@@ -786,13 +790,10 @@ export function useDraw(
             const translationX = currentPosition.x - startPosition.x
             const translationY = currentPosition.y - startPosition.y
 
-            const parent = svg.parent()
-
-            if (parent)
-                parent.css(
-                    'transform',
-                    `translate(${translationX}px, ${translationY}px)`,
-                )
+            parent.css(
+                'transform',
+                `translate3d(${translationX}px, ${translationY}px, 0px)`,
+            )
         } else if (props.mode === 'path') {
             const svgRect = svg.node.getBoundingClientRect()
 
