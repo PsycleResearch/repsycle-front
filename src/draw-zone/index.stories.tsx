@@ -38,73 +38,77 @@ export function Rects({}) {
                     {showMarker ? 'Cacher' : 'Afficher'} marqueur
                 </button>
             </div>
-            <DrawZone
-                src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/250px-Image_created_with_a_mobile_phone.png"
-                elements={elements}
-                onChange={(elements: ChangedElement[]) => setElements(elements)}
-                remove={(id) =>
-                    setElements((el) => el.filter((e) => e.id !== id))
-                }
-                scale={scale}
-                mode={move ? 'move' : mode}
-                showMarker={showMarker}
-            >
-                {elements.map((element, index) => {
-                    const elem = element as ChangedElement
+            <div style={{ backgroundColor: '#aaa' }}>
+                <DrawZone
+                    src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/250px-Image_created_with_a_mobile_phone.png"
+                    elements={elements}
+                    onChange={(elements: ChangedElement[]) =>
+                        setElements(elements)
+                    }
+                    remove={(id) =>
+                        setElements((el) => el.filter((e) => e.id !== id))
+                    }
+                    scale={scale}
+                    mode={move ? 'move' : mode}
+                    showMarker={showMarker}
+                >
+                    {elements.map((element, index) => {
+                        const elem = element as ChangedElement
 
-                    if (!elem.selected) return null
+                        if (!elem.selected) return null
 
-                    return (
-                        <div
-                            key={index}
-                            style={{
-                                position: 'absolute',
-                                zIndex: 10,
-                                top: elem.rect
-                                    ? `${elem.rect.y}%`
-                                    : `${elem.points[0].y * 100}%`,
-                                left: elem.rect
-                                    ? `${elem.rect.x}%`
-                                    : `${elem.points[0].x * 100}%`,
-                                border:
-                                    elem.rect && elem.selected
-                                        ? '1px dashed black'
-                                        : 'none',
-                                width:
-                                    elem.rect && elem.selected
-                                        ? `${elem.rect.width}%`
-                                        : 'auto',
-                                height:
-                                    elem.rect && elem.selected
-                                        ? `${elem.rect.height}%`
-                                        : 'auto',
-                                pointerEvents: 'none',
-                            }}
-                        >
-                            <button
+                        return (
+                            <div
+                                key={index}
                                 style={{
-                                    pointerEvents: 'auto',
-                                }}
-                                onClick={() => {
-                                    console.log(
-                                        'elements',
-                                        elements.filter(
-                                            (_, idx) => index !== idx,
-                                        ),
-                                    )
-                                    setElements(
-                                        elements.filter(
-                                            (_, idx) => index !== idx,
-                                        ),
-                                    )
+                                    position: 'absolute',
+                                    zIndex: 10,
+                                    top: elem.rect
+                                        ? `${elem.rect.y}%`
+                                        : `${elem.points[0].y * 100}%`,
+                                    left: elem.rect
+                                        ? `${elem.rect.x}%`
+                                        : `${elem.points[0].x * 100}%`,
+                                    border:
+                                        elem.rect && elem.selected
+                                            ? '1px dashed black'
+                                            : 'none',
+                                    width:
+                                        elem.rect && elem.selected
+                                            ? `${elem.rect.width}%`
+                                            : 'auto',
+                                    height:
+                                        elem.rect && elem.selected
+                                            ? `${elem.rect.height}%`
+                                            : 'auto',
+                                    pointerEvents: 'none',
                                 }}
                             >
-                                supprimer
-                            </button>
-                        </div>
-                    )
-                })}
-            </DrawZone>
+                                <button
+                                    style={{
+                                        pointerEvents: 'auto',
+                                    }}
+                                    onClick={() => {
+                                        console.log(
+                                            'elements',
+                                            elements.filter(
+                                                (_, idx) => index !== idx,
+                                            ),
+                                        )
+                                        setElements(
+                                            elements.filter(
+                                                (_, idx) => index !== idx,
+                                            ),
+                                        )
+                                    }}
+                                >
+                                    supprimer
+                                </button>
+                            </div>
+                        )
+                    })}
+                </DrawZone>
+            </div>
         </div>
     )
 }
@@ -169,73 +173,77 @@ export function Polygons({}) {
                     {showMarker ? 'Cacher' : 'Afficher'} marqueur
                 </button>
             </div>
-            <DrawZone
-                src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/250px-Image_created_with_a_mobile_phone.png"
-                elements={elements}
-                onChange={(elements: ChangedElement[]) => setElements(elements)}
-                remove={(id) =>
-                    setElements((el) => el.filter((e) => e.id !== id))
-                }
-                scale={scale}
-                mode={move ? 'move' : mode}
-                showMarker={showMarker}
-            >
-                {elements.map((element, index) => {
-                    const elem = element as ChangedElement
+            <div style={{ backgroundColor: '#aaa' }}>
+                <DrawZone
+                    src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/250px-Image_created_with_a_mobile_phone.png"
+                    elements={elements}
+                    onChange={(elements: ChangedElement[]) =>
+                        setElements(elements)
+                    }
+                    remove={(id) =>
+                        setElements((el) => el.filter((e) => e.id !== id))
+                    }
+                    scale={scale}
+                    mode={move ? 'move' : mode}
+                    showMarker={showMarker}
+                >
+                    {elements.map((element, index) => {
+                        const elem = element as ChangedElement
 
-                    if (!elem.selected) return null
+                        if (!elem.selected) return null
 
-                    return (
-                        <div
-                            key={index}
-                            style={{
-                                position: 'absolute',
-                                zIndex: 10,
-                                top: elem.rect
-                                    ? `${elem.rect.y}%`
-                                    : `${elem.points[0].y * 100}%`,
-                                left: elem.rect
-                                    ? `${elem.rect.x}%`
-                                    : `${elem.points[0].x * 100}%`,
-                                border:
-                                    elem.rect && elem.selected
-                                        ? '1px dashed black'
-                                        : 'none',
-                                width:
-                                    elem.rect && elem.selected
-                                        ? `${elem.rect.width}%`
-                                        : 'auto',
-                                height:
-                                    elem.rect && elem.selected
-                                        ? `${elem.rect.height}%`
-                                        : 'auto',
-                                pointerEvents: 'none',
-                            }}
-                        >
-                            <button
+                        return (
+                            <div
+                                key={index}
                                 style={{
-                                    pointerEvents: 'auto',
-                                }}
-                                onClick={() => {
-                                    console.log(
-                                        'elements',
-                                        elements.filter(
-                                            (_, idx) => index !== idx,
-                                        ),
-                                    )
-                                    setElements(
-                                        elements.filter(
-                                            (_, idx) => index !== idx,
-                                        ),
-                                    )
+                                    position: 'absolute',
+                                    zIndex: 10,
+                                    top: elem.rect
+                                        ? `${elem.rect.y}%`
+                                        : `${elem.points[0].y * 100}%`,
+                                    left: elem.rect
+                                        ? `${elem.rect.x}%`
+                                        : `${elem.points[0].x * 100}%`,
+                                    border:
+                                        elem.rect && elem.selected
+                                            ? '1px dashed black'
+                                            : 'none',
+                                    width:
+                                        elem.rect && elem.selected
+                                            ? `${elem.rect.width}%`
+                                            : 'auto',
+                                    height:
+                                        elem.rect && elem.selected
+                                            ? `${elem.rect.height}%`
+                                            : 'auto',
+                                    pointerEvents: 'none',
                                 }}
                             >
-                                supprimer
-                            </button>
-                        </div>
-                    )
-                })}
-            </DrawZone>
+                                <button
+                                    style={{
+                                        pointerEvents: 'auto',
+                                    }}
+                                    onClick={() => {
+                                        console.log(
+                                            'elements',
+                                            elements.filter(
+                                                (_, idx) => index !== idx,
+                                            ),
+                                        )
+                                        setElements(
+                                            elements.filter(
+                                                (_, idx) => index !== idx,
+                                            ),
+                                        )
+                                    }}
+                                >
+                                    supprimer
+                                </button>
+                            </div>
+                        )
+                    })}
+                </DrawZone>
+            </div>
         </div>
     )
 }
