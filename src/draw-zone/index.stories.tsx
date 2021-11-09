@@ -11,7 +11,6 @@ export function Rects({}) {
     const [scale, setScale] = useState(1)
     const mode = 'draw'
     const [move, setMove] = useState(false)
-    const [forceDraw, setForceDraw] = useState(false)
     const [elements, setElements] = useState<Array<Partial<ChangedElement>>>([
         {
             id: 'rect1',
@@ -37,14 +36,6 @@ export function Rects({}) {
                 </button>
                 <button onClick={() => setShowMarker((s) => !s)}>
                     {showMarker ? 'Cacher' : 'Afficher'} marqueur
-                </button>
-                <button
-                    onClick={() => {
-                        setForceDraw(true)
-                        setTimeout(() => setForceDraw(false), 250)
-                    }}
-                >
-                    Force draw
                 </button>
             </div>
             <DrawZone
@@ -122,7 +113,6 @@ export function Polygons({}) {
     const [scale, setScale] = useState(1)
     const mode = 'path'
     const [move, setMove] = useState(false)
-    const [forceDraw, setForceDraw] = useState(false)
     const [elements, setElements] = useState<Array<Partial<ChangedElement>>>([
         /*
         {
@@ -141,13 +131,22 @@ export function Polygons({}) {
                 { x: 0.25, y: 0.8 },
             ],
         },
-        */
         {
             id: 'poly1',
             points: [
                 { x: 0.2, y: 0.3 },
                 { x: 0.2, y: 0.85 },
                 { x: 0.6, y: 0.8 },
+                { x: 0.8, y: 0.2 },
+            ],
+        },
+        */
+        {
+            id: 'poly2',
+            points: [
+                { x: 0.2, y: 0.2 },
+                { x: 0.2, y: 0.8 },
+                { x: 0.8, y: 0.8 },
                 { x: 0.8, y: 0.2 },
             ],
         },
@@ -168,14 +167,6 @@ export function Polygons({}) {
                 </button>
                 <button onClick={() => setShowMarker((s) => !s)}>
                     {showMarker ? 'Cacher' : 'Afficher'} marqueur
-                </button>
-                <button
-                    onClick={() => {
-                        setForceDraw(true)
-                        setTimeout(() => setForceDraw(false), 250)
-                    }}
-                >
-                    Force draw
                 </button>
             </div>
             <DrawZone

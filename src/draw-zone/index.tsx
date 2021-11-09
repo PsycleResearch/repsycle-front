@@ -1,4 +1,11 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
+import React, {
+    useState,
+    useEffect,
+    useLayoutEffect,
+    useRef,
+    Dispatch,
+    SetStateAction,
+} from 'react'
 import { SVG, Rect, Svg, Polygon, ArrayXY, Circle, Use } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.draggable.js'
 import interact from 'interactjs'
@@ -53,6 +60,7 @@ export function useDraw(
         mode: DrawZoneMode
         scale: number
         drawOnMouseDown?: boolean
+        setImageLoaded: Dispatch<SetStateAction<boolean>>
     },
 ) {
     const [svg, setSvg] = useState<Svg>()
@@ -65,22 +73,22 @@ export function useDraw(
 
     function getRelativeCoordinates(points: Point[]): Point[] {
         if (!svg) return points
-        const svgRect = svg.node.getBoundingClientRect();
+        const svgRect = svg.node.getBoundingClientRect()
 
-        return points.map(({x, y}) => ({
+        return points.map(({ x, y }) => ({
             x: x * svgRect.width,
-            y: y * svgRect.height
-        }));
+            y: y * svgRect.height,
+        }))
     }
 
     function getAbsoluteCoordinates(points: Point[]) {
         if (!svg) return points
-        const svgRect = svg.node.getBoundingClientRect();
+        const svgRect = svg.node.getBoundingClientRect()
 
-        return points.map(({x, y}) => ({
+        return points.map(({ x, y }) => ({
             x: x / svgRect.width,
-            y: y / svgRect.height
-        }));
+            y: y / svgRect.height,
+        }))
     }
 
     function onChange() {
@@ -108,10 +116,12 @@ export function useDraw(
                             const polygon = elt as Polygon
 
                             return {
-                                points: getAbsoluteCoordinates(polygon.plot().map((p) => ({
-                                    x: p[0],
-                                    y: p[1],
-                                }))),
+                                points: getAbsoluteCoordinates(
+                                    polygon.plot().map((p) => ({
+                                        x: p[0],
+                                        y: p[1],
+                                    })),
+                                ),
                                 rect: rect,
                                 selected: polygon.data('selected') as boolean,
                                 id: polygon.data('id'),
@@ -381,7 +391,6 @@ export function useDraw(
                             event.target.instance.fire('select')
                         },
                         move(event) {
-                            console.log('trigger')
                             const svgRect = svg.node.getBoundingClientRect()
 
                             const x =
@@ -466,9 +475,13 @@ export function useDraw(
         if (!svg || !points || points.length < 2) {
             return
         }
+        const svgRect = svg.node.getBoundingClientRect()
+
+        const svgWidth = svgRect.width || originalSize?.width || 0
+        const svgHeight = svgRect.height || originalSize?.height || 0
 
         const poly = svg.polygon(
-            points.map((point) => [point.x * 100, point.y * 100]),
+            points.map((point) => [point.x * svgWidth, point.y * svgHeight]),
         )
 
         poly.fill(fill)
@@ -1016,13 +1029,15 @@ export function useDraw(
             return
         }
 
+        props.setImageLoaded(false)
         const image = new Image()
         image.onload = () => {
             setOriginalSize({
                 width: image.naturalWidth,
-
                 height: image.naturalHeight,
             })
+
+            props.setImageLoaded(true)
         }
         image.src = src
         ref.current.style.background = `url('${src}') center center / 100% 100% no-repeat`
@@ -1049,11 +1064,14 @@ export function useDraw(
 
             ref.current.style.height = `${originalSize.height * props.scale}px`
 
+            // TODO: Fix the fact that all polygon y are set to 0 on forst render.
+            /*
             if (svg) {
                 svg.each(function (this: Svg) {
                     this.fire('deselect')
                 })
             }
+            */
         }
     }, [ref, originalSize, props.scale])
 
@@ -1083,6 +1101,7 @@ export function useDraw(
         svg.on('mouseup', onMouseUp as unknown as EventListener)
         svg.on('click', onClick as unknown as EventListener)
         window.addEventListener('mousemove', onMouseMove)
+
         return () => {
             svg.off('mousedown', onMouseDown as unknown as EventListener)
             svg.off('mouseup', onMouseUp as unknown as EventListener)
@@ -1126,6 +1145,7 @@ export default function DrawZone({
     showMarker = false,
 }: DrawZoneProps): JSX.Element {
     const svgRef = useRef<HTMLDivElement>(null)
+    const [imageLoaded, setImageLoaded] = useState(false)
     const { svg, draw } = useDraw(svgRef, src, {
         onChange,
         remove,
@@ -1133,6 +1153,7 @@ export default function DrawZone({
         mode,
         scale,
         drawOnMouseDown,
+        setImageLoaded,
     })
     const { clientX, clientY } = useMousePosition()
     const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
@@ -1167,15 +1188,17 @@ export default function DrawZone({
             if (
                 elements.length !==
                     svg.children().filter((c) => !c.attr('data-draw-ignore'))
-                        .length
+                        .length ||
+                imageLoaded
             ) {
-                console.log('layout')
                 svg.clear()
                 elements.forEach((element) => draw(element as ChangedElement))
+
+                if (imageLoaded) setImageLoaded(false)
                 return
             }
         }
-    }, [svg, elements])
+    }, [svg, elements, imageLoaded])
 
     return (
         <div
