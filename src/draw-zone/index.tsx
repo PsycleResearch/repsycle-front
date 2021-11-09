@@ -1,20 +1,12 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
-import {
-    SVG,
-    Rect,
-    Svg,
-    Polygon,
-    Polyline,
-    ArrayXY,
-    Circle,
-    Use,
-} from '@svgdotjs/svg.js'
+import { SVG, Rect, Svg, Polygon, ArrayXY, Circle, Use } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.draggable.js'
 import interact from 'interactjs'
 import { DraggableOptions } from '@interactjs/types/index'
 import { uuid4 } from '../helpers'
 import { useMousePosition } from '../hooks'
 import { isTouchDevice } from '../utils'
+import { Polyline } from '@svgdotjs/svg.js'
 
 export type DrawZoneMode = 'draw' | 'path' | 'move'
 
@@ -67,7 +59,7 @@ export function useDraw(
     const [originalSize, setOriginalSize] = useState<Size>()
     let startPosition: Point | null
     let overlayRect: Rect | undefined
-    let poly: Polyline | undefined
+    let poly: Polygon | undefined
     let tmpPoly: Polyline | undefined
     let dragging: boolean
 
@@ -137,6 +129,40 @@ export function useDraw(
         }
     }
 
+    function onEnterKeyPress(this: Window, event: KeyboardEvent) {
+        if (event.defaultPrevented) return
+        if (event.key === 'Enter') {
+            if (!poly) return
+            const plot = poly.plot()
+
+            if (plot.length < 3) return
+
+            event.preventDefault()
+
+            poly.remove()
+            poly = undefined
+
+            if (tmpPoly) {
+                tmpPoly.remove()
+                tmpPoly = undefined
+            }
+
+            startPosition = null
+
+            drawPoly({
+                points: plot.map(([x, y]) => ({
+                    x: x / 100,
+                    y: y / 100,
+                })),
+            })
+
+            window.removeEventListener('keydown', onAbortPathDrawing)
+            window.removeEventListener('keydown', onEnterKeyPress)
+
+            onChange()
+        }
+    }
+
     function onAbortPathDrawing(this: Window, event: KeyboardEvent) {
         if (event.defaultPrevented) return
         if (event.key === 'Escape') {
@@ -153,6 +179,9 @@ export function useDraw(
             }
 
             startPosition = null
+
+            window.removeEventListener('keydown', onAbortPathDrawing)
+            window.removeEventListener('keydown', onEnterKeyPress)
         }
     }
 
@@ -770,6 +799,7 @@ export function useDraw(
                     width: 1,
                     linecap: 'round',
                     linejoin: 'round',
+                    dasharray: '5,5',
                 })
         }
     }
@@ -883,9 +913,8 @@ export function useDraw(
                     y: e.clientY - svgRect.top,
                 }
 
-                window.addEventListener('keydown', onAbortPathDrawing, {
-                    once: true,
-                })
+                window.addEventListener('keydown', onAbortPathDrawing)
+                window.addEventListener('keydown', onEnterKeyPress)
             } else if (startPosition && tmpPoly) {
                 const currentPosition = {
                     x: e.clientX - svgRect.left,
@@ -931,18 +960,28 @@ export function useDraw(
                     })
 
                     window.removeEventListener('keydown', onAbortPathDrawing)
+                    window.removeEventListener('keydown', onEnterKeyPress)
 
                     onChange()
                 } else {
                     poly = svg
-                        .polyline([
+                        .polygon([
                             ...prev,
                             [
                                 (currentPosition.x / svgRect.width) * 100,
                                 (currentPosition.y / svgRect.height) * 100,
                             ],
                         ])
-                        .hide()
+                        .fill({
+                            color: '#f06',
+                            opacity: 0.2,
+                        })
+                        .stroke({
+                            color: '#f06',
+                            width: 1,
+                            linecap: 'round',
+                            linejoin: 'round',
+                        })
 
                     startPosition = currentPosition
                 }
