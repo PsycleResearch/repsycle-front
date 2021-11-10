@@ -18,6 +18,8 @@ export function Rects({}) {
                 { x: 0.5, y: 0.5 },
                 { x: 1, y: 1 },
             ],
+            fillColor: '#00ff00',
+            strokeColor: '#00ff00',
         },
     ])
     const [showMarker, setShowMarker] = useState(false)
@@ -153,6 +155,8 @@ export function Polygons({}) {
                 { x: 0.8, y: 0.8 },
                 { x: 0.8, y: 0.2 },
             ],
+            fillColor: '#00ff00',
+            strokeColor: '#00ff00',
         },
     ])
     const [showMarker, setShowMarker] = useState(false)

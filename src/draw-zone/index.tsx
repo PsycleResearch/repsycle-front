@@ -35,10 +35,14 @@ export interface ChangedElement {
         readonly x: number
         readonly y: number
     }
+    readonly fillColor?: string
+    readonly strokeColor?: string
 }
 
 const xns = 'http://www.w3.org/1999/xlink'
 const blue = '#2BB1FD'
+const defaultStroke = { color: '#fff', width: 2, opacity: 1 }
+const defaultFill = { color: '#000', opacity: 0.2 }
 
 function getRectCoords(rect: Rect) {
     const bbox = rect.bbox()
@@ -112,31 +116,32 @@ export function useDraw(
                                 100,
                         }
 
+                        let points: Point[]
+
                         if (elt instanceof Polygon) {
                             const polygon = elt as Polygon
 
-                            return {
-                                points: getAbsoluteCoordinates(
-                                    polygon.plot().map((p) => ({
-                                        x: p[0],
-                                        y: p[1],
-                                    })),
-                                ),
-                                rect: rect,
-                                selected: polygon.data('selected') as boolean,
-                                id: polygon.data('id'),
-                            }
-                        }
-
-                        const box = elt.bbox()
-                        return {
-                            points: getAbsoluteCoordinates([
+                            points = getAbsoluteCoordinates(
+                                polygon.plot().map((p) => ({
+                                    x: p[0],
+                                    y: p[1],
+                                })),
+                            )
+                        } else {
+                            const box = elt.bbox()
+                            points = getAbsoluteCoordinates([
                                 { x: box.x, y: box.y },
                                 { x: box.x2, y: box.y2 },
-                            ]),
+                            ])
+                        }
+
+                        return {
+                            points: points,
                             rect: rect,
                             selected: elt.data('selected') as boolean,
                             id: elt.data('id'),
+                            fillColor: elt.attr('fill'),
+                            strokeColor: elt.attr('stroke'),
                         }
                     }),
             )
@@ -224,8 +229,8 @@ export function useDraw(
     function drawRect({
         points,
         disabled = props.disabled ? true : false,
-        stroke = { color: '#fff', width: 2, opacity: 1 },
-        fill = { color: '#000', opacity: 0.2 },
+        stroke = { ...defaultStroke },
+        fill = { ...defaultFill },
         id = null,
     }: {
         points: Point[]
@@ -464,8 +469,8 @@ export function useDraw(
     function drawPoly({
         points,
         disabled = props.disabled,
-        stroke = { color: '#fff', width: 2, opacity: 1 },
-        fill = { color: '#000', opacity: 0.2 },
+        stroke = { ...defaultStroke },
+        fill = { ...defaultFill },
         id = null,
     }: {
         points: Point[]
@@ -692,9 +697,26 @@ export function useDraw(
         return poly
     }
 
-    const draw = ({ points, id }: { points: Array<Point>; id: string }) => {
-        if (points.length === 2) drawRect({ points, id })
-        else drawPoly({ points, id })
+    const draw = ({
+        points,
+        id,
+        fillColor,
+        strokeColor,
+    }: {
+        readonly points: Array<Point>
+        readonly id: string
+        readonly fillColor?: string
+        readonly strokeColor?: string
+    }) => {
+        const fill = fillColor
+            ? { ...defaultFill, color: fillColor }
+            : defaultFill
+        const stroke = strokeColor
+            ? { ...defaultStroke, color: strokeColor }
+            : defaultStroke
+
+        if (points.length === 2) drawRect({ points, id, fill, stroke })
+        else drawPoly({ points, id, fill, stroke })
     }
 
     function onMouseDown(e: globalThis.MouseEvent) {
