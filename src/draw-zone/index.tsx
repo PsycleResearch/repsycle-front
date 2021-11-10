@@ -17,11 +17,11 @@ import { Polyline } from '@svgdotjs/svg.js'
 
 export type DrawZoneMode = 'draw' | 'path' | 'move'
 
-interface Size {
+export interface Size {
     readonly width: number
     readonly height: number
 }
-interface Point {
+export interface Point {
     readonly x: number
     readonly y: number
 }
@@ -488,7 +488,9 @@ export function useDraw(
         const svgHeight = svgRect.height || originalSize?.height || 0
 
         const poly = svg.polygon(
-            points.map((point) => [point.x * svgWidth, point.y * svgHeight] as ArrayXY),
+            points.map(
+                (point) => [point.x * svgWidth, point.y * svgHeight] as ArrayXY,
+            ),
         )
 
         poly.fill(fill)
@@ -1102,6 +1104,7 @@ export function useDraw(
     return {
         svg,
         draw,
+        originalSize,
     }
 }
 
@@ -1116,6 +1119,7 @@ export interface DrawZoneProps {
     scale: number
     drawOnMouseDown?: boolean
     showMarker?: boolean
+    setOriginalSize: Dispatch<SetStateAction<Size | undefined>>
 }
 
 export default function DrawZone({
@@ -1129,10 +1133,11 @@ export default function DrawZone({
     scale,
     drawOnMouseDown,
     showMarker = false,
+    setOriginalSize,
 }: DrawZoneProps): JSX.Element {
     const svgRef = useRef<HTMLDivElement>(null)
     const [forceRedraw, setForceRedraw] = useState(false)
-    const { svg, draw } = useDraw(svgRef, src, {
+    const { svg, draw, originalSize } = useDraw(svgRef, src, {
         onChange,
         remove,
         disabled,
@@ -1143,6 +1148,10 @@ export default function DrawZone({
     })
     const { clientX, clientY } = useMousePosition()
     const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
+
+    useEffect(() => {
+        setOriginalSize(originalSize)
+    }, [originalSize])
 
     useEffect(() => {
         if (isTouchDevice) return
