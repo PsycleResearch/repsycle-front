@@ -488,7 +488,7 @@ export function useDraw(
         const svgHeight = svgRect.height || originalSize?.height || 0
 
         const poly = svg.polygon(
-            points.map((point) => [point.x * svgWidth, point.y * svgHeight]),
+            points.map((point) => [point.x * svgWidth, point.y * svgHeight] as ArrayXY),
         )
 
         poly.fill(fill)
