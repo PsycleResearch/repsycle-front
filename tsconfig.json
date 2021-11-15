@@ -17,7 +17,8 @@
         "jsx": "react",
         "declaration": true,
         "declarationDir": ".",
-        "outDir": "./dist"
+        "outDir": "./dist",
+        "downlevelIteration": true,
     },
     "include": ["typings.d.ts", "src/**/*"],
     "exclude": ["node_modules", "dist"]

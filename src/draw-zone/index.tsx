@@ -16,6 +16,7 @@ import { isTouchDevice } from '../utils'
 import { Polyline } from '@svgdotjs/svg.js'
 
 export type DrawZoneMode = 'draw' | 'path' | 'move'
+export type SizeMode = 'auto' | 'fit'
 
 export interface Size {
     readonly width: number
@@ -74,16 +75,6 @@ export function useDraw(
     let poly: Polygon | undefined
     let tmpPoly: Polyline | undefined
     let dragging: boolean
-
-    function getRelativeCoordinates(points: Point[]): Point[] {
-        if (!svg) return points
-        const svgRect = svg.node.getBoundingClientRect()
-
-        return points.map(({ x, y }) => ({
-            x: x * svgRect.width,
-            y: y * svgRect.height,
-        }))
-    }
 
     function getAbsoluteCoordinates(points: Point[]) {
         if (!svg) return points
@@ -1120,6 +1111,7 @@ export interface DrawZoneProps {
     drawOnMouseDown?: boolean
     showMarker?: boolean
     setOriginalSize: Dispatch<SetStateAction<Size | undefined>>
+    sizeMode?: SizeMode
 }
 
 export default function DrawZone({
@@ -1134,20 +1126,40 @@ export default function DrawZone({
     drawOnMouseDown,
     showMarker = false,
     setOriginalSize,
+    sizeMode = 'auto',
 }: DrawZoneProps): JSX.Element {
     const svgRef = useRef<HTMLDivElement>(null)
+    const containerRef = useRef<HTMLDivElement>(null)
     const [forceRedraw, setForceRedraw] = useState(false)
+    const [computedScale, setComputedScale] = useState(scale)
     const { svg, draw, originalSize } = useDraw(svgRef, src, {
         onChange,
         remove,
         disabled,
         mode,
-        scale,
+        scale: computedScale,
         drawOnMouseDown,
         setForceRedraw,
     })
     const { clientX, clientY } = useMousePosition()
     const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
+
+    useEffect(() => {
+        if (sizeMode === 'auto') {
+            setComputedScale(scale)
+        } else if (containerRef.current && originalSize) {
+            const rect = containerRef.current.getBoundingClientRect()
+
+            const minWidth = Math.min(rect.width, originalSize.width)
+            const minHeight = Math.min(rect.height, originalSize.height)
+
+            if (originalSize.width <= minWidth && originalSize.height <= minHeight) {
+                setComputedScale(scale)
+            } else if (minWidth < originalSize.width || minHeight < originalSize.height) {
+                setComputedScale(Math.min(minWidth / originalSize.width, minHeight / originalSize.height) * scale)
+            }
+        }
+    }, [containerRef, originalSize, sizeMode, scale])
 
     useEffect(() => {
         setOriginalSize(originalSize)
@@ -1208,6 +1220,7 @@ export default function DrawZone({
                 overflow: 'hidden',
                 position: 'relative',
             }}
+            ref={containerRef}
         >
             <div ref={svgRef}>
                 {canMarkerBeVisible && showMarker && (
