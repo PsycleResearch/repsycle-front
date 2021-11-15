@@ -280,7 +280,6 @@ export function Polygons({}) {
     )
 }
 
-
 export function Scale({}) {
     const originalElements = [
         {

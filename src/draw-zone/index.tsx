@@ -1028,6 +1028,8 @@ export function useDraw(
         }
         image.src = src
         ref.current.style.background = `url('${src}') center center / 100% 100% no-repeat`
+        ref.current.style.left = '0'
+        ref.current.style.top = '0'
 
         if (svg) {
             svg.node.remove()
