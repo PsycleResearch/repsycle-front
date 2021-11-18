@@ -15,7 +15,7 @@ import { useMousePosition } from '../hooks'
 import { isTouchDevice } from '../utils'
 import { Polyline } from '@svgdotjs/svg.js'
 
-export type DrawZoneMode = 'draw' | 'path' | 'move'
+export type DrawZoneMode = 'draw' | 'path' | 'move' | 'none'
 export type SizeMode = 'auto' | 'fit'
 
 export interface Size {
@@ -1038,9 +1038,7 @@ export function useDraw(
         const newSvg = SVG()
             .addTo(ref.current)
             .size('100%', '100%')
-            //.viewbox(0, 0, 100, 100)
             .attr({
-                //preserveAspectRatio: 'none',
                 'xmlns:xlink': xns,
             })
 
@@ -1102,7 +1100,7 @@ export function useDraw(
 }
 
 export interface DrawZoneProps {
-    children: React.ReactNode
+    children?: React.ReactNode
     src: string
     elements: Partial<ChangedElement>[]
     onChange: (elements: ChangedElement[]) => void
@@ -1191,6 +1189,10 @@ export default function DrawZone({
             }
         }
     }, [])
+
+    useEffect(() => {
+        setForceRedraw(true)
+    }, [mode])
 
     useLayoutEffect(() => {
         if (svg) {

@@ -404,3 +404,48 @@ export function Scale({}) {
         </div>
     )
 }
+
+export function None({}) {
+    const [scale, setScale] = useState(1)
+    const mode = 'none'
+    const [move, setMove] = useState(false)
+    const [elements, setElements] = useState<Array<Partial<ChangedElement>>>([])
+    const [showMarker, setShowMarker] = useState(false)
+    const [orignalSize, setOriginalSize] = useState<Size>()
+
+    return (
+        <div>
+            <div>
+                <button onClick={() => setScale((old) => old - 0.25)}>
+                    Reduire
+                </button>
+                <button onClick={() => setScale((old) => old + 0.25)}>
+                    Agrandir
+                </button>
+                <button onClick={() => setMove((m) => !m)}>
+                    {move ? 'Déplacer actif' : 'Déplacer inactif'}
+                </button>
+                <button onClick={() => setShowMarker((s) => !s)}>
+                    {showMarker ? 'Cacher' : 'Afficher'} marqueur
+                </button>
+            </div>
+            <div style={{ backgroundColor: '#aaa', width: '500px', height: '500px' }}>
+                <DrawZone
+                    src="https://picsum.photos/seed/drawzone/5000/4000"
+                    elements={elements}
+                    onChange={(elements: ChangedElement[]) =>
+                        setElements(elements)
+                    }
+                    remove={(id) =>
+                        setElements((el) => el.filter((e) => e.id !== id))
+                    }
+                    scale={scale}
+                    mode={move ? 'move' : mode}
+                    showMarker={showMarker}
+                    setOriginalSize={setOriginalSize}
+                    sizeMode='fit'
+                />
+            </div>
+        </div>
+    )
+}
