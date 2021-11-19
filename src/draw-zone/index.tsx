@@ -6,7 +6,16 @@ import React, {
     Dispatch,
     SetStateAction,
 } from 'react'
-import { SVG, Rect, Svg, Polygon, ArrayXY, Circle, Use } from '@svgdotjs/svg.js'
+import {
+    SVG,
+    Rect,
+    Svg,
+    Polygon,
+    ArrayXY,
+    Circle,
+    Use,
+    PointArrayAlias,
+} from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.draggable.js'
 import interact from 'interactjs'
 import { DraggableOptions } from '@interactjs/types/index'
@@ -74,6 +83,7 @@ export function useDraw(
     let overlayRect: Rect | undefined
     let poly: Polygon | undefined
     let tmpPoly: Polyline | undefined
+    let tmpPoints: Array<Circle> | undefined
     let dragging: boolean
 
     function getAbsoluteCoordinates(points: Point[]) {
@@ -155,39 +165,48 @@ export function useDraw(
         }
     }
 
+    function endPolyDrawing(event: Event) {
+        if (!svg || !poly) return
+
+        const svgRect = svg.node.getBoundingClientRect()
+        const plot = poly.plot()
+
+        if (plot.length < 3) return
+
+        event.preventDefault()
+
+        poly.remove()
+        poly = undefined
+
+        if (tmpPoints && tmpPoints.length > 0) {
+            tmpPoints.forEach((p) => p.remove())
+            tmpPoints = undefined
+        }
+
+        if (tmpPoly) {
+            tmpPoly.remove()
+            tmpPoly = undefined
+        }
+
+        startPosition = null
+
+        drawPoly({
+            points: plot.map(([x, y]) => ({
+                x: x / svgRect.width,
+                y: y / svgRect.height,
+            })),
+        })
+
+        window.removeEventListener('keydown', onAbortPathDrawing)
+        window.removeEventListener('keydown', onEnterKeyPress)
+
+        onChange()
+    }
+
     function onEnterKeyPress(this: Window, event: KeyboardEvent) {
         if (event.defaultPrevented) return
         if (event.key === 'Enter') {
-            if (!svg || !poly) return
-
-            const svgRect = svg.node.getBoundingClientRect()
-            const plot = poly.plot()
-
-            if (plot.length < 3) return
-
-            event.preventDefault()
-
-            poly.remove()
-            poly = undefined
-
-            if (tmpPoly) {
-                tmpPoly.remove()
-                tmpPoly = undefined
-            }
-
-            startPosition = null
-
-            drawPoly({
-                points: plot.map(([x, y]) => ({
-                    x: x / svgRect.width,
-                    y: y / svgRect.height,
-                })),
-            })
-
-            window.removeEventListener('keydown', onAbortPathDrawing)
-            window.removeEventListener('keydown', onEnterKeyPress)
-
-            onChange()
+            endPolyDrawing(event)
         }
     }
 
@@ -195,6 +214,11 @@ export function useDraw(
         if (event.defaultPrevented) return
         if (event.key === 'Escape') {
             event.preventDefault()
+
+            if (tmpPoints && tmpPoints.length > 0) {
+                tmpPoints.forEach((p) => p.remove())
+                tmpPoints = undefined
+            }
 
             if (tmpPoly) {
                 tmpPoly.remove()
@@ -690,6 +714,39 @@ export function useDraw(
         return poly
     }
 
+    function drawPoint(svg: Svg, x: number, y: number): Circle {
+        const point = svg
+            .circle(6)
+            .center(0, 0)
+            .fill({ opacity: 1, color: '#f06' })
+            .stroke({ width: 1, color: '#fff' })
+            .attr('data-draw-ignore', true)
+            .move(x - 3, y - 3)
+
+        const mouseenter = () => {
+            point.scale(1.4)
+
+            point.on('mouseleave', mouseleave)
+            point.off('mouseenter', mouseenter)
+        }
+        const mouseleave = () => {
+            point.scale(5 / 7)
+
+            point.on('mouseenter', mouseenter)
+            point.off('mouseleave', mouseleave)
+        }
+
+        point.on('mouseenter', mouseenter)
+        point.on('click', function (event) {
+            event.preventDefault()
+            event.stopPropagation()
+
+            endPolyDrawing(event)
+        })
+
+        return point
+    }
+
     const draw = ({
         points,
         id,
@@ -826,8 +883,13 @@ export function useDraw(
                 ? [...poly.plot()]
                 : [[startPosition.x, startPosition.y] as ArrayXY]
 
+            const plotline: PointArrayAlias = [
+                ...prev,
+                [currentPosition.x, currentPosition.y],
+            ]
+
             tmpPoly = svg
-                .polyline([...prev, [currentPosition.x, currentPosition.y]])
+                .polyline(plotline)
                 .fill('none')
                 .stroke({
                     color: '#f06',
@@ -837,6 +899,10 @@ export function useDraw(
                     dasharray: '5,5',
                 })
                 .attr('data-draw-ignore', true)
+
+            if (Array.isArray(tmpPoints)) {
+                tmpPoints.forEach((point) => point.front())
+            }
         }
     }
 
@@ -949,6 +1015,8 @@ export function useDraw(
                     y: e.clientY - svgRect.top,
                 }
 
+                tmpPoints = [drawPoint(svg, startPosition.x, startPosition.y)]
+
                 window.addEventListener('keydown', onAbortPathDrawing)
                 window.addEventListener('keydown', onEnterKeyPress)
             } else if (startPosition && tmpPoly) {
@@ -972,6 +1040,11 @@ export function useDraw(
                     Math.abs(currentPosition.x - start[0]) <= 10 &&
                     Math.abs(currentPosition.y - start[1]) <= 10
                 ) {
+                    if (tmpPoints && tmpPoints.length > 0) {
+                        tmpPoints.forEach((p) => p.remove())
+                        tmpPoints = undefined
+                    }
+
                     if (tmpPoly) {
                         tmpPoly.remove()
                         tmpPoly = undefined
@@ -991,11 +1064,13 @@ export function useDraw(
 
                     onChange()
                 } else {
+                    const plotline: PointArrayAlias = [
+                        ...prev,
+                        [currentPosition.x, currentPosition.y],
+                    ]
+
                     poly = svg
-                        .polygon([
-                            ...prev,
-                            [currentPosition.x, currentPosition.y],
-                        ])
+                        .polygon(plotline)
                         .fill({
                             color: '#f06',
                             opacity: 0.2,
@@ -1007,6 +1082,18 @@ export function useDraw(
                             linejoin: 'round',
                         })
                         .attr('data-draw-ignore', true)
+
+                    if (Array.isArray(tmpPoints)) {
+                        tmpPoints.push(
+                            drawPoint(
+                                svg,
+                                currentPosition.x,
+                                currentPosition.y,
+                            ),
+                        )
+
+                        tmpPoints.forEach((p) => p.front())
+                    }
 
                     startPosition = currentPosition
                 }
@@ -1035,12 +1122,9 @@ export function useDraw(
             svg.node.remove()
         }
 
-        const newSvg = SVG()
-            .addTo(ref.current)
-            .size('100%', '100%')
-            .attr({
-                'xmlns:xlink': xns,
-            })
+        const newSvg = SVG().addTo(ref.current).size('100%', '100%').attr({
+            'xmlns:xlink': xns,
+        })
 
         setSvg(newSvg)
     }, [ref, src])
@@ -1153,10 +1237,21 @@ export default function DrawZone({
             const minWidth = Math.min(rect.width, originalSize.width)
             const minHeight = Math.min(rect.height, originalSize.height)
 
-            if (originalSize.width <= minWidth && originalSize.height <= minHeight) {
+            if (
+                originalSize.width <= minWidth &&
+                originalSize.height <= minHeight
+            ) {
                 setComputedScale(scale)
-            } else if (minWidth < originalSize.width || minHeight < originalSize.height) {
-                setComputedScale(Math.min(minWidth / originalSize.width, minHeight / originalSize.height) * scale)
+            } else if (
+                minWidth < originalSize.width ||
+                minHeight < originalSize.height
+            ) {
+                setComputedScale(
+                    Math.min(
+                        minWidth / originalSize.width,
+                        minHeight / originalSize.height,
+                    ) * scale,
+                )
             }
         }
     }, [containerRef, originalSize, sizeMode, scale])
