@@ -185,8 +185,8 @@ export function Polygons({}) {
                         ({
                             ...element,
                             points: element.points.map((point) => ({
-                                x: point.x / orignalSize.width,
-                                y: point.y / orignalSize.height,
+                                x: point.x,
+                                y: point.y,
                             })),
                         } as ChangedElement),
                 ),

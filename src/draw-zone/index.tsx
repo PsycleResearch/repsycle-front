@@ -39,6 +39,7 @@ export interface ChangedElement {
     readonly id: string
     readonly selected: boolean
     readonly points: Point[]
+    readonly label: string
     readonly rect: {
         readonly height: number
         readonly width: number
@@ -98,7 +99,7 @@ export function useDraw(
     }
 
     function onChange() {
-        if (svg && props.onChange) {
+        if (svg && originalSize && props.onChange) {
             props.onChange(
                 svg
                     .children()
@@ -125,21 +126,28 @@ export function useDraw(
 
                             points = getAbsoluteCoordinates(
                                 polygon.plot().map((p) => ({
-                                    x: p[0],
-                                    y: p[1],
+                                    x: p[0] * originalSize.width,
+                                    y: p[1] * originalSize.height,
                                 })),
                             )
                         } else {
                             const box = elt.bbox()
                             points = getAbsoluteCoordinates([
-                                { x: box.x, y: box.y },
-                                { x: box.x2, y: box.y2 },
+                                {
+                                    x: box.x * originalSize.width,
+                                    y: box.y * originalSize.height,
+                                },
+                                {
+                                    x: box.x2 * originalSize.width,
+                                    y: box.y2 * originalSize.height,
+                                },
                             ])
                         }
 
                         return {
                             points: points,
                             rect: rect,
+                            label: elt.data('label'),
                             selected: elt.data('selected') as boolean,
                             id: elt.data('id'),
                             fillColor: elt.attr('fill'),
@@ -247,12 +255,14 @@ export function useDraw(
         disabled = props.disabled ? true : false,
         stroke = { ...defaultStroke },
         fill = { ...defaultFill },
+        label,
         id = null,
     }: {
         points: Point[]
         disabled?: boolean
         stroke?: object
         fill?: object
+        label?: string
         id?: string | null
     }) {
         if (!svg || !points || points.length !== 2) {
@@ -466,6 +476,7 @@ export function useDraw(
 
         rect.data('disabled', disabled)
         rect.data('id', id || uuid4())
+        rect.data('label', label)
 
         return rect
     }
@@ -475,12 +486,14 @@ export function useDraw(
         disabled = props.disabled,
         stroke = { ...defaultStroke },
         fill = { ...defaultFill },
+        label,
         id = null,
     }: {
         points: Point[]
         disabled?: boolean
         stroke?: { color: string; width: number; opacity: number }
         fill?: { color: string; opacity: number }
+        label?: string
         id?: string | null
     }) {
         if (!svg || !points || points.length < 2) {
@@ -755,6 +768,7 @@ export function useDraw(
 
         poly.data('disabled', disabled)
         poly.data('id', id || uuid4())
+        poly.data('label', label)
 
         return poly
     }
@@ -793,16 +807,20 @@ export function useDraw(
     }
 
     const draw = ({
-        points,
+        points: inputPoints,
         id,
         fillColor,
         strokeColor,
+        label,
     }: {
         readonly points: Array<Point>
         readonly id: string
         readonly fillColor?: string
         readonly strokeColor?: string
+        readonly label?: string
     }) => {
+        if (!originalSize) return
+
         const fill = fillColor
             ? { ...defaultFill, color: fillColor }
             : defaultFill
@@ -810,8 +828,16 @@ export function useDraw(
             ? { ...defaultStroke, color: strokeColor }
             : defaultStroke
 
-        if (points.length === 2) drawRect({ points, id, fill, stroke })
-        else drawPoly({ points, id, fill, stroke })
+        const points = inputPoints.map(
+            (point) =>
+                ({
+                    x: point.x / originalSize.width,
+                    y: point.y / originalSize.height,
+                } as Point),
+        )
+
+        if (points.length === 2) drawRect({ points, id, fill, stroke, label })
+        else drawPoly({ points, id, fill, stroke, label })
     }
 
     function onMouseDown(e: globalThis.MouseEvent) {
