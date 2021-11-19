@@ -512,7 +512,7 @@ export function useDraw(
         poly.stroke(stroke)
         poly.css('touch-action', 'none') // silence interactjs warning.
 
-        let circle: Circle
+        let circles: Circle[] = []
         let handles: Use[] = []
         let rootMatrix: DOMMatrix
 
@@ -537,20 +537,38 @@ export function useDraw(
                 handles.length = 0
                 rootMatrix = svg.node.getScreenCTM() as DOMMatrix
 
-                circle = svg
-                    .defs()
-                    .attr('data-draw-ignore', true)
-                    .circle(7)
-                    .center(0, 0)
-                    .fill({ opacity: 1, color: blue })
-                    .stroke({ width: 1, color: '#fff' })
-                    .id('point-handle')
-
                 for (let i = 0; i < poly.node.points.numberOfItems; i++) {
                     const point = poly.node.points.getItem(i)
+
+                    const handleId = `point-handle-${i}`
+
+                    const newCircle = svg
+                        .defs()
+                        .attr('data-draw-ignore', true)
+                        .circle(7)
+                        .center(0, 0)
+                        .fill({ opacity: 1, color: blue })
+                        .stroke({ width: 1, color: '#fff' })
+                        .id(handleId)
+
+                    const mouseenter = () => {
+                        newCircle.scale(1.4)
+
+                        newCircle.on('mouseleave', mouseleave)
+                        newCircle.off('mouseenter', mouseenter)
+                    }
+                    const mouseleave = () => {
+                        newCircle.scale(5 / 7)
+
+                        newCircle.on('mouseenter', mouseenter)
+                        newCircle.off('mouseleave', mouseleave)
+                    }
+
+                    newCircle.on('mouseenter', mouseenter)
+
                     const handle = svg
-                        .use(circle as Circle)
-                        .attr('href', '#point-handle', xns)
+                        .use(newCircle as Circle)
+                        .attr('href', `#${handleId}`, xns)
                         .addClass('point-handle')
                         .data('draw-ignore', true)
                         .x(point.x)
@@ -562,6 +580,7 @@ export function useDraw(
                         event.stopPropagation()
                     })
 
+                    circles.push(newCircle)
                     handles.push(handle)
                 }
 
@@ -626,9 +645,9 @@ export function useDraw(
             poly.stroke(stroke)
             poly.data('selected', false)
 
-            circle?.remove()
             interact('.point-handle').unset()
             handles.forEach((h) => h.remove())
+            circles.forEach((circle) => circle.remove())
             document.removeEventListener('dragstart', preventDrag)
 
             window.removeEventListener('keydown', polyDelKeyPress)
@@ -654,6 +673,9 @@ export function useDraw(
                         handles.forEach((handle) => {
                             handle.remove()
                         })
+                        circles.forEach((circle) => {
+                            circle.remove()
+                        })
                     },
                     move(event) {
                         const x = parseFloat(event.target.instance.x())
@@ -671,9 +693,36 @@ export function useDraw(
                             i++
                         ) {
                             const point = poly.node.points.getItem(i)
+
+                            const handleId = `point-handle-${i}`
+
+                            const newCircle = svg
+                                .defs()
+                                .attr('data-draw-ignore', true)
+                                .circle(7)
+                                .center(0, 0)
+                                .fill({ opacity: 1, color: blue })
+                                .stroke({ width: 1, color: '#fff' })
+                                .id(handleId)
+
+                            const mouseenter = () => {
+                                newCircle.scale(1.4)
+
+                                newCircle.on('mouseleave', mouseleave)
+                                newCircle.off('mouseenter', mouseenter)
+                            }
+                            const mouseleave = () => {
+                                newCircle.scale(5 / 7)
+
+                                newCircle.on('mouseenter', mouseenter)
+                                newCircle.off('mouseleave', mouseleave)
+                            }
+
+                            newCircle.on('mouseenter', mouseenter)
+
                             const handle = svg
-                                .use(circle as Circle)
-                                .attr('href', '#point-handle', xns)
+                                .use(newCircle as Circle)
+                                .attr('href', `#${handleId}`, xns)
                                 .addClass('point-handle')
                                 .data('draw-ignore', true)
                                 .x(point.x)
@@ -685,6 +734,7 @@ export function useDraw(
                                 event.stopPropagation()
                             })
 
+                            circles.push(newCircle)
                             handles.push(handle)
                         }
                     },
