@@ -1271,6 +1271,7 @@ export interface DrawZoneProps {
     showMarker?: boolean
     setOriginalSize: Dispatch<SetStateAction<Size | undefined>>
     sizeMode?: SizeMode
+    redraw?: boolean
 }
 
 export default function DrawZone({
@@ -1286,6 +1287,7 @@ export default function DrawZone({
     showMarker = false,
     setOriginalSize,
     sizeMode = 'auto',
+    redraw = false,
 }: DrawZoneProps): JSX.Element {
     const svgRef = useRef<HTMLDivElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
@@ -1363,7 +1365,7 @@ export default function DrawZone({
 
     useEffect(() => {
         setForceRedraw(true)
-    }, [mode])
+    }, [mode, redraw])
 
     useLayoutEffect(() => {
         if (svg) {
