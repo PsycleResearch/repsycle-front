@@ -74,6 +74,7 @@ export function useDraw(
         mode: DrawZoneMode
         scale: number
         drawOnMouseDown?: boolean
+        showMarker: boolean
         setForceRedraw: Dispatch<SetStateAction<boolean>>
     },
 ) {
@@ -272,7 +273,7 @@ export function useDraw(
         const rectDelKeyPress = onDelKeyPress.bind(rect.node)
         const rectEscKeyPress = onEscKeyPress.bind(rect.node)
 
-        let circle: Circle
+        let circle: Circle | undefined
         let handles: Use[] = []
 
         // Custom events.
@@ -292,6 +293,8 @@ export function useDraw(
             if (!disabled) {
                 handles.forEach((h) => h.remove())
                 handles.length = 0
+                circle?.remove()
+                circle = undefined
                 window.addEventListener('keydown', rectDelKeyPress, {
                     once: true,
                 })
@@ -310,16 +313,16 @@ export function useDraw(
 
                 for (let i = 0; i < coords.length; i++) {
                     const point = coords[i]
+
                     const handle = svg
                         .use(circle as Circle)
-                        .attr('pointer-events', 'none')
-                        .css('pointerEvents', 'none')
                         .attr('href', '#point-handle', xns)
                         .addClass('point-handle')
                         .data('draw-ignore', true)
                         .x(point.x)
                         .y(point.y)
                         .data('index', i)
+                        .back()
 
                     handles.push(handle)
                 }
@@ -330,9 +333,11 @@ export function useDraw(
             rect.stroke(stroke)
             rect.data('selected', false)
 
-            circle?.remove()
             interact('.point-handle').unset()
             handles.forEach((h) => h.remove())
+            handles.length = 0
+            circle?.remove()
+            circle = undefined
             document.removeEventListener('dragstart', preventDrag)
 
             window.removeEventListener('keydown', rectDelKeyPress)
@@ -411,6 +416,7 @@ export function useDraw(
                     listeners: {
                         start(event) {
                             event.target.instance.fire('select')
+                            handles.forEach((h) => h.hide())
                         },
                         move(event) {
                             const svgRect = svg.node.getBoundingClientRect()
@@ -429,27 +435,10 @@ export function useDraw(
                                 `${((y + event.dy) / svgRect.height) * 100}%`,
                             )
 
-                            handles.forEach((h) => {
-                                const x =
-                                    (parseFloat(h.x() as string) / 100) *
-                                    svgRect.width
-                                const y =
-                                    (parseFloat(h.y() as string) / 100) *
-                                    svgRect.height
-
-                                h.x(
-                                    `${
-                                        ((x + event.dx) / svgRect.width) * 100
-                                    }%`,
-                                )
-                                h.y(
-                                    `${
-                                        ((y + event.dy) / svgRect.height) * 100
-                                    }%`,
-                                )
-                            })
-
                             onChange()
+                        },
+                        end(event) {
+                            handles.forEach((h) => h.show())
                         },
                     },
                     modifiers: [
@@ -535,6 +524,8 @@ export function useDraw(
             if (!disabled) {
                 handles.forEach((h) => h.remove())
                 handles.length = 0
+                circles.forEach((c) => c.remove())
+                circles.length = 0
                 rootMatrix = svg.node.getScreenCTM() as DOMMatrix
 
                 for (let i = 0; i < poly.node.points.numberOfItems; i++) {
@@ -542,7 +533,7 @@ export function useDraw(
 
                     const handleId = `point-handle-${i}`
 
-                    const newCircle = svg
+                    const circle = svg
                         .defs()
                         .attr('data-draw-ignore', true)
                         .circle(7)
@@ -552,22 +543,22 @@ export function useDraw(
                         .id(handleId)
 
                     const mouseenter = () => {
-                        newCircle.scale(1.4)
+                        circle.scale(1.4)
 
-                        newCircle.on('mouseleave', mouseleave)
-                        newCircle.off('mouseenter', mouseenter)
+                        circle.on('mouseleave', mouseleave)
+                        circle.off('mouseenter', mouseenter)
                     }
                     const mouseleave = () => {
-                        newCircle.scale(5 / 7)
+                        circle.scale(5 / 7)
 
-                        newCircle.on('mouseenter', mouseenter)
-                        newCircle.off('mouseleave', mouseleave)
+                        circle.on('mouseenter', mouseenter)
+                        circle.off('mouseleave', mouseleave)
                     }
 
-                    newCircle.on('mouseenter', mouseenter)
+                    circle.on('mouseenter', mouseenter)
 
                     const handle = svg
-                        .use(newCircle as Circle)
+                        .use(circle as Circle)
                         .attr('href', `#${handleId}`, xns)
                         .addClass('point-handle')
                         .data('draw-ignore', true)
@@ -580,7 +571,7 @@ export function useDraw(
                         event.stopPropagation()
                     })
 
-                    circles.push(newCircle)
+                    circles.push(circle)
                     handles.push(handle)
                 }
 
@@ -647,7 +638,9 @@ export function useDraw(
 
             interact('.point-handle').unset()
             handles.forEach((h) => h.remove())
+            handles.length = 0
             circles.forEach((circle) => circle.remove())
+            circles.length = 0
             document.removeEventListener('dragstart', preventDrag)
 
             window.removeEventListener('keydown', polyDelKeyPress)
@@ -673,9 +666,11 @@ export function useDraw(
                         handles.forEach((handle) => {
                             handle.remove()
                         })
+                        handles.length = 0
                         circles.forEach((circle) => {
                             circle.remove()
                         })
+                        circles.length = 0
                     },
                     move(event) {
                         const x = parseFloat(event.target.instance.x())
@@ -1198,7 +1193,11 @@ export function useDraw(
 
         svg.css({
             cursor:
-                props.mode === 'move' && !props.disabled ? 'grab' : 'crosshair',
+                props.mode === 'move' && !props.disabled
+                    ? 'grab'
+                    : props.mode === 'none' && !props.showMarker
+                    ? 'normal'
+                    : 'crosshair',
             position: 'absolute',
             top: '0',
             left: '0',
@@ -1273,6 +1272,7 @@ export default function DrawZone({
         mode,
         scale: computedScale,
         drawOnMouseDown,
+        showMarker,
         setForceRedraw,
     })
     const { clientX, clientY } = useMousePosition()
