@@ -1384,8 +1384,8 @@ export default function DrawZone({
             if (
                 elements.length !==
                     svg.children().filter((c) => !c.attr('data-draw-ignore'))
-                        .length ||
-                forceRedraw
+                        .length /* ||
+                forceRedraw*/
             ) {
                 svg.clear()
                 elements.forEach((element) => draw(element as ChangedElement))

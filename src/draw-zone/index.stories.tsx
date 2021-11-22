@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 
-import DrawZone, { ChangedElement, DrawZoneMode, Size } from '.'
+import DrawZone, { ChangedElement, Size } from '.'
 
 export default {
     title: 'Components/DrawZone',
@@ -34,8 +34,8 @@ export function Rects({}) {
                         ({
                             ...element,
                             points: element.points.map((point) => ({
-                                x: point.x / orignalSize.width,
-                                y: point.y / orignalSize.height,
+                                x: point.x,
+                                y: point.y,
                             })),
                         } as ChangedElement),
                 ),
@@ -309,8 +309,8 @@ export function ScaleIn({}) {
                         ({
                             ...element,
                             points: element.points.map((point) => ({
-                                x: point.x / orignalSize.width,
-                                y: point.y / orignalSize.height,
+                                x: point.x,
+                                y: point.y,
                             })),
                         } as ChangedElement),
                 ),
@@ -432,8 +432,8 @@ export function ScaleOut({}) {
                         ({
                             ...element,
                             points: element.points.map((point) => ({
-                                x: point.x / orignalSize.width,
-                                y: point.y / orignalSize.height,
+                                x: point.x,
+                                y: point.y,
                             })),
                         } as ChangedElement),
                 ),
