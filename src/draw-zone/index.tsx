@@ -1319,7 +1319,19 @@ export default function DrawZone({
                 originalSize.width <= minWidth &&
                 originalSize.height <= minHeight
             ) {
-                setComputedScale(scale)
+                const maxWidth = Math.max(rect.width, originalSize.width)
+                const maxHeight = Math.max(rect.height, originalSize.height)
+
+                const coef = maxWidth / minWidth
+                const coef2 = maxHeight / minHeight
+
+                if (originalSize.height * coef <= maxHeight) {
+                    setComputedScale(coef * scale)
+                } else if (originalSize.width * coef2 <= maxWidth) {
+                    setComputedScale(coef2 * scale)
+                } else {
+                    setComputedScale(scale)
+                }
             } else if (
                 minWidth < originalSize.width ||
                 minHeight < originalSize.height
