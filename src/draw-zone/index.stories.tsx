@@ -33,8 +33,8 @@ export function Rects({}) {
                         ({
                             ...element,
                             points: element.points.map((point) => ({
-                                x: point.x,
-                                y: point.y,
+                                x: point.x / orignalSize.width,
+                                y: point.y / orignalSize.height,
                             })),
                         } as ChangedElement),
                 ),
@@ -306,8 +306,8 @@ export function ScaleIn({}) {
                         ({
                             ...element,
                             points: element.points.map((point) => ({
-                                x: point.x,
-                                y: point.y,
+                                x: point.x / orignalSize.width,
+                                y: point.y / orignalSize.height,
                             })),
                         } as ChangedElement),
                 ),
@@ -434,8 +434,8 @@ export function ScaleOut({}) {
                         ({
                             ...element,
                             points: element.points.map((point) => ({
-                                x: point.x,
-                                y: point.y,
+                                x: point.x / orignalSize.width,
+                                y: point.y / orignalSize.height,
                             })),
                         } as ChangedElement),
                 ),
