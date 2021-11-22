@@ -101,12 +101,13 @@ export function useDraw(
 
     function onChange() {
         if (svg && originalSize && props.onChange) {
+            const svgRect = svg.node.getBoundingClientRect()
+            
             props.onChange(
                 svg
                     .children()
                     .filter((e) => !e.attr('data-draw-ignore'))
                     .map((elt) => {
-                        const svgRect = svg.node.getBoundingClientRect()
                         const elementRect = elt.node.getBoundingClientRect()
 
                         const rect: ChangedElement['rect'] = {
@@ -261,7 +262,7 @@ export function useDraw(
         disabled = props.disabled ? true : false,
         stroke = { ...defaultStroke },
         fill = { ...defaultFill },
-        label,
+        label = null,
         id = null,
     }: {
         points: Point[]
@@ -495,7 +496,7 @@ export function useDraw(
         disabled = props.disabled,
         stroke = { ...defaultStroke },
         fill = { ...defaultFill },
-        label,
+        label = null,
         id = null,
     }: {
         points: Point[]
