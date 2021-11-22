@@ -100,7 +100,7 @@ export function useDraw(
     }
 
     function onChange() {
-        if (svg && originalSize && props.onChange) {
+        if (svg && /*originalSize && */props.onChange) {
             const svgRect = svg.node.getBoundingClientRect()
             
             props.onChange(
@@ -128,20 +128,20 @@ export function useDraw(
 
                             points = getAbsoluteCoordinates(
                                 polygon.plot().map((p) => ({
-                                    x: p[0] * originalSize.width,
-                                    y: p[1] * originalSize.height,
+                                    x: p[0],// * originalSize.width,
+                                    y: p[1],// * originalSize.height,
                                 })),
                             )
                         } else {
                             const box = elt.bbox()
                             points = getAbsoluteCoordinates([
                                 {
-                                    x: box.x * originalSize.width,
-                                    y: box.y * originalSize.height,
+                                    x: box.x,// * originalSize.width,
+                                    y: box.y,// * originalSize.height,
                                 },
                                 {
-                                    x: box.x2 * originalSize.width,
-                                    y: box.y2 * originalSize.height,
+                                    x: box.x2,// * originalSize.width,
+                                    y: box.y2,// * originalSize.height,
                                 },
                             ])
                         }
@@ -262,7 +262,7 @@ export function useDraw(
         disabled = props.disabled ? true : false,
         stroke = { ...defaultStroke },
         fill = { ...defaultFill },
-        label = null,
+        label,
         id = null,
     }: {
         points: Point[]
@@ -496,7 +496,7 @@ export function useDraw(
         disabled = props.disabled,
         stroke = { ...defaultStroke },
         fill = { ...defaultFill },
-        label = null,
+        label,
         id = null,
     }: {
         points: Point[]
@@ -830,7 +830,6 @@ export function useDraw(
         readonly color?: string
         readonly label?: string
     }) => {
-        if (!originalSize) return
 
         const fill = color ? { ...defaultFill, color } : defaultFill
         const stroke = color ? { ...defaultStroke, color } : defaultStroke
@@ -838,8 +837,8 @@ export function useDraw(
         const points = inputPoints.map(
             (point) =>
                 ({
-                    x: point.x / originalSize.width,
-                    y: point.y / originalSize.height,
+                    x: point.x,// / originalSize.width,
+                    y: point.y,// / originalSize.height,
                 } as Point),
         )
 
