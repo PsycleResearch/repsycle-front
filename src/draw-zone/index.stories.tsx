@@ -15,8 +15,7 @@ export function Rects({}) {
                 { x: 125, y: 94 },
                 { x: 250, y: 1 },
             ],
-            fillColor: '#00ff00',
-            strokeColor: '#00ff00',
+            color: '#00ff00',
         },
     ]
     const [scale, setScale] = useState(1)
@@ -166,8 +165,7 @@ export function Polygons({}) {
                 { x: 250, y: 188 },
                 { x: 250, y: 94 },
             ],
-            fillColor: '#00ff00',
-            strokeColor: '#00ff00',
+            color: '#00ff00',
         },
     ]
     const [scale, setScale] = useState(1)
@@ -290,8 +288,7 @@ export function ScaleIn({}) {
                 { x: 3550, y: 3580 },
                 { x: 3420, y: 1930 },
             ],
-            fillColor: '#00ff00',
-            strokeColor: '#00ff00',
+            color: '#00ff00',
         },
     ]
     const [scale, setScale] = useState(1)
@@ -334,7 +331,13 @@ export function ScaleIn({}) {
                     {showMarker ? 'Cacher' : 'Afficher'} marqueur
                 </button>
             </div>
-            <div style={{ backgroundColor: '#aaa', width: '500px', height: '500px' }}>
+            <div
+                style={{
+                    backgroundColor: '#aaa',
+                    width: '500px',
+                    height: '500px',
+                }}
+            >
                 <DrawZone
                     src="https://picsum.photos/seed/drawzone/5000/4000"
                     elements={elements}
@@ -348,7 +351,7 @@ export function ScaleIn({}) {
                     mode={move ? 'move' : mode}
                     showMarker={showMarker}
                     setOriginalSize={setOriginalSize}
-                    sizeMode='fit'
+                    sizeMode="fit"
                 >
                     {elements.map((element, index) => {
                         const elem = element as ChangedElement
@@ -413,8 +416,7 @@ export function ScaleOut({}) {
                 { x: 125, y: 94 },
                 { x: 250, y: 1 },
             ],
-            fillColor: '#00ff00',
-            strokeColor: '#00ff00',
+            color: '#00ff00',
         },
     ]
     const [scale, setScale] = useState(1)
@@ -457,7 +459,13 @@ export function ScaleOut({}) {
                     {showMarker ? 'Cacher' : 'Afficher'} marqueur
                 </button>
             </div>
-            <div style={{ backgroundColor: '#aaa', width: '500px', height: '500px' }}>
+            <div
+                style={{
+                    backgroundColor: '#aaa',
+                    width: '500px',
+                    height: '500px',
+                }}
+            >
                 <DrawZone
                     src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/250px-Image_created_with_a_mobile_phone.png"
                     elements={elements}
@@ -471,7 +479,7 @@ export function ScaleOut({}) {
                     mode={move ? 'move' : mode}
                     showMarker={showMarker}
                     setOriginalSize={setOriginalSize}
-                    sizeMode='fit'
+                    sizeMode="fit"
                 >
                     {elements.map((element, index) => {
                         const elem = element as ChangedElement
@@ -552,7 +560,13 @@ export function None({}) {
                     {showMarker ? 'Cacher' : 'Afficher'} marqueur
                 </button>
             </div>
-            <div style={{ backgroundColor: '#aaa', width: '500px', height: '500px' }}>
+            <div
+                style={{
+                    backgroundColor: '#aaa',
+                    width: '500px',
+                    height: '500px',
+                }}
+            >
                 <DrawZone
                     src="https://picsum.photos/seed/drawzone/5000/4000"
                     elements={elements}
@@ -566,7 +580,7 @@ export function None({}) {
                     mode={move ? 'move' : mode}
                     showMarker={showMarker}
                     setOriginalSize={setOriginalSize}
-                    sizeMode='fit'
+                    sizeMode="fit"
                 />
             </div>
         </div>

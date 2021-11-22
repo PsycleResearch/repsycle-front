@@ -15,6 +15,7 @@ import {
     Circle,
     Use,
     PointArrayAlias,
+    FillData,
 } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.draggable.js'
 import interact from 'interactjs'
@@ -23,6 +24,7 @@ import { uuid4 } from '../helpers'
 import { useMousePosition } from '../hooks'
 import { isTouchDevice } from '../utils'
 import { Polyline } from '@svgdotjs/svg.js'
+import { StrokeData } from '@svgdotjs/svg.js'
 
 export type DrawZoneMode = 'draw' | 'path' | 'move' | 'none'
 export type SizeMode = 'auto' | 'fit'
@@ -46,8 +48,7 @@ export interface ChangedElement {
         readonly x: number
         readonly y: number
     }
-    readonly fillColor?: string
-    readonly strokeColor?: string
+    readonly color?: string
 }
 
 const xns = 'http://www.w3.org/1999/xlink'
@@ -144,15 +145,18 @@ export function useDraw(
                             ])
                         }
 
-                        return {
-                            points: points,
-                            rect: rect,
+                        const result = {
+                            points,
+                            rect,
                             label: elt.data('label'),
                             selected: elt.data('selected') as boolean,
                             id: elt.data('id'),
-                            fillColor: elt.attr('fill'),
-                            strokeColor: elt.attr('stroke'),
+                            color: elt.data('color'),
                         }
+
+                        console.log('result', result)
+
+                        return result
                     }),
             )
         }
@@ -199,7 +203,7 @@ export function useDraw(
 
         startPosition = null
 
-        drawPoly({
+        const newPoly = drawPoly({
             points: plot.map(([x, y]) => ({
                 x: x / svgRect.width,
                 y: y / svgRect.height,
@@ -208,6 +212,8 @@ export function useDraw(
 
         window.removeEventListener('keydown', onAbortPathDrawing)
         window.removeEventListener('keydown', onEnterKeyPress)
+
+        newPoly?.fire('select')
 
         onChange()
     }
@@ -260,8 +266,8 @@ export function useDraw(
     }: {
         points: Point[]
         disabled?: boolean
-        stroke?: object
-        fill?: object
+        stroke?: StrokeData
+        fill?: FillData
         label?: string
         id?: string | null
     }) {
@@ -477,6 +483,9 @@ export function useDraw(
         rect.data('disabled', disabled)
         rect.data('id', id || uuid4())
         rect.data('label', label)
+
+        if (stroke.color !== defaultStroke.color)
+            rect.data('color', stroke.color)
 
         return rect
     }
@@ -770,6 +779,9 @@ export function useDraw(
         poly.data('id', id || uuid4())
         poly.data('label', label)
 
+        if (defaultStroke.color !== stroke.color)
+            poly.data('color', stroke.color)
+
         return poly
     }
 
@@ -809,24 +821,18 @@ export function useDraw(
     const draw = ({
         points: inputPoints,
         id,
-        fillColor,
-        strokeColor,
+        color,
         label,
     }: {
         readonly points: Array<Point>
         readonly id: string
-        readonly fillColor?: string
-        readonly strokeColor?: string
+        readonly color?: string
         readonly label?: string
     }) => {
         if (!originalSize) return
 
-        const fill = fillColor
-            ? { ...defaultFill, color: fillColor }
-            : defaultFill
-        const stroke = strokeColor
-            ? { ...defaultStroke, color: strokeColor }
-            : defaultStroke
+        const fill = color ? { ...defaultFill, color } : defaultFill
+        const stroke = color ? { ...defaultStroke, color } : defaultStroke
 
         const points = inputPoints.map(
             (point) =>
@@ -1013,7 +1019,7 @@ export function useDraw(
                 }
             }
 
-            drawRect({
+            const newRect = drawRect({
                 points: [
                     {
                         x:
@@ -1033,6 +1039,9 @@ export function useDraw(
                     },
                 ],
             })
+
+            newRect?.data('selected', true)
+            newRect?.fire('select')
 
             onChange()
         } else if (props.mode === 'move' && dragging) {
@@ -1123,7 +1132,7 @@ export function useDraw(
 
                     startPosition = null
 
-                    drawPoly({
+                    const poly = drawPoly({
                         points: prev.map(([x, y]) => ({
                             x: x / svgRect.width,
                             y: y / svgRect.height,
@@ -1132,6 +1141,9 @@ export function useDraw(
 
                     window.removeEventListener('keydown', onAbortPathDrawing)
                     window.removeEventListener('keydown', onEnterKeyPress)
+
+                    poly?.data('selected', true)
+                    poly?.fire('select')
 
                     onChange()
                 } else {
