@@ -432,8 +432,10 @@ export function useDraw(
                         start(event) {
                             event.target.instance.fire('select')
                             handles.forEach((h) => h.hide())
+                            rect.css('cursor', 'grbbing')
                         },
                         move(event) {
+                            rect.css('cursor', 'grbbing')
                             const svgRect = svg.node.getBoundingClientRect()
 
                             const x =
@@ -454,6 +456,8 @@ export function useDraw(
                         },
                         end(event) {
                             handles.forEach((h) => h.show())
+
+                            rect.css('cursor', 'move')
                         },
                     },
                     modifiers: [
@@ -591,6 +595,7 @@ export function useDraw(
                         event.preventDefault()
                         event.stopPropagation()
                     })
+                        .css('cursor', 'grab')
 
                     circles.push(circle)
                     handles.push(handle)
@@ -599,7 +604,8 @@ export function useDraw(
                 interact('.point-handle')
                     .draggable({
                         onstart: function (event) {
-                            svg.node.setAttribute('class', 'dragging')
+                            svg.css('cursor', 'grabbing')
+                            event.target.instance.css('cursor', 'grabbing')
                         },
                         onmove: function (event) {
                             const i =
@@ -613,6 +619,8 @@ export function useDraw(
                             event.target.y.baseVal.value = point.y
                         },
                         onend: function (event) {
+                            event.target.instance.css('cursor', 'grab')
+                            svg.css('cursor', 'crosshair')
                             const index = Number(
                                 event.target.getAttribute('data-index') || 0,
                             )
