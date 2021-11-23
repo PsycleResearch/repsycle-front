@@ -209,8 +209,8 @@ export function useDraw(
             })),
         })
 
-        window.removeEventListener('keydown', onAbortPathDrawing)
-        window.removeEventListener('keydown', onEnterKeyPress)
+        window.removeEventListener('keyup', onAbortPathDrawing)
+        window.removeEventListener('keyup', onEnterKeyPress)
 
         newPoly?.fire('select')
 
@@ -220,6 +220,8 @@ export function useDraw(
     function onEnterKeyPress(this: Window, event: KeyboardEvent) {
         if (event.defaultPrevented) return
         if (event.key === 'Enter') {
+            event.preventDefault()
+
             endPolyDrawing(event)
         }
     }
@@ -246,8 +248,8 @@ export function useDraw(
 
             startPosition = null
 
-            window.removeEventListener('keydown', onAbortPathDrawing)
-            window.removeEventListener('keydown', onEnterKeyPress)
+            window.removeEventListener('keyup', onAbortPathDrawing)
+            window.removeEventListener('keyup', onEnterKeyPress)
         }
     }
 
@@ -310,11 +312,13 @@ export function useDraw(
                 handles.length = 0
                 circle?.remove()
                 circle = undefined
-                window.addEventListener('keydown', rectDelKeyPress, {
+                window.addEventListener('keyup', rectDelKeyPress, {
                     once: true,
+                    capture: true,
                 })
-                window.addEventListener('keydown', rectEscKeyPress, {
+                window.addEventListener('keyup', rectEscKeyPress, {
                     once: true,
+                    capture: true,
                 })
 
                 circle = svg
@@ -355,8 +359,8 @@ export function useDraw(
             circle = undefined
             document.removeEventListener('dragstart', preventDrag)
 
-            window.removeEventListener('keydown', rectDelKeyPress)
-            window.removeEventListener('keydown', rectEscKeyPress)
+            window.removeEventListener('keyup', rectDelKeyPress)
+            window.removeEventListener('keyup', rectEscKeyPress)
 
             onChange()
         })
@@ -543,8 +547,14 @@ export function useDraw(
             })
             poly.stroke({ color: blue })
             poly.data('selected', true)
-            window.addEventListener('keydown', polyDelKeyPress, { once: true })
-            window.addEventListener('keydown', polyEscKeyPress, { once: true })
+            window.addEventListener('keyup', polyDelKeyPress, {
+                once: true,
+                capture: true,
+            })
+            window.addEventListener('keyup', polyEscKeyPress, {
+                once: true,
+                capture: true,
+            })
 
             if (!disabled) {
                 handles.forEach((h) => h.remove())
@@ -591,10 +601,11 @@ export function useDraw(
                         .y(point.y)
                         .data('index', i)
 
-                    handle.on('mousedown', function mousedown(event) {
-                        event.preventDefault()
-                        event.stopPropagation()
-                    })
+                    handle
+                        .on('mousedown', function mousedown(event) {
+                            event.preventDefault()
+                            event.stopPropagation()
+                        })
                         .css('cursor', 'grab')
 
                     circles.push(circle)
@@ -672,8 +683,8 @@ export function useDraw(
             circles.length = 0
             document.removeEventListener('dragstart', preventDrag)
 
-            window.removeEventListener('keydown', polyDelKeyPress)
-            window.removeEventListener('keydown', polyEscKeyPress)
+            window.removeEventListener('keyup', polyDelKeyPress)
+            window.removeEventListener('keyup', polyEscKeyPress)
 
             onChange()
         })
@@ -1101,8 +1112,14 @@ export function useDraw(
 
                 tmpPoints = [drawPoint(svg, startPosition.x, startPosition.y)]
 
-                window.addEventListener('keydown', onAbortPathDrawing)
-                window.addEventListener('keydown', onEnterKeyPress)
+                window.addEventListener('keyup', onAbortPathDrawing, {
+                    once: true,
+                    capture: true,
+                })
+                window.addEventListener('keyup', onEnterKeyPress, {
+                    once: true,
+                    capture: true,
+                })
             } else if (startPosition && tmpPoly) {
                 const currentPosition = {
                     x: e.clientX - svgRect.left,
@@ -1143,8 +1160,8 @@ export function useDraw(
                         })),
                     })
 
-                    window.removeEventListener('keydown', onAbortPathDrawing)
-                    window.removeEventListener('keydown', onEnterKeyPress)
+                    window.removeEventListener('keyup', onAbortPathDrawing)
+                    window.removeEventListener('keyup', onEnterKeyPress)
 
                     poly?.data('selected', true)
                     poly?.fire('select')
