@@ -1,4 +1,4 @@
-export { default as DrawZone } from './draw-zone';
-export { default as ErrorBoundary } from './error-boundary';
+export { default as DrawZone } from './draw-zone'
+export { default as ErrorBoundary } from './error-boundary'
 
-export * as helpers from './helpers';
+export * as helpers from './helpers'
