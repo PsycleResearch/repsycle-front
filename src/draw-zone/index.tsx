@@ -100,9 +100,9 @@ export function useDraw(
     }
 
     function onChange() {
-        if (svg && /*originalSize && */props.onChange) {
+        if (svg && props.onChange) {
             const svgRect = svg.node.getBoundingClientRect()
-            
+
             props.onChange(
                 svg
                     .children()
@@ -128,20 +128,20 @@ export function useDraw(
 
                             points = getAbsoluteCoordinates(
                                 polygon.plot().map((p) => ({
-                                    x: p[0],// * originalSize.width,
-                                    y: p[1],// * originalSize.height,
+                                    x: p[0],
+                                    y: p[1],
                                 })),
                             )
                         } else {
                             const box = elt.bbox()
                             points = getAbsoluteCoordinates([
                                 {
-                                    x: box.x,// * originalSize.width,
-                                    y: box.y,// * originalSize.height,
+                                    x: box.x,
+                                    y: box.y,
                                 },
                                 {
-                                    x: box.x2,// * originalSize.width,
-                                    y: box.y2,// * originalSize.height,
+                                    x: box.x2,
+                                    y: box.y2,
                                 },
                             ])
                         }
@@ -828,15 +828,14 @@ export function useDraw(
         readonly color?: string
         readonly label?: string
     }) => {
-
         const fill = color ? { ...defaultFill, color } : defaultFill
         const stroke = color ? { ...defaultStroke, color } : defaultStroke
 
         const points = inputPoints.map(
             (point) =>
                 ({
-                    x: point.x,// / originalSize.width,
-                    y: point.y,// / originalSize.height,
+                    x: point.x,
+                    y: point.y,
                 } as Point),
         )
 
@@ -996,7 +995,6 @@ export function useDraw(
             }
 
             // Prevent drawing new rect on rect dragend...
-
             if ((e.target as Node | null)?.parentNode === svg.node) {
                 return
             }
