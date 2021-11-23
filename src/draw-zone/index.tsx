@@ -155,8 +155,6 @@ export function useDraw(
                             color: elt.data('color'),
                         }
 
-                        console.log('result', result)
-
                         return result
                     }),
             )
