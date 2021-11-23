@@ -432,10 +432,10 @@ export function useDraw(
                         start(event) {
                             event.target.instance.fire('select')
                             handles.forEach((h) => h.hide())
-                            rect.css('cursor', 'grbbing')
+                            rect.css('cursor', 'grabbing')
                         },
                         move(event) {
-                            rect.css('cursor', 'grbbing')
+                            rect.css('cursor', 'grabbing')
                             const svgRect = svg.node.getBoundingClientRect()
 
                             const x =
