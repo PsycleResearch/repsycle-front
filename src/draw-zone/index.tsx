@@ -163,7 +163,7 @@ export function useDraw(
 
     function onDelKeyPress(this: SVGElement, event: KeyboardEvent): boolean {
         if (event.defaultPrevented) return false
-        if (event.key === 'Delete') {
+        if (event.key === 'Delete' && this.closest('svg')) {
             event.preventDefault()
             props.remove(this.dataset['id'] as string)
 
@@ -175,7 +175,7 @@ export function useDraw(
 
     function onEscKeyPress(this: SVGElement, event: KeyboardEvent): boolean {
         if (event.defaultPrevented) return false
-        if (event.key === 'Escape') {
+        if (event.key === 'Escape' && this.closest('svg')) {
             event.preventDefault()
             ;(this as any).instance.fire('deselect')
 
@@ -223,7 +223,7 @@ export function useDraw(
         window.removeEventListener('keyup', onEnterKeyPress, { capture: true })
 
         if (newPoly) {
-            newPoly.data('selected', true)
+            //newPoly.data('selected', true)
             newPoly.fire('select')
         }
 
@@ -305,7 +305,6 @@ export function useDraw(
         rect.css('touch-action', 'none') // silence interactjs warning.
 
         function rectDelKeyPress(ev: KeyboardEvent) {
-            console.log('PSYC--DRAW--ON-RECT-DEL-PRESS')
             const result = onDelKeyPress.call(rect.node, ev)
 
             if (result) {
@@ -315,7 +314,6 @@ export function useDraw(
             }
         }
         function rectEscKeyPress(ev: KeyboardEvent) {
-            console.log('PSYC--DRAW--ON-RECT-ESC-PRESS')
             const result = onEscKeyPress.call(rect.node, ev)
 
             if (result) {
@@ -337,8 +335,6 @@ export function useDraw(
             })
             rect.stroke({ color: blue })
             rect.data('selected', true)
-
-            onChange()
 
             const coords = getRectCoords(rect)
 
@@ -381,6 +377,8 @@ export function useDraw(
 
                 document.addEventListener('dragstart', preventDrag)
             }
+
+            onChange()
         })
         rect.on('deselect', (e) => {
             if ((e as any).detail?.inst === rect) return
@@ -596,8 +594,6 @@ export function useDraw(
 
         // Custom events.
         poly.on('select', () => {
-            if (poly.data('selected') === true) return
-            console.log('PSYC--DRAW--ON-POLY-SELECT')
             // Deselect all
             svg.each(function (this: Svg) {
                 this.fire('deselect', { inst: poly })
@@ -1114,7 +1110,7 @@ export function useDraw(
                 ],
             })
 
-            newRect?.data('selected', true)
+            //newRect?.data('selected', true)
             newRect?.fire('select')
 
             onChange()
@@ -1224,7 +1220,7 @@ export function useDraw(
                         capture: true,
                     })
 
-                    poly?.data('selected', true)
+                    //poly?.data('selected', true)
                     poly?.fire('select')
 
                     onChange()
