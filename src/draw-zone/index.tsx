@@ -161,20 +161,28 @@ export function useDraw(
         }
     }
 
-    function onDelKeyPress(this: SVGElement, event: KeyboardEvent) {
-        if (event.defaultPrevented) return
+    function onDelKeyPress(this: SVGElement, event: KeyboardEvent): boolean {
+        if (event.defaultPrevented) return false
         if (event.key === 'Delete') {
             event.preventDefault()
             props.remove(this.dataset['id'] as string)
+
+            return true
         }
+
+        return false
     }
 
-    function onEscKeyPress(this: SVGElement, event: KeyboardEvent) {
-        if (event.defaultPrevented) return
+    function onEscKeyPress(this: SVGElement, event: KeyboardEvent): boolean {
+        if (event.defaultPrevented) return false
         if (event.key === 'Escape') {
             event.preventDefault()
-            this.dispatchEvent(new Event('deselect'))
+            ;(this as any).instance.fire('deselect')
+
+            return true
         }
+
+        return false
     }
 
     function endPolyDrawing(event: Event) {
@@ -209,10 +217,15 @@ export function useDraw(
             })),
         })
 
-        window.removeEventListener('keyup', onAbortPathDrawing)
-        window.removeEventListener('keyup', onEnterKeyPress)
+        window.removeEventListener('keyup', onAbortPathDrawing, {
+            capture: true,
+        })
+        window.removeEventListener('keyup', onEnterKeyPress, { capture: true })
 
-        newPoly?.fire('select')
+        if (newPoly) {
+            newPoly.data('selected', true)
+            newPoly.fire('select')
+        }
 
         onChange()
     }
@@ -248,8 +261,12 @@ export function useDraw(
 
             startPosition = null
 
-            window.removeEventListener('keyup', onAbortPathDrawing)
-            window.removeEventListener('keyup', onEnterKeyPress)
+            window.removeEventListener('keyup', onAbortPathDrawing, {
+                capture: true,
+            })
+            window.removeEventListener('keyup', onEnterKeyPress, {
+                capture: true,
+            })
         }
     }
 
@@ -287,8 +304,26 @@ export function useDraw(
         rect.stroke(stroke)
         rect.css('touch-action', 'none') // silence interactjs warning.
 
-        const rectDelKeyPress = onDelKeyPress.bind(rect.node)
-        const rectEscKeyPress = onEscKeyPress.bind(rect.node)
+        function rectDelKeyPress(ev: KeyboardEvent) {
+            console.log('PSYC--DRAW--ON-RECT-DEL-PRESS')
+            const result = onDelKeyPress.call(rect.node, ev)
+
+            if (result) {
+                window.removeEventListener('keyup', rectDelKeyPress, {
+                    capture: true,
+                })
+            }
+        }
+        function rectEscKeyPress(ev: KeyboardEvent) {
+            console.log('PSYC--DRAW--ON-RECT-ESC-PRESS')
+            const result = onEscKeyPress.call(rect.node, ev)
+
+            if (result) {
+                window.removeEventListener('keyup', rectEscKeyPress, {
+                    capture: true,
+                })
+            }
+        }
 
         let circle: Circle | undefined
         let handles: Use[] = []
@@ -313,11 +348,9 @@ export function useDraw(
                 circle?.remove()
                 circle = undefined
                 window.addEventListener('keyup', rectDelKeyPress, {
-                    once: true,
                     capture: true,
                 })
                 window.addEventListener('keyup', rectEscKeyPress, {
-                    once: true,
                     capture: true,
                 })
 
@@ -345,6 +378,8 @@ export function useDraw(
 
                     handles.push(handle)
                 }
+
+                document.addEventListener('dragstart', preventDrag)
             }
         })
         rect.on('deselect', (e) => {
@@ -359,8 +394,12 @@ export function useDraw(
             circle = undefined
             document.removeEventListener('dragstart', preventDrag)
 
-            window.removeEventListener('keyup', rectDelKeyPress)
-            window.removeEventListener('keyup', rectEscKeyPress)
+            window.removeEventListener('keyup', rectDelKeyPress, {
+                capture: true,
+            })
+            window.removeEventListener('keyup', rectEscKeyPress, {
+                capture: true,
+            })
 
             onChange()
         })
@@ -534,25 +573,41 @@ export function useDraw(
         let handles: Use[] = []
         let rootMatrix: DOMMatrix
 
-        const polyDelKeyPress = onDelKeyPress.bind(poly.node)
-        const polyEscKeyPress = onEscKeyPress.bind(poly.node)
+        function polyDelKeyPress(ev: KeyboardEvent) {
+            console.log('PSYC--DRAW--ON-POLY-DEL-PRESS')
+            const result = onDelKeyPress.call(poly.node, ev)
+
+            if (result) {
+                window.removeEventListener('keyup', polyDelKeyPress, {
+                    capture: true,
+                })
+            }
+        }
+        function polyEscKeyPress(ev: KeyboardEvent) {
+            console.log('PSYC--DRAW--ON-POLY-ESC-PRESS')
+            const result = onEscKeyPress.call(poly.node, ev)
+
+            if (result) {
+                window.removeEventListener('keyup', polyEscKeyPress, {
+                    capture: true,
+                })
+            }
+        }
 
         // Custom events.
         poly.on('select', () => {
             if (poly.data('selected') === true) return
+            console.log('PSYC--DRAW--ON-POLY-SELECT')
             // Deselect all
-
             svg.each(function (this: Svg) {
                 this.fire('deselect', { inst: poly })
             })
             poly.stroke({ color: blue })
             poly.data('selected', true)
             window.addEventListener('keyup', polyDelKeyPress, {
-                once: true,
                 capture: true,
             })
             window.addEventListener('keyup', polyEscKeyPress, {
-                once: true,
                 capture: true,
             })
 
@@ -683,8 +738,12 @@ export function useDraw(
             circles.length = 0
             document.removeEventListener('dragstart', preventDrag)
 
-            window.removeEventListener('keyup', polyDelKeyPress)
-            window.removeEventListener('keyup', polyEscKeyPress)
+            window.removeEventListener('keyup', polyDelKeyPress, {
+                capture: true,
+            })
+            window.removeEventListener('keyup', polyEscKeyPress, {
+                capture: true,
+            })
 
             onChange()
         })
@@ -1113,11 +1172,9 @@ export function useDraw(
                 tmpPoints = [drawPoint(svg, startPosition.x, startPosition.y)]
 
                 window.addEventListener('keyup', onAbortPathDrawing, {
-                    once: true,
                     capture: true,
                 })
                 window.addEventListener('keyup', onEnterKeyPress, {
-                    once: true,
                     capture: true,
                 })
             } else if (startPosition && tmpPoly) {
@@ -1160,8 +1217,12 @@ export function useDraw(
                         })),
                     })
 
-                    window.removeEventListener('keyup', onAbortPathDrawing)
-                    window.removeEventListener('keyup', onEnterKeyPress)
+                    window.removeEventListener('keyup', onAbortPathDrawing, {
+                        capture: true,
+                    })
+                    window.removeEventListener('keyup', onEnterKeyPress, {
+                        capture: true,
+                    })
 
                     poly?.data('selected', true)
                     poly?.fire('select')
@@ -1336,7 +1397,6 @@ export default function DrawZone({
         showMarker,
         setForceRedraw,
     })
-    const { clientX, clientY } = useMousePosition()
     const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
 
     useEffect(() => {
@@ -1429,11 +1489,6 @@ export default function DrawZone({
         }
     }, [svg, elements, forceRedraw])
 
-    const width = svgRef.current?.getBoundingClientRect().width
-    const height = svgRef.current?.getBoundingClientRect().height
-    const left = clientX - (svgRef.current?.getBoundingClientRect().left || 0)
-    const top = clientY - (svgRef.current?.getBoundingClientRect().top || 0)
-
     return (
         <div
             style={{
@@ -1446,43 +1501,60 @@ export default function DrawZone({
         >
             <div ref={svgRef}>
                 {canMarkerBeVisible && showMarker && (
-                    <>
-                        <div
-                            style={{
-                                position: 'absolute',
-                                top: '0',
-                                bottom: '0',
-                                transform: `translate3d(${left}px, 0px, 0px)`,
-                                width: '1px',
-                                background: `url(${src}) ${
-                                    left * -1
-                                }px 0% / ${width}px ${height}px, #fff`,
-                                backgroundBlendMode: 'difference',
-                                zIndex: 20,
-                                pointerEvents: 'none',
-                                willChange: 'transform, background',
-                            }}
-                        />
-                        <div
-                            style={{
-                                position: 'absolute',
-                                transform: `translate3d(0px, ${top}px, 0px)`,
-                                right: '0',
-                                left: '0',
-                                height: '1px',
-                                background: `url(${src}) 0% ${
-                                    top * -1
-                                }px / ${width}px ${height}px, #fff`,
-                                backgroundBlendMode: 'difference',
-                                zIndex: 20,
-                                pointerEvents: 'none',
-                                willChange: 'transform, background',
-                            }}
-                        />
-                    </>
+                    <Marker src={src} svgRef={svgRef} />
                 )}
                 {children}
             </div>
         </div>
+    )
+}
+
+type MarkerProps = {
+    readonly src: string
+    readonly svgRef: React.RefObject<HTMLDivElement>
+}
+function Marker({ src, svgRef }: MarkerProps): JSX.Element {
+    const { clientX, clientY } = useMousePosition()
+
+    const width = svgRef.current?.getBoundingClientRect().width
+    const height = svgRef.current?.getBoundingClientRect().height
+    const left = clientX - (svgRef.current?.getBoundingClientRect().left || 0)
+    const top = clientY - (svgRef.current?.getBoundingClientRect().top || 0)
+
+    return (
+        <>
+            <div
+                style={{
+                    position: 'absolute',
+                    top: '0',
+                    bottom: '0',
+                    transform: `translate3d(${left}px, 0px, 0px)`,
+                    width: '1px',
+                    background: `url(${src}) ${
+                        left * -1
+                    }px 0% / ${width}px ${height}px, #fff`,
+                    backgroundBlendMode: 'difference',
+                    zIndex: 20,
+                    pointerEvents: 'none',
+                    willChange: 'transform, background',
+                }}
+            />
+            <div
+                style={{
+                    position: 'absolute',
+                    transform: `translate3d(0px, ${top}px, 0px)`,
+                    right: '0',
+                    left: '0',
+                    height: '1px',
+                    background: `url(${src}) 0% ${
+                        top * -1
+                    }px / ${width}px ${height}px, #fff`,
+                    backgroundBlendMode: 'difference',
+                    zIndex: 20,
+                    pointerEvents: 'none',
+                    willChange: 'transform, background',
+                }}
+            />
+        </>
     )
 }
