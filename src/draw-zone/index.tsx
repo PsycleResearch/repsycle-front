@@ -572,7 +572,6 @@ export function useDraw(
         let rootMatrix: DOMMatrix
 
         function polyDelKeyPress(ev: KeyboardEvent) {
-            console.log('PSYC--DRAW--ON-POLY-DEL-PRESS')
             const result = onDelKeyPress.call(poly.node, ev)
 
             if (result) {
@@ -582,7 +581,6 @@ export function useDraw(
             }
         }
         function polyEscKeyPress(ev: KeyboardEvent) {
-            console.log('PSYC--DRAW--ON-POLY-ESC-PRESS')
             const result = onEscKeyPress.call(poly.node, ev)
 
             if (result) {
@@ -1110,7 +1108,6 @@ export function useDraw(
                 ],
             })
 
-            //newRect?.data('selected', true)
             newRect?.fire('select')
 
             onChange()
@@ -1220,7 +1217,6 @@ export function useDraw(
                         capture: true,
                     })
 
-                    //poly?.data('selected', true)
                     poly?.fire('select')
 
                     onChange()
