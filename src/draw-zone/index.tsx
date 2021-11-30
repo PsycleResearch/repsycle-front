@@ -223,7 +223,6 @@ export function useDraw(
         window.removeEventListener('keyup', onEnterKeyPress, { capture: true })
 
         if (newPoly) {
-            //newPoly.data('selected', true)
             newPoly.fire('select')
         }
 
