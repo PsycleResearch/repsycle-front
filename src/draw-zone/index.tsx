@@ -16,6 +16,8 @@ import {
     Use,
     PointArrayAlias,
     FillData,
+    Polyline,
+    StrokeData,
 } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.draggable.js'
 import interact from 'interactjs'
@@ -23,8 +25,6 @@ import { DraggableOptions } from '@interactjs/types/index'
 import { uuid4 } from '../helpers'
 import { useMousePosition } from '../hooks'
 import { isTouchDevice } from '../utils'
-import { Polyline } from '@svgdotjs/svg.js'
-import { StrokeData } from '@svgdotjs/svg.js'
 
 export type DrawZoneMode = 'draw' | 'path' | 'move' | 'none'
 export type SizeMode = 'auto' | 'fit'
@@ -84,6 +84,7 @@ export function useDraw(
     const [originalSize, setOriginalSize] = useState<Size>()
     let startPosition: Point | null
     let overlayRect: Rect | undefined
+    let overlayRect2: Rect | undefined
     let poly: Polygon | undefined
     let tmpPoly: Polyline | undefined
     let tmpPoints: Array<Circle> | undefined
@@ -926,14 +927,28 @@ export function useDraw(
                 y: e.clientY - svgRect.top,
             }
 
-            if (!overlayRect) {
-                overlayRect = svg
-                    .rect(0, 0)
-                    .fill({ opacity: 0.2 })
-                    .stroke({ color: '#000', width: 2, opacity: 0.5 })
+            if (!overlayRect || !overlayRect2) {
+                overlayRect = svg.rect(0, 0).fill({ opacity: 0.2 }).stroke({
+                    color: '#000',
+                    width: 2,
+                    opacity: 0.5,
+                    dasharray: '5,5',
+                })
+                overlayRect2 = svg.rect(0, 0).fill({ opacity: 0.2 }).stroke({
+                    color: '#fff',
+                    width: 2,
+                    opacity: 0.5,
+                    dasharray: '5,5',
+                    dashoffset: 5,
+                })
             }
 
             overlayRect.move(
+                startPosition.x / svgRect.width,
+                startPosition.y / svgRect.height,
+            )
+
+            overlayRect2.move(
                 startPosition.x / svgRect.width,
                 startPosition.y / svgRect.height,
             )
@@ -962,10 +977,11 @@ export function useDraw(
         if (props.mode === 'draw' && !props.disabled) {
             if (!svg.node.contains(e.target as Node)) {
                 overlayRect = undefined
+                overlayRect2 = undefined
                 return
             }
 
-            if (overlayRect) {
+            if (overlayRect && overlayRect2) {
                 const svgRect = svg.node.getBoundingClientRect()
 
                 const currentPosition: Point = {
@@ -990,6 +1006,9 @@ export function useDraw(
                 overlayRect.move(`${minX * 100}%`, `${minY * 100}%`)
                 overlayRect.width(`${width * 100}%`)
                 overlayRect.height(`${height * 100}%`)
+                overlayRect2.move(`${minX * 100}%`, `${minY * 100}%`)
+                overlayRect2.width(`${width * 100}%`)
+                overlayRect2.height(`${height * 100}%`)
             }
         } else if (props.mode === 'move' && dragging) {
             if (!svg.node.contains(e.target as Node)) {
@@ -1060,9 +1079,11 @@ export function useDraw(
                 return
             }
 
-            if (overlayRect) {
-                overlayRect.remove()
+            if (overlayRect || overlayRect2) {
+                overlayRect?.remove()
                 overlayRect = undefined
+                overlayRect2?.remove()
+                overlayRect2 = undefined
             }
 
             // Prevent drawing new rect on rect dragend...
@@ -1107,9 +1128,10 @@ export function useDraw(
                 ],
             })
 
-            newRect?.fire('select')
-
-            onChange()
+            setTimeout(() => {
+                newRect?.fire('select')
+                onChange()
+            }, 50)
         } else if (props.mode === 'move' && dragging) {
             const parent = svg.parent()
 
