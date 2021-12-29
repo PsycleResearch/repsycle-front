@@ -919,6 +919,8 @@ export function useDraw(
         if (e.defaultPrevented) return
         if (!svg) return
 
+        if (!svg.node.contains(e.target as Node)) return
+
         if (props.mode === 'draw' && !props.disabled) {
             const svgRect = svg.node.getBoundingClientRect()
 
@@ -975,18 +977,12 @@ export function useDraw(
         if (!svg || !startPosition) return
 
         if (props.mode === 'draw' && !props.disabled) {
-            if (!svg.node.contains(e.target as Node)) {
-                overlayRect = undefined
-                overlayRect2 = undefined
-                return
-            }
-
             if (overlayRect && overlayRect2) {
                 const svgRect = svg.node.getBoundingClientRect()
 
-                const currentPosition: Point = {
-                    x: e.clientX - svgRect.left,
-                    y: e.clientY - svgRect.top,
+                const currentPosition = {
+                    x: Math.max(Math.min(e.clientX, svgRect.right), svgRect.left) - svgRect.left,
+                    y: Math.max(Math.min(e.clientY, svgRect.bottom), svgRect.top) - svgRect.top,
                 }
 
                 const minX =
@@ -1070,7 +1066,7 @@ export function useDraw(
         }
     }
 
-    function onMouseUp(e: globalThis.MouseEvent) {
+    function onMouseUp(this: Window, e: globalThis.MouseEvent) {
         if (e.defaultPrevented) return
         if (!svg) return
 
@@ -1093,8 +1089,8 @@ export function useDraw(
 
             const svgRect = svg.node.getBoundingClientRect()
             const currentPosition = {
-                x: e.clientX - svgRect.left,
-                y: e.clientY - svgRect.top,
+                x: Math.max(Math.min(e.clientX, svgRect.right), svgRect.left) - svgRect.left,
+                y: Math.max(Math.min(e.clientY, svgRect.bottom), svgRect.top) - svgRect.top,
             }
 
             // Prevent adding very small rects (mis-clicks).
@@ -1347,12 +1343,13 @@ export function useDraw(
 
         svg.on('mousedown', onMouseDown as unknown as EventListener)
         svg.on('mouseup', onMouseUp as unknown as EventListener)
+        window.addEventListener('mouseup', onMouseUp)
         svg.on('click', onClick as unknown as EventListener)
         window.addEventListener('mousemove', onMouseMove)
 
         return () => {
             svg.off('mousedown', onMouseDown as unknown as EventListener)
-            svg.off('mouseup', onMouseUp as unknown as EventListener)
+            window.removeEventListener('mouseup', onMouseUp)
             svg.off('click', onClick as unknown as EventListener)
             window.removeEventListener('mousemove', onMouseMove)
         }
