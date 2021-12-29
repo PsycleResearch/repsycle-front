@@ -981,8 +981,8 @@ export function useDraw(
                 const svgRect = svg.node.getBoundingClientRect()
 
                 const currentPosition = {
-                    x: Math.min(e.clientX, svgRect.right) - svgRect.left,
-                    y: Math.min(e.clientY, svgRect.bottom) - svgRect.top,
+                    x: Math.max(Math.min(e.clientX, svgRect.right), svgRect.left) - svgRect.left,
+                    y: Math.max(Math.min(e.clientY, svgRect.bottom), svgRect.top) - svgRect.top,
                 }
 
                 const minX =
@@ -1089,8 +1089,8 @@ export function useDraw(
 
             const svgRect = svg.node.getBoundingClientRect()
             const currentPosition = {
-                x: Math.min(e.clientX, svgRect.right) - svgRect.left,
-                y: Math.min(e.clientY, svgRect.bottom) - svgRect.top,
+                x: Math.max(Math.min(e.clientX, svgRect.right), svgRect.left) - svgRect.left,
+                y: Math.max(Math.min(e.clientY, svgRect.bottom), svgRect.top) - svgRect.top,
             }
 
             // Prevent adding very small rects (mis-clicks).
