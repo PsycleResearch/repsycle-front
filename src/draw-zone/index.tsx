@@ -977,15 +977,6 @@ export function useDraw(
         if (!svg || !startPosition) return
 
         if (props.mode === 'draw' && !props.disabled) {
-            /*
-            if (!svg.node.contains(e.target as Node)) {
-                console.log('here')
-                overlayRect = undefined
-                overlayRect2 = undefined
-                return
-            }
-            */
-
             if (overlayRect && overlayRect2) {
                 const svgRect = svg.node.getBoundingClientRect()
 
