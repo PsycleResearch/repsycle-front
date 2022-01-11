@@ -66,7 +66,7 @@ export const MAX_SCALE = 8
 export const SCALE_STEP = 0.25
 
 type DrawZoneStateInternal = DrawZoneState & {
-    readonly initialScale: number
+    readonly logicalScale: number
     readonly positionTop: number
     readonly positionLeft: number
     readonly redraw: boolean
@@ -74,7 +74,7 @@ type DrawZoneStateInternal = DrawZoneState & {
 
 enum DrawZoneStateActionType {
     RESET,
-    INITIAL_SCALE,
+    SET_SCALE,
     ZOOM_IN,
     ZOOM_OUT,
     CHANGE_MODE,
@@ -91,7 +91,7 @@ enum DrawZoneStateActionType {
 type DrawZoneStateAction =
     | { readonly type: DrawZoneStateActionType.RESET }
     | {
-          readonly type: DrawZoneStateActionType.INITIAL_SCALE
+          readonly type: DrawZoneStateActionType.SET_SCALE
           readonly payload: number
       }
     | {
@@ -133,7 +133,7 @@ const drawZoneInitialState: DrawZoneStateInternal = {
     isDisabled: false,
     originalSize: undefined,
     // Internal props
-    initialScale: 1,
+    logicalScale: 1,
     positionTop: 0,
     positionLeft: 0,
     redraw: false,
@@ -147,27 +147,25 @@ const drawZoneReducer = (
         case DrawZoneStateActionType.RESET:
             return {
                 ...state,
-                scale: state.initialScale,
+                scale: 1,
+                logicalScale: 1,
                 positionTop: 0,
                 positionLeft: 0,
             }
-        case DrawZoneStateActionType.INITIAL_SCALE:
+        case DrawZoneStateActionType.SET_SCALE:
             return {
                 ...state,
                 scale: action.payload,
-                initialScale: action.payload,
             }
         case DrawZoneStateActionType.ZOOM_IN:
             return {
                 ...state,
-                scale: state.scale + SCALE_STEP,
+                logicalScale: state.logicalScale + SCALE_STEP,
             }
         case DrawZoneStateActionType.ZOOM_OUT:
-            if (state.scale - SCALE_STEP < SCALE_STEP) return state
-
             return {
                 ...state,
-                scale: state.scale - SCALE_STEP,
+                logicalScale: state.logicalScale - SCALE_STEP,
             }
         case DrawZoneStateActionType.SHOW_MARKER:
             return {
@@ -328,7 +326,7 @@ export function useDraw(
         }))
     }
 
-    function onChange() {
+    const onChange = useCallback(() => {
         if (svg && props.onChange) {
             const svgRect = svg.node.getBoundingClientRect()
 
@@ -388,7 +386,7 @@ export function useDraw(
                     }),
             )
         }
-    }
+    }, [svg, props.onChange])
 
     function onDelKeyPress(this: SVGElement, event: KeyboardEvent): boolean {
         if (event.defaultPrevented) return false
@@ -1627,7 +1625,14 @@ export default function DrawZone({
     remove,
 }: DrawZoneProps) {
     const {
-        state: { isMarkerShown, scale, positionTop, positionLeft, redraw },
+        state: {
+            scale,
+            isMarkerShown,
+            positionTop,
+            positionLeft,
+            redraw,
+            logicalScale,
+        },
         dispatch,
     } = useContext(DrawZoneContext)
     const svgRef = useRef<HTMLDivElement>(null)
@@ -1641,10 +1646,10 @@ export default function DrawZone({
     const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
     const [forceRedraw, setForceRedraw] = useState(false)
 
-    const setInitialScale = useCallback(
+    const setScale = useCallback(
         (scale: number) => {
             dispatch({
-                type: DrawZoneStateActionType.INITIAL_SCALE,
+                type: DrawZoneStateActionType.SET_SCALE,
                 payload: scale,
             })
         },
@@ -1660,7 +1665,7 @@ export default function DrawZone({
 
     useEffect(() => {
         if (sizeMode === 'auto') {
-            setInitialScale(scale)
+            setScale(logicalScale)
         } else if (containerRef.current && originalSize) {
             const rect = containerRef.current.getBoundingClientRect()
 
@@ -1678,25 +1683,25 @@ export default function DrawZone({
                 const coef2 = maxHeight / minHeight
 
                 if (originalSize.height * coef <= maxHeight) {
-                    setInitialScale(coef * scale)
+                    setScale(coef * logicalScale)
                 } else if (originalSize.width * coef2 <= maxWidth) {
-                    setInitialScale(coef2 * scale)
+                    setScale(coef2 * logicalScale)
                 } else {
-                    setInitialScale(scale)
+                    setScale(logicalScale)
                 }
             } else if (
                 minWidth < originalSize.width ||
                 minHeight < originalSize.height
             ) {
-                setInitialScale(
+                setScale(
                     Math.min(
                         minWidth / originalSize.width,
                         minHeight / originalSize.height,
-                    ) * scale,
+                    ) * logicalScale,
                 )
             }
         }
-    }, [containerRef, originalSize, sizeMode])
+    }, [containerRef, originalSize, sizeMode, logicalScale])
 
     useEffect(() => {
         if (isTouchDevice) return
@@ -1750,7 +1755,7 @@ export default function DrawZone({
                 return
             }
         }
-    }, [svg, elements, forceRedraw])
+    }, [svg, elements, forceRedraw, scale])
 
     return (
         <div
