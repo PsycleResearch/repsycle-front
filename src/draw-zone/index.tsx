@@ -4,7 +4,6 @@ import React, {
     useLayoutEffect,
     useRef,
     Dispatch,
-    SetStateAction,
     createContext,
     useContext,
     useCallback,
@@ -70,6 +69,7 @@ type DrawZoneStateInternal = DrawZoneState & {
     readonly initialScale: number
     readonly positionTop: number
     readonly positionLeft: number
+    readonly redraw: boolean
 }
 
 enum DrawZoneStateActionType {
@@ -85,6 +85,7 @@ enum DrawZoneStateActionType {
     ENABLE,
     SET_ORIGINAL_SIZE,
     SET_POSITION,
+    FORCE_REDRAW,
 }
 
 type DrawZoneStateAction =
@@ -122,6 +123,9 @@ type DrawZoneStateAction =
               readonly left: number
           }
       }
+    | {
+          readonly type: DrawZoneStateActionType.FORCE_REDRAW
+      }
 
 const drawZoneInitialState: DrawZoneStateInternal = {
     scale: 1,
@@ -132,6 +136,7 @@ const drawZoneInitialState: DrawZoneStateInternal = {
     initialScale: 1,
     positionTop: 0,
     positionLeft: 0,
+    redraw: false,
 }
 
 const drawZoneReducer = (
@@ -194,6 +199,11 @@ const drawZoneReducer = (
                 ...state,
                 positionTop: action.payload.top,
                 positionLeft: action.payload.left,
+            }
+        case DrawZoneStateActionType.FORCE_REDRAW:
+            return {
+                ...state,
+                redraw: !state.redraw,
             }
         default:
             return state
@@ -292,7 +302,6 @@ export function useDraw(
         remove: (id: string) => void
         mode: DrawZoneMode
         drawOnMouseDown?: boolean
-        setForceRedraw: Dispatch<SetStateAction<boolean>>
     },
 ) {
     const {
@@ -1369,10 +1378,12 @@ export function useDraw(
                     const parentRect = grandParent.node.getBoundingClientRect()
                     const svgRect = parent.node.getBoundingClientRect()
 
-                    parent.css({
-                        left: `${svgRect.left - parentRect.left}px`,
-                        top: `${svgRect.top - parentRect.top}px`,
-                        transform: 'none',
+                    dispatch({
+                        type: DrawZoneStateActionType.SET_POSITION,
+                        payload: {
+                            top: svgRect.top - parentRect.top,
+                            left: svgRect.left - parentRect.left,
+                        },
                     })
 
                     svg.css({ cursor: 'grab' })
@@ -1520,8 +1531,8 @@ export function useDraw(
         }
         image.src = src
         ref.current.style.background = `url('${src}') center center / 100% 100% no-repeat`
-        ref.current.style.left = '0'
-        ref.current.style.top = '0'
+        ref.current.style.left = `${positionTop}px`
+        ref.current.style.top = `${positionLeft}px`
 
         if (svg) {
             svg.node.remove()
@@ -1541,7 +1552,9 @@ export function useDraw(
             ref.current.style.height = `${originalSize.height * scale}px`
 
             if (svg) {
-                props.setForceRedraw(true)
+                dispatch({
+                    type: DrawZoneStateActionType.FORCE_REDRAW,
+                })
             }
         }
     }, [ref, originalSize, scale])
@@ -1614,19 +1627,19 @@ export default function DrawZone({
     remove,
 }: DrawZoneProps) {
     const {
-        state: { isMarkerShown, scale, positionTop, positionLeft },
+        state: { isMarkerShown, scale, positionTop, positionLeft, redraw },
         dispatch,
     } = useContext(DrawZoneContext)
     const svgRef = useRef<HTMLDivElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
-    const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
     const { svg, draw, originalSize } = useDraw(svgRef, src, {
         onChange,
         remove,
         mode,
         drawOnMouseDown: false,
-        setForceRedraw: (_) => {},
     })
+    const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
+    const [forceRedraw, setForceRedraw] = useState(false)
 
     const setInitialScale = useCallback(
         (scale: number) => {
@@ -1710,154 +1723,13 @@ export default function DrawZone({
         }
     }, [])
 
-    useLayoutEffect(() => {
-        if (svg) {
-            if (
-                elements.length !==
-                svg.children().filter((c) => !c.attr('data-draw-ignore')).length
-            ) {
-                svg.clear()
-                elements.forEach((element) => draw(element as ChangedElement))
-            }
-        }
-    }, [svg, elements])
-
-    return (
-        <div
-            style={{
-                width: '100%',
-                height: '100%',
-                overflow: 'hidden',
-                position: 'relative',
-            }}
-            ref={containerRef}
-        >
-            <div ref={svgRef}>
-                {canMarkerBeVisible && isMarkerShown && (
-                    <Marker src={src} svgRef={svgRef} />
-                )}
-                {children}
-            </div>
-        </div>
-    )
-}
-
-/*
-export interface DrawZoneOldProps {
-    children?: React.ReactNode
-    src: string
-    elements: Partial<ChangedElement>[]
-    onChange: (elements: ChangedElement[]) => void
-    remove: (id: string) => void
-    disabled?: boolean
-    mode: DrawZoneMode
-    scale: number
-    drawOnMouseDown?: boolean
-    showMarker?: boolean
-    setOriginalSize: Dispatch<SetStateAction<Size | undefined>>
-    sizeMode?: SizeMode
-    redraw?: boolean
-}
-
-export function DrawZoneOld({
-    src,
-    elements,
-    onChange,
-    remove,
-    children,
-    disabled = false,
-    mode = 'draw',
-    scale,
-    drawOnMouseDown,
-    showMarker = false,
-    setOriginalSize,
-    sizeMode = 'auto',
-    redraw = false,
-}: DrawZoneOldProps): JSX.Element {
-    const svgRef = useRef<HTMLDivElement>(null)
-    const containerRef = useRef<HTMLDivElement>(null)
-    const [forceRedraw, setForceRedraw] = useState(false)
-    const [computedScale, setComputedScale] = useState(scale)
-    const { svg, draw, originalSize } = useDraw(svgRef, src, {
-        onChange,
-        remove,
-        disabled,
-        mode,
-        scale: computedScale,
-        drawOnMouseDown,
-        showMarker,
-        setForceRedraw,
-    })
-    const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
-
     useEffect(() => {
-        if (sizeMode === 'auto') {
-            setComputedScale(scale)
-        } else if (containerRef.current && originalSize) {
-            const rect = containerRef.current.getBoundingClientRect()
-
-            const minWidth = Math.min(rect.width, originalSize.width)
-            const minHeight = Math.min(rect.height, originalSize.height)
-
-            if (
-                originalSize.width <= minWidth &&
-                originalSize.height <= minHeight
-            ) {
-                const maxWidth = Math.max(rect.width, originalSize.width)
-                const maxHeight = Math.max(rect.height, originalSize.height)
-
-                const coef = maxWidth / minWidth
-                const coef2 = maxHeight / minHeight
-
-                if (originalSize.height * coef <= maxHeight) {
-                    setComputedScale(coef * scale)
-                } else if (originalSize.width * coef2 <= maxWidth) {
-                    setComputedScale(coef2 * scale)
-                } else {
-                    setComputedScale(scale)
-                }
-            } else if (
-                minWidth < originalSize.width ||
-                minHeight < originalSize.height
-            ) {
-                setComputedScale(
-                    Math.min(
-                        minWidth / originalSize.width,
-                        minHeight / originalSize.height,
-                    ) * scale,
-                )
-            }
-        }
-    }, [containerRef, originalSize, sizeMode, scale])
-
-    useEffect(() => {
-        setOriginalSize(originalSize)
-    }, [originalSize])
-
-    useEffect(() => {
-        if (isTouchDevice) return
-
-        const handleMouseEnter = () => setCanMarkerBeVisible(true)
-        const handleMouseLeave = () => setCanMarkerBeVisible(false)
-
         if (svgRef.current) {
-            svgRef.current.addEventListener('mouseenter', handleMouseEnter)
-            svgRef.current.addEventListener('mouseleave', handleMouseLeave)
+            svgRef.current.style.top = `${positionTop}px`
+            svgRef.current.style.left = `${positionLeft}px`
+            svgRef.current.style.transform = 'none'
         }
-
-        return () => {
-            if (svgRef.current) {
-                svgRef.current.removeEventListener(
-                    'mouseenter',
-                    handleMouseEnter,
-                )
-                svgRef.current.removeEventListener(
-                    'mouseleave',
-                    handleMouseLeave,
-                )
-            }
-        }
-    }, [])
+    }, [positionTop, positionLeft])
 
     useEffect(() => {
         setForceRedraw(true)
@@ -1891,7 +1763,7 @@ export function DrawZoneOld({
             ref={containerRef}
         >
             <div ref={svgRef}>
-                {canMarkerBeVisible && showMarker && (
+                {canMarkerBeVisible && isMarkerShown && (
                     <Marker src={src} svgRef={svgRef} />
                 )}
                 {children}
@@ -1899,7 +1771,6 @@ export function DrawZoneOld({
         </div>
     )
 }
-*/
 
 type MarkerProps = {
     readonly src: string
