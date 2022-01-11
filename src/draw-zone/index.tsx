@@ -5,6 +5,11 @@ import React, {
     useRef,
     Dispatch,
     SetStateAction,
+    createContext,
+    useContext,
+    useCallback,
+    ReactNode,
+    useReducer,
 } from 'react'
 import {
     SVG,
@@ -51,6 +56,219 @@ export interface ChangedElement {
     readonly color?: string
 }
 
+export type DrawZoneState = {
+    readonly scale: number
+    readonly isMarkerShown: boolean
+    readonly isDisabled: boolean
+    readonly originalSize: Size | undefined
+}
+
+export const MAX_SCALE = 8
+export const SCALE_STEP = 0.25
+
+type DrawZoneStateInternal = DrawZoneState & {
+    readonly initialScale: number
+    readonly positionTop: number
+    readonly positionLeft: number
+}
+
+enum DrawZoneStateActionType {
+    RESET,
+    INITIAL_SCALE,
+    ZOOM_IN,
+    ZOOM_OUT,
+    CHANGE_MODE,
+    CHANGE_SIZE_MODE,
+    SHOW_MARKER,
+    HIDE_MARKER,
+    DISABLE,
+    ENABLE,
+    SET_ORIGINAL_SIZE,
+    SET_POSITION,
+}
+
+type DrawZoneStateAction =
+    | { readonly type: DrawZoneStateActionType.RESET }
+    | {
+          readonly type: DrawZoneStateActionType.INITIAL_SCALE
+          readonly payload: number
+      }
+    | {
+          readonly type: DrawZoneStateActionType.ZOOM_IN
+      }
+    | {
+          readonly type: DrawZoneStateActionType.ZOOM_OUT
+      }
+    | {
+          readonly type: DrawZoneStateActionType.SHOW_MARKER
+      }
+    | {
+          readonly type: DrawZoneStateActionType.HIDE_MARKER
+      }
+    | {
+          readonly type: DrawZoneStateActionType.DISABLE
+      }
+    | {
+          readonly type: DrawZoneStateActionType.ENABLE
+      }
+    | {
+          readonly type: DrawZoneStateActionType.SET_ORIGINAL_SIZE
+          readonly payload: Size | undefined
+      }
+    | {
+          readonly type: DrawZoneStateActionType.SET_POSITION
+          readonly payload: {
+              readonly top: number
+              readonly left: number
+          }
+      }
+
+const drawZoneInitialState: DrawZoneStateInternal = {
+    scale: 1,
+    isMarkerShown: false,
+    isDisabled: false,
+    originalSize: undefined,
+    // Internal props
+    initialScale: 1,
+    positionTop: 0,
+    positionLeft: 0,
+}
+
+const drawZoneReducer = (
+    state: DrawZoneStateInternal,
+    action: DrawZoneStateAction,
+): DrawZoneStateInternal => {
+    switch (action.type) {
+        case DrawZoneStateActionType.RESET:
+            return {
+                ...state,
+                scale: state.initialScale,
+                positionTop: 0,
+                positionLeft: 0,
+            }
+        case DrawZoneStateActionType.INITIAL_SCALE:
+            return {
+                ...state,
+                scale: action.payload,
+                initialScale: action.payload,
+            }
+        case DrawZoneStateActionType.ZOOM_IN:
+            return {
+                ...state,
+                scale: state.scale + SCALE_STEP,
+            }
+        case DrawZoneStateActionType.ZOOM_OUT:
+            if (state.scale - SCALE_STEP < SCALE_STEP) return state
+
+            return {
+                ...state,
+                scale: state.scale - SCALE_STEP,
+            }
+        case DrawZoneStateActionType.SHOW_MARKER:
+            return {
+                ...state,
+                isMarkerShown: true,
+            }
+        case DrawZoneStateActionType.HIDE_MARKER:
+            return {
+                ...state,
+                isMarkerShown: false,
+            }
+        case DrawZoneStateActionType.DISABLE:
+            return {
+                ...state,
+                isDisabled: true,
+            }
+        case DrawZoneStateActionType.ENABLE:
+            return {
+                ...state,
+                isDisabled: false,
+            }
+        case DrawZoneStateActionType.SET_ORIGINAL_SIZE:
+            return {
+                ...state,
+                originalSize: action.payload,
+            }
+        case DrawZoneStateActionType.SET_POSITION:
+            return {
+                ...state,
+                positionTop: action.payload.top,
+                positionLeft: action.payload.left,
+            }
+        default:
+            return state
+    }
+}
+
+const DrawZoneContext = createContext<{
+    readonly state: DrawZoneStateInternal
+    readonly dispatch: Dispatch<DrawZoneStateAction>
+}>({
+    state: drawZoneInitialState,
+    dispatch: () => undefined,
+})
+
+export function useDrawZone() {
+    const { state, dispatch } = useContext(DrawZoneContext)
+
+    const zoomIn = useCallback(() => {
+        dispatch({ type: DrawZoneStateActionType.ZOOM_IN })
+    }, [dispatch])
+
+    const zoomOut = useCallback(() => {
+        dispatch({ type: DrawZoneStateActionType.ZOOM_OUT })
+    }, [dispatch])
+
+    const reset = useCallback(() => {
+        dispatch({ type: DrawZoneStateActionType.RESET })
+    }, [dispatch])
+
+    const toggleMarker = useCallback(() => {
+        if (state.isMarkerShown) {
+            dispatch({ type: DrawZoneStateActionType.HIDE_MARKER })
+        } else {
+            dispatch({ type: DrawZoneStateActionType.SHOW_MARKER })
+        }
+    }, [dispatch, state.isMarkerShown])
+
+    const disable = useCallback(() => {
+        dispatch({ type: DrawZoneStateActionType.DISABLE })
+    }, [dispatch])
+
+    const enable = useCallback(() => {
+        dispatch({ type: DrawZoneStateActionType.ENABLE })
+    }, [dispatch])
+
+    return {
+        ...(state as DrawZoneState),
+        zoomIn,
+        zoomOut,
+        reset,
+        toggleMarker,
+        disable,
+        enable,
+    }
+}
+
+export type DrawZoneContainerProps = Partial<DrawZoneState> & {
+    readonly children: ReactNode
+}
+export function DrawZoneContainer({
+    children,
+    ...props
+}: DrawZoneContainerProps) {
+    const [state, dispatch] = useReducer(drawZoneReducer, {
+        ...drawZoneInitialState,
+        ...props,
+    })
+
+    return (
+        <DrawZoneContext.Provider value={{ state, dispatch }}>
+            {children}
+        </DrawZoneContext.Provider>
+    )
+}
+
 const xns = 'http://www.w3.org/1999/xlink'
 const blue = '#2BB1FD'
 const defaultStroke = { color: '#fff', width: 2, opacity: 1 }
@@ -72,14 +290,15 @@ export function useDraw(
     props: {
         onChange: (elements: Array<ChangedElement>) => void
         remove: (id: string) => void
-        disabled: boolean
         mode: DrawZoneMode
-        scale: number
         drawOnMouseDown?: boolean
-        showMarker: boolean
         setForceRedraw: Dispatch<SetStateAction<boolean>>
     },
 ) {
+    const {
+        state: { isMarkerShown, isDisabled, scale, positionTop, positionLeft },
+        dispatch,
+    } = useContext(DrawZoneContext)
     const [svg, setSvg] = useState<Svg>()
     const [originalSize, setOriginalSize] = useState<Size>()
     let startPosition: Point | null
@@ -276,7 +495,7 @@ export function useDraw(
 
     function drawRect({
         points,
-        disabled = props.disabled ? true : false,
+        disabled = isDisabled,
         stroke = { ...defaultStroke },
         fill = { ...defaultFill },
         label,
@@ -536,7 +755,7 @@ export function useDraw(
 
     function drawPoly({
         points,
-        disabled = props.disabled,
+        disabled = isDisabled,
         stroke = { ...defaultStroke },
         fill = { ...defaultFill },
         label,
@@ -921,7 +1140,7 @@ export function useDraw(
 
         if (!svg.node.contains(e.target as Node)) return
 
-        if (props.mode === 'draw' && !props.disabled) {
+        if (props.mode === 'draw' && !isDisabled) {
             const svgRect = svg.node.getBoundingClientRect()
 
             startPosition = {
@@ -976,13 +1195,21 @@ export function useDraw(
         if (e.defaultPrevented) return
         if (!svg || !startPosition) return
 
-        if (props.mode === 'draw' && !props.disabled) {
+        if (props.mode === 'draw' && !isDisabled) {
             if (overlayRect && overlayRect2) {
                 const svgRect = svg.node.getBoundingClientRect()
 
                 const currentPosition = {
-                    x: Math.max(Math.min(e.clientX, svgRect.right), svgRect.left) - svgRect.left,
-                    y: Math.max(Math.min(e.clientY, svgRect.bottom), svgRect.top) - svgRect.top,
+                    x:
+                        Math.max(
+                            Math.min(e.clientX, svgRect.right),
+                            svgRect.left,
+                        ) - svgRect.left,
+                    y:
+                        Math.max(
+                            Math.min(e.clientY, svgRect.bottom),
+                            svgRect.top,
+                        ) - svgRect.top,
                 }
 
                 const minX =
@@ -1070,7 +1297,7 @@ export function useDraw(
         if (e.defaultPrevented) return
         if (!svg) return
 
-        if (props.mode === 'draw' && !props.disabled) {
+        if (props.mode === 'draw' && !isDisabled) {
             if (!startPosition) {
                 return
             }
@@ -1089,8 +1316,12 @@ export function useDraw(
 
             const svgRect = svg.node.getBoundingClientRect()
             const currentPosition = {
-                x: Math.max(Math.min(e.clientX, svgRect.right), svgRect.left) - svgRect.left,
-                y: Math.max(Math.min(e.clientY, svgRect.bottom), svgRect.top) - svgRect.top,
+                x:
+                    Math.max(Math.min(e.clientX, svgRect.right), svgRect.left) -
+                    svgRect.left,
+                y:
+                    Math.max(Math.min(e.clientY, svgRect.bottom), svgRect.top) -
+                    svgRect.top,
             }
 
             // Prevent adding very small rects (mis-clicks).
@@ -1304,16 +1535,16 @@ export function useDraw(
     }, [ref, src])
 
     useEffect(() => {
-        if (ref.current && originalSize && props.scale) {
-            ref.current.style.width = `${originalSize.width * props.scale}px`
+        if (ref.current && originalSize && scale) {
+            ref.current.style.width = `${originalSize.width * scale}px`
 
-            ref.current.style.height = `${originalSize.height * props.scale}px`
+            ref.current.style.height = `${originalSize.height * scale}px`
 
             if (svg) {
                 props.setForceRedraw(true)
             }
         }
-    }, [ref, originalSize, props.scale])
+    }, [ref, originalSize, scale])
 
     useLayoutEffect(() => {
         if (!svg) {
@@ -1322,9 +1553,9 @@ export function useDraw(
 
         svg.css({
             cursor:
-                props.mode === 'move' && !props.disabled
+                props.mode === 'move' && !isDisabled
                     ? 'grab'
-                    : props.mode === 'none' && !props.showMarker
+                    : props.mode === 'none' && !isMarkerShown
                     ? 'normal'
                     : 'crosshair',
             position: 'absolute',
@@ -1338,6 +1569,7 @@ export function useDraw(
             parent.css({
                 position: 'relative',
                 userSelect: 'none',
+                transform: 'none',
             })
         }
 
@@ -1363,6 +1595,155 @@ export function useDraw(
 }
 
 export interface DrawZoneProps {
+    readonly children?: React.ReactNode
+    readonly mode?: DrawZoneMode
+    readonly sizeMode?: SizeMode
+    readonly src: string
+    readonly elements: Partial<ChangedElement>[]
+    readonly onChange: (elements: ChangedElement[]) => void
+    readonly remove: (id: string) => void
+}
+
+export default function DrawZone({
+    children,
+    mode = 'draw',
+    sizeMode = 'auto',
+    src,
+    elements,
+    onChange,
+    remove,
+}: DrawZoneProps) {
+    const {
+        state: { isMarkerShown, scale, positionTop, positionLeft },
+        dispatch,
+    } = useContext(DrawZoneContext)
+    const svgRef = useRef<HTMLDivElement>(null)
+    const containerRef = useRef<HTMLDivElement>(null)
+    const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
+    const { svg, draw, originalSize } = useDraw(svgRef, src, {
+        onChange,
+        remove,
+        mode,
+        drawOnMouseDown: false,
+        setForceRedraw: (_) => {},
+    })
+
+    const setInitialScale = useCallback(
+        (scale: number) => {
+            dispatch({
+                type: DrawZoneStateActionType.INITIAL_SCALE,
+                payload: scale,
+            })
+        },
+        [dispatch],
+    )
+
+    useEffect(() => {
+        dispatch({
+            type: DrawZoneStateActionType.SET_ORIGINAL_SIZE,
+            payload: originalSize,
+        })
+    }, [originalSize])
+
+    useEffect(() => {
+        if (sizeMode === 'auto') {
+            setInitialScale(scale)
+        } else if (containerRef.current && originalSize) {
+            const rect = containerRef.current.getBoundingClientRect()
+
+            const minWidth = Math.min(rect.width, originalSize.width)
+            const minHeight = Math.min(rect.height, originalSize.height)
+
+            if (
+                originalSize.width <= minWidth &&
+                originalSize.height <= minHeight
+            ) {
+                const maxWidth = Math.max(rect.width, originalSize.width)
+                const maxHeight = Math.max(rect.height, originalSize.height)
+
+                const coef = maxWidth / minWidth
+                const coef2 = maxHeight / minHeight
+
+                if (originalSize.height * coef <= maxHeight) {
+                    setInitialScale(coef * scale)
+                } else if (originalSize.width * coef2 <= maxWidth) {
+                    setInitialScale(coef2 * scale)
+                } else {
+                    setInitialScale(scale)
+                }
+            } else if (
+                minWidth < originalSize.width ||
+                minHeight < originalSize.height
+            ) {
+                setInitialScale(
+                    Math.min(
+                        minWidth / originalSize.width,
+                        minHeight / originalSize.height,
+                    ) * scale,
+                )
+            }
+        }
+    }, [containerRef, originalSize, sizeMode])
+
+    useEffect(() => {
+        if (isTouchDevice) return
+
+        const handleMouseEnter = () => setCanMarkerBeVisible(true)
+        const handleMouseLeave = () => setCanMarkerBeVisible(false)
+
+        if (svgRef.current) {
+            svgRef.current.addEventListener('mouseenter', handleMouseEnter)
+            svgRef.current.addEventListener('mouseleave', handleMouseLeave)
+        }
+
+        return () => {
+            if (svgRef.current) {
+                svgRef.current.removeEventListener(
+                    'mouseenter',
+                    handleMouseEnter,
+                )
+                svgRef.current.removeEventListener(
+                    'mouseleave',
+                    handleMouseLeave,
+                )
+            }
+        }
+    }, [])
+
+    useLayoutEffect(() => {
+        if (svg) {
+            if (
+                elements.length !==
+                svg.children().filter((c) => !c.attr('data-draw-ignore')).length
+            ) {
+                svg.clear()
+                elements.forEach((element) => draw(element as ChangedElement))
+            }
+        }
+    }, [svg, elements])
+
+    return (
+        <div
+            style={{
+                width: '100%',
+                height: '100%',
+                overflow: 'hidden',
+                position: 'relative',
+            }}
+            ref={containerRef}
+        >
+            <div ref={svgRef}>
+                {canMarkerBeVisible && isMarkerShown && (
+                    <Marker src={src} svgRef={svgRef} />
+                )}
+                {children}
+            </div>
+        </div>
+    )
+}
+
+/*
+export interface DrawZoneOldProps {
     children?: React.ReactNode
     src: string
     elements: Partial<ChangedElement>[]
@@ -1378,7 +1759,7 @@ export interface DrawZoneProps {
     redraw?: boolean
 }
 
-export default function DrawZone({
+export function DrawZoneOld({
     src,
     elements,
     onChange,
@@ -1392,7 +1773,7 @@ export default function DrawZone({
     setOriginalSize,
     sizeMode = 'auto',
     redraw = false,
-}: DrawZoneProps): JSX.Element {
+}: DrawZoneOldProps): JSX.Element {
     const svgRef = useRef<HTMLDivElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const [forceRedraw, setForceRedraw] = useState(false)
@@ -1518,6 +1899,7 @@ export default function DrawZone({
         </div>
     )
 }
+*/
 
 type MarkerProps = {
     readonly src: string

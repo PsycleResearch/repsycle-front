@@ -1,10 +1,91 @@
 import React, { useEffect, useState } from 'react'
 
-import DrawZone, { ChangedElement, Size } from '.'
+import DrawZone, {
+    ChangedElement,
+    DrawZoneContainer,
+    Size,
+    useDrawZone,
+} from '.'
 
 export default {
     title: 'Components/DrawZone',
     component: DrawZone,
+    decorators: [
+        (Story: any) => (
+            <DrawZoneContainer>
+                <Story />
+            </DrawZoneContainer>
+        ),
+    ],
+}
+
+export function Default({}) {
+    const originalElements = [
+        {
+            id: 'rect1',
+            points: [
+                { x: 125, y: 94 },
+                { x: 250, y: 1 },
+            ],
+            color: '#00ff00',
+        },
+    ]
+    const {
+        isMarkerShown,
+        originalSize,
+        zoomIn,
+        zoomOut,
+        toggleMarker,
+        reset,
+    } = useDrawZone()
+    const [move, setMove] = useState(false)
+    const [elements, setElements] = useState<Array<Partial<ChangedElement>>>([])
+
+    useEffect(() => {
+        if (originalSize) {
+            setElements(
+                originalElements.map(
+                    (element) =>
+                        ({
+                            ...element,
+                            points: element.points.map((point) => ({
+                                x: point.x / originalSize.width,
+                                y: point.y / originalSize.height,
+                            })),
+                        } as ChangedElement),
+                ),
+            )
+        }
+    }, [originalSize])
+
+    return (
+        <div>
+            <div>
+                <button onClick={() => setMove((m) => !m)}>
+                    {move ? 'Déplacer actif' : 'Déplacer inactif'}
+                </button>
+                <button onClick={() => zoomOut()}>Reduire</button>
+                <button onClick={() => zoomIn()}>Agrandir</button>
+                <button onClick={() => toggleMarker()}>
+                    {isMarkerShown ? 'Cacher' : 'Afficher'} marqueur
+                </button>
+                <button onClick={() => reset()}>Reset (taille/position)</button>
+            </div>
+            <div>
+                <DrawZone
+                    src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/250px-Image_created_with_a_mobile_phone.png"
+                    elements={elements}
+                    mode={move ? 'move' : 'draw'}
+                    onChange={(elements: ChangedElement[]) =>
+                        setElements(elements)
+                    }
+                    remove={(id) =>
+                        setElements((el) => el.filter((e) => e.id !== id))
+                    }
+                />
+            </div>
+        </div>
+    )
 }
 
 export function Rects({}) {
@@ -68,10 +149,10 @@ export function Rects({}) {
                     remove={(id) =>
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
-                    scale={scale}
                     mode={move ? 'move' : mode}
-                    showMarker={showMarker}
-                    setOriginalSize={setOriginalSize}
+                    //scale={scale}
+                    //showMarker={showMarker}
+                    //setOriginalSize={setOriginalSize}
                 >
                     {elements.map((element, index) => {
                         const elem = element as ChangedElement
@@ -218,10 +299,10 @@ export function Polygons({}) {
                     remove={(id) =>
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
-                    scale={scale}
                     mode={move ? 'move' : mode}
-                    showMarker={showMarker}
-                    setOriginalSize={setOriginalSize}
+                    //scale={scale}
+                    //showMarker={showMarker}
+                    //setOriginalSize={setOriginalSize}
                 >
                     {elements.map((element, index) => {
                         const elem = element as ChangedElement
@@ -347,11 +428,11 @@ export function ScaleIn({}) {
                     remove={(id) =>
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
-                    scale={scale}
                     mode={move ? 'move' : mode}
-                    showMarker={showMarker}
-                    setOriginalSize={setOriginalSize}
                     sizeMode="fit"
+                    //scale={scale}
+                    //showMarker={showMarker}
+                    //setOriginalSize={setOriginalSize}
                 >
                     {elements.map((element, index) => {
                         const elem = element as ChangedElement
@@ -475,11 +556,11 @@ export function ScaleOut({}) {
                     remove={(id) =>
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
-                    scale={scale}
                     mode={move ? 'move' : mode}
-                    showMarker={showMarker}
-                    setOriginalSize={setOriginalSize}
                     sizeMode="fit"
+                    //scale={scale}
+                    //showMarker={showMarker}
+                    //setOriginalSize={setOriginalSize}
                 >
                     {elements.map((element, index) => {
                         const elem = element as ChangedElement
@@ -603,11 +684,11 @@ export function ScaleInRect({}) {
                     remove={(id) =>
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
-                    scale={scale}
                     mode={move ? 'move' : mode}
-                    showMarker={showMarker}
-                    setOriginalSize={setOriginalSize}
                     sizeMode="fit"
+                    //scale={scale}
+                    //showMarker={showMarker}
+                    //setOriginalSize={setOriginalSize}
                 >
                     {elements.map((element, index) => {
                         const elem = element as ChangedElement
@@ -704,11 +785,11 @@ export function None({}) {
                     remove={(id) =>
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
-                    scale={scale}
                     mode={move ? 'move' : mode}
-                    showMarker={showMarker}
-                    setOriginalSize={setOriginalSize}
                     sizeMode="fit"
+                    //scale={scale}
+                    //showMarker={showMarker}
+                    //setOriginalSize={setOriginalSize}
                 />
             </div>
         </div>
