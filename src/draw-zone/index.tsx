@@ -290,7 +290,7 @@ export function DrawZoneContainer({
 const xns = 'http://www.w3.org/1999/xlink'
 const blue = '#2BB1FD'
 const defaultStroke = { color: '#fff', width: 2, opacity: 1 }
-const defaultFill = { color: '#000', opacity: 0.2 }
+const defaultFill = { color: '#000', opacity: 0.5 }
 
 function getRectCoords(rect: Rect) {
     const bbox = rect.bbox()
@@ -1166,16 +1166,16 @@ function useDraw(
             }
 
             if (!overlayRect || !overlayRect2) {
-                overlayRect = svg.rect(0, 0).fill({ opacity: 0.2 }).stroke({
+                overlayRect = svg.rect(0, 0).fill({ opacity: 0.5 }).stroke({
                     color: '#000',
                     width: 2,
-                    opacity: 0.5,
+                    opacity: 0.7,
                     dasharray: '5,5',
                 })
-                overlayRect2 = svg.rect(0, 0).fill({ opacity: 0.2 }).stroke({
+                overlayRect2 = svg.rect(0, 0).fill({ opacity: 0.5 }).stroke({
                     color: '#fff',
                     width: 2,
-                    opacity: 0.5,
+                    opacity: 0.7,
                     dasharray: '5,5',
                     dashoffset: 5,
                 })
@@ -1497,7 +1497,7 @@ function useDraw(
                         .polygon(plotline)
                         .fill({
                             color: '#f06',
-                            opacity: 0.2,
+                            opacity: 0.5,
                         })
                         .stroke({
                             color: '#f06',
