@@ -59,7 +59,7 @@ export function Default({}) {
                 <button onClick={() => setMove((m) => !m)}>
                     {move ? 'Déplacer actif' : 'Déplacer inactif'}
                 </button>
-                <button onClick={() => zoomOut()}>Reduire</button>
+                <button onClick={() => zoomOut()}>Réduire</button>
                 <button onClick={() => zoomIn()}>Agrandir</button>
                 <button onClick={() => toggleMarker()}>
                     {isMarkerShown ? 'Cacher' : 'Afficher'} marqueur
@@ -128,7 +128,7 @@ export function Rects({}) {
                 <button onClick={() => setMove((m) => !m)}>
                     {move ? 'Déplacer actif' : 'Déplacer inactif'}
                 </button>
-                <button onClick={() => zoomOut()}>Reduire</button>
+                <button onClick={() => zoomOut()}>Réduire</button>
                 <button onClick={() => zoomIn()}>Agrandir</button>
                 <button onClick={() => toggleMarker()}>
                     {isMarkerShown ? 'Cacher' : 'Afficher'} marqueur
@@ -276,7 +276,7 @@ export function Polygons({}) {
                 <button onClick={() => setMove((m) => !m)}>
                     {move ? 'Déplacer actif' : 'Déplacer inactif'}
                 </button>
-                <button onClick={() => zoomOut()}>Reduire</button>
+                <button onClick={() => zoomOut()}>Réduire</button>
                 <button onClick={() => zoomIn()}>Agrandir</button>
                 <button onClick={() => toggleMarker()}>
                     {isMarkerShown ? 'Cacher' : 'Afficher'} marqueur
@@ -397,7 +397,7 @@ export function ScaleIn({}) {
                 <button onClick={() => setMove((m) => !m)}>
                     {move ? 'Déplacer actif' : 'Déplacer inactif'}
                 </button>
-                <button onClick={() => zoomOut()}>Reduire</button>
+                <button onClick={() => zoomOut()}>Réduire</button>
                 <button onClick={() => zoomIn()}>Agrandir</button>
                 <button onClick={() => toggleMarker()}>
                     {isMarkerShown ? 'Cacher' : 'Afficher'} marqueur
@@ -523,7 +523,7 @@ export function ScaleOut({}) {
                 <button onClick={() => setMove((m) => !m)}>
                     {move ? 'Déplacer actif' : 'Déplacer inactif'}
                 </button>
-                <button onClick={() => zoomOut()}>Reduire</button>
+                <button onClick={() => zoomOut()}>Réduire</button>
                 <button onClick={() => zoomIn()}>Agrandir</button>
                 <button onClick={() => toggleMarker()}>
                     {isMarkerShown ? 'Cacher' : 'Afficher'} marqueur
@@ -649,7 +649,7 @@ export function ScaleInRect({}) {
                 <button onClick={() => setMove((m) => !m)}>
                     {move ? 'Déplacer actif' : 'Déplacer inactif'}
                 </button>
-                <button onClick={() => zoomOut()}>Reduire</button>
+                <button onClick={() => zoomOut()}>Réduire</button>
                 <button onClick={() => zoomIn()}>Agrandir</button>
                 <button onClick={() => toggleMarker()}>
                     {isMarkerShown ? 'Cacher' : 'Afficher'} marqueur
@@ -742,7 +742,7 @@ export function None({}) {
                 <button onClick={() => setMove((m) => !m)}>
                     {move ? 'Déplacer actif' : 'Déplacer inactif'}
                 </button>
-                <button onClick={() => zoomOut()}>Reduire</button>
+                <button onClick={() => zoomOut()}>Réduire</button>
                 <button onClick={() => zoomIn()}>Agrandir</button>
                 <button onClick={() => toggleMarker()}>
                     {isMarkerShown ? 'Cacher' : 'Afficher'} marqueur

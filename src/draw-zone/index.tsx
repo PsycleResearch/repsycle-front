@@ -147,7 +147,6 @@ const drawZoneReducer = (
         case DrawZoneStateActionType.RESET:
             return {
                 ...state,
-                scale: 1,
                 logicalScale: 1,
                 positionTop: 0,
                 positionLeft: 0,
@@ -259,7 +258,7 @@ export function useDrawZone() {
         toggleMarker,
         disable,
         enable,
-        redraw
+        redraw,
     }
 }
 
@@ -297,7 +296,7 @@ function getRectCoords(rect: Rect) {
     ]
 }
 
-export function useDraw(
+function useDraw(
     ref: React.RefObject<HTMLElement>,
     src: string,
     props: {
@@ -1534,8 +1533,8 @@ export function useDraw(
         }
         image.src = src
         ref.current.style.background = `url('${src}') center center / 100% 100% no-repeat`
-        ref.current.style.left = `${positionTop}px`
-        ref.current.style.top = `${positionLeft}px`
+        ref.current.style.top = `${positionTop}px`
+        ref.current.style.left = `${positionLeft}px`
 
         if (svg) {
             svg.node.remove()
