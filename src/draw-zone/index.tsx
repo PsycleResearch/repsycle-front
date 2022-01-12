@@ -247,6 +247,10 @@ export function useDrawZone() {
         dispatch({ type: DrawZoneStateActionType.ENABLE })
     }, [dispatch])
 
+    const redraw = useCallback(() => {
+        dispatch({ type: DrawZoneStateActionType.FORCE_REDRAW })
+    }, [dispatch])
+
     return {
         ...(state as DrawZoneState),
         zoomIn,
@@ -255,6 +259,7 @@ export function useDrawZone() {
         toggleMarker,
         disable,
         enable,
+        redraw
     }
 }
 
