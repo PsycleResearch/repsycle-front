@@ -62,7 +62,7 @@ export type DrawZoneState = {
     readonly originalSize: Size | undefined
 }
 
-export const MAX_SCALE = 8
+export const MAX_SCALE = 4
 export const SCALE_STEP = 0.25
 
 type DrawZoneStateInternal = DrawZoneState & {
@@ -159,12 +159,18 @@ const drawZoneReducer = (
         case DrawZoneStateActionType.ZOOM_IN:
             return {
                 ...state,
-                logicalScale: state.logicalScale + SCALE_STEP,
+                logicalScale: Math.min(
+                    state.logicalScale + SCALE_STEP,
+                    MAX_SCALE,
+                ),
             }
         case DrawZoneStateActionType.ZOOM_OUT:
             return {
                 ...state,
-                logicalScale: state.logicalScale - SCALE_STEP,
+                logicalScale: Math.max(
+                    SCALE_STEP,
+                    state.logicalScale - SCALE_STEP,
+                ),
             }
         case DrawZoneStateActionType.SHOW_MARKER:
             return {
