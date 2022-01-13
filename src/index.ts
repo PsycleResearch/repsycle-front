@@ -11,6 +11,7 @@ export type {
     ChangedElement,
     DrawZoneContainerProps,
     DrawZoneProps,
+    DrawZoneMode,
     SizeMode,
     DrawZoneState,
 } from './draw-zone'
