@@ -1,10 +1,86 @@
 import React, { useEffect, useState } from 'react'
 
-import DrawZone, { ChangedElement, Size } from '.'
+import DrawZone, { ChangedElement, DrawZoneContainer, useDrawZone } from '.'
 
 export default {
     title: 'Components/DrawZone',
     component: DrawZone,
+    decorators: [
+        (Story: any) => (
+            <DrawZoneContainer>
+                <Story />
+            </DrawZoneContainer>
+        ),
+    ],
+}
+
+export function Default({}) {
+    const originalElements = [
+        {
+            id: 'rect1',
+            points: [
+                { x: 125, y: 94 },
+                { x: 250, y: 1 },
+            ],
+            color: '#00ff00',
+        },
+    ]
+    const {
+        isMarkerShown,
+        originalSize,
+        zoomIn,
+        zoomOut,
+        toggleMarker,
+        reset,
+    } = useDrawZone()
+    const [move, setMove] = useState(false)
+    const [elements, setElements] = useState<Array<Partial<ChangedElement>>>([])
+
+    useEffect(() => {
+        if (originalSize) {
+            setElements(
+                originalElements.map(
+                    (element) =>
+                        ({
+                            ...element,
+                            points: element.points.map((point) => ({
+                                x: point.x / originalSize.width,
+                                y: point.y / originalSize.height,
+                            })),
+                        } as ChangedElement),
+                ),
+            )
+        }
+    }, [originalSize])
+
+    return (
+        <div>
+            <div>
+                <button onClick={() => setMove((m) => !m)}>
+                    {move ? 'Déplacer actif' : 'Déplacer inactif'}
+                </button>
+                <button onClick={() => zoomOut()}>Réduire</button>
+                <button onClick={() => zoomIn()}>Agrandir</button>
+                <button onClick={() => toggleMarker()}>
+                    {isMarkerShown ? 'Cacher' : 'Afficher'} marqueur
+                </button>
+                <button onClick={() => reset()}>Reset (taille/position)</button>
+            </div>
+            <div>
+                <DrawZone
+                    src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/250px-Image_created_with_a_mobile_phone.png"
+                    elements={elements}
+                    mode={move ? 'move' : 'draw'}
+                    onChange={(elements: ChangedElement[]) =>
+                        setElements(elements)
+                    }
+                    remove={(id) =>
+                        setElements((el) => el.filter((e) => e.id !== id))
+                    }
+                />
+            </div>
+        </div>
+    )
 }
 
 export function Rects({}) {
@@ -18,45 +94,46 @@ export function Rects({}) {
             color: '#00ff00',
         },
     ]
-    const [scale, setScale] = useState(1)
-    const mode = 'draw'
+    const {
+        isMarkerShown,
+        originalSize,
+        zoomIn,
+        zoomOut,
+        toggleMarker,
+        reset,
+    } = useDrawZone()
     const [move, setMove] = useState(false)
     const [elements, setElements] = useState<Array<Partial<ChangedElement>>>([])
-    const [showMarker, setShowMarker] = useState(false)
-    const [orignalSize, setOriginalSize] = useState<Size>()
 
     useEffect(() => {
-        if (orignalSize) {
+        if (originalSize) {
             setElements(
                 originalElements.map(
                     (element) =>
                         ({
                             ...element,
                             points: element.points.map((point) => ({
-                                x: point.x / orignalSize.width,
-                                y: point.y / orignalSize.height,
+                                x: point.x / originalSize.width,
+                                y: point.y / originalSize.height,
                             })),
                         } as ChangedElement),
                 ),
             )
         }
-    }, [orignalSize])
+    }, [originalSize])
 
     return (
         <div>
             <div>
-                <button onClick={() => setScale((old) => old - 0.25)}>
-                    Reduire
-                </button>
-                <button onClick={() => setScale((old) => old + 0.25)}>
-                    Agrandir
-                </button>
                 <button onClick={() => setMove((m) => !m)}>
                     {move ? 'Déplacer actif' : 'Déplacer inactif'}
                 </button>
-                <button onClick={() => setShowMarker((s) => !s)}>
-                    {showMarker ? 'Cacher' : 'Afficher'} marqueur
+                <button onClick={() => zoomOut()}>Réduire</button>
+                <button onClick={() => zoomIn()}>Agrandir</button>
+                <button onClick={() => toggleMarker()}>
+                    {isMarkerShown ? 'Cacher' : 'Afficher'} marqueur
                 </button>
+                <button onClick={() => reset()}>Reset (taille/position)</button>
             </div>
             <div style={{ backgroundColor: '#aaa' }}>
                 <DrawZone
@@ -68,10 +145,7 @@ export function Rects({}) {
                     remove={(id) =>
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
-                    scale={scale}
-                    mode={move ? 'move' : mode}
-                    showMarker={showMarker}
-                    setOriginalSize={setOriginalSize}
+                    mode={move ? 'move' : 'draw'}
                 >
                     {elements.map((element, index) => {
                         const elem = element as ChangedElement
@@ -168,45 +242,46 @@ export function Polygons({}) {
             color: '#00ff00',
         },
     ]
-    const [scale, setScale] = useState(1)
-    const mode = 'path'
+    const {
+        isMarkerShown,
+        originalSize,
+        zoomIn,
+        zoomOut,
+        toggleMarker,
+        reset,
+    } = useDrawZone()
     const [move, setMove] = useState(false)
     const [elements, setElements] = useState<Array<Partial<ChangedElement>>>([])
-    const [showMarker, setShowMarker] = useState(false)
-    const [orignalSize, setOriginalSize] = useState<Size>()
 
     useEffect(() => {
-        if (orignalSize) {
+        if (originalSize) {
             setElements(
                 originalElements.map(
                     (element) =>
                         ({
                             ...element,
                             points: element.points.map((point) => ({
-                                x: point.x / orignalSize.width,
-                                y: point.y / orignalSize.height,
+                                x: point.x / originalSize.width,
+                                y: point.y / originalSize.height,
                             })),
                         } as ChangedElement),
                 ),
             )
         }
-    }, [orignalSize])
+    }, [originalSize])
 
     return (
         <div>
             <div>
-                <button onClick={() => setScale((old) => old - 0.25)}>
-                    Reduire
-                </button>
-                <button onClick={() => setScale((old) => old + 0.25)}>
-                    Agrandir
-                </button>
                 <button onClick={() => setMove((m) => !m)}>
                     {move ? 'Déplacer actif' : 'Déplacer inactif'}
                 </button>
-                <button onClick={() => setShowMarker((s) => !s)}>
-                    {showMarker ? 'Cacher' : 'Afficher'} marqueur
+                <button onClick={() => zoomOut()}>Réduire</button>
+                <button onClick={() => zoomIn()}>Agrandir</button>
+                <button onClick={() => toggleMarker()}>
+                    {isMarkerShown ? 'Cacher' : 'Afficher'} marqueur
                 </button>
+                <button onClick={() => reset()}>Reset (taille/position)</button>
             </div>
             <div style={{ backgroundColor: '#aaa' }}>
                 <DrawZone
@@ -218,10 +293,7 @@ export function Polygons({}) {
                     remove={(id) =>
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
-                    scale={scale}
-                    mode={move ? 'move' : mode}
-                    showMarker={showMarker}
-                    setOriginalSize={setOriginalSize}
+                    mode={move ? 'move' : 'path'}
                 >
                     {elements.map((element, index) => {
                         const elem = element as ChangedElement
@@ -291,45 +363,46 @@ export function ScaleIn({}) {
             color: '#00ff00',
         },
     ]
-    const [scale, setScale] = useState(1)
-    const mode = 'path'
+    const {
+        isMarkerShown,
+        originalSize,
+        zoomIn,
+        zoomOut,
+        toggleMarker,
+        reset,
+    } = useDrawZone()
     const [move, setMove] = useState(false)
     const [elements, setElements] = useState<Array<Partial<ChangedElement>>>([])
-    const [showMarker, setShowMarker] = useState(false)
-    const [orignalSize, setOriginalSize] = useState<Size>()
 
     useEffect(() => {
-        if (orignalSize) {
+        if (originalSize) {
             setElements(
                 originalElements.map(
                     (element) =>
                         ({
                             ...element,
                             points: element.points.map((point) => ({
-                                x: point.x / orignalSize.width,
-                                y: point.y / orignalSize.height,
+                                x: point.x / originalSize.width,
+                                y: point.y / originalSize.height,
                             })),
                         } as ChangedElement),
                 ),
             )
         }
-    }, [orignalSize])
+    }, [originalSize])
 
     return (
         <div>
             <div>
-                <button onClick={() => setScale((old) => old - 0.25)}>
-                    Reduire
-                </button>
-                <button onClick={() => setScale((old) => old + 0.25)}>
-                    Agrandir
-                </button>
                 <button onClick={() => setMove((m) => !m)}>
                     {move ? 'Déplacer actif' : 'Déplacer inactif'}
                 </button>
-                <button onClick={() => setShowMarker((s) => !s)}>
-                    {showMarker ? 'Cacher' : 'Afficher'} marqueur
+                <button onClick={() => zoomOut()}>Réduire</button>
+                <button onClick={() => zoomIn()}>Agrandir</button>
+                <button onClick={() => toggleMarker()}>
+                    {isMarkerShown ? 'Cacher' : 'Afficher'} marqueur
                 </button>
+                <button onClick={() => reset()}>Reset (taille/position)</button>
             </div>
             <div
                 style={{
@@ -347,10 +420,7 @@ export function ScaleIn({}) {
                     remove={(id) =>
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
-                    scale={scale}
-                    mode={move ? 'move' : mode}
-                    showMarker={showMarker}
-                    setOriginalSize={setOriginalSize}
+                    mode={move ? 'move' : 'path'}
                     sizeMode="fit"
                 >
                     {elements.map((element, index) => {
@@ -419,45 +489,46 @@ export function ScaleOut({}) {
             color: '#00ff00',
         },
     ]
-    const [scale, setScale] = useState(1)
-    const mode = 'draw'
+    const {
+        isMarkerShown,
+        originalSize,
+        zoomIn,
+        zoomOut,
+        toggleMarker,
+        reset,
+    } = useDrawZone()
     const [move, setMove] = useState(false)
     const [elements, setElements] = useState<Array<Partial<ChangedElement>>>([])
-    const [showMarker, setShowMarker] = useState(false)
-    const [orignalSize, setOriginalSize] = useState<Size>()
 
     useEffect(() => {
-        if (orignalSize) {
+        if (originalSize) {
             setElements(
                 originalElements.map(
                     (element) =>
                         ({
                             ...element,
                             points: element.points.map((point) => ({
-                                x: point.x / orignalSize.width,
-                                y: point.y / orignalSize.height,
+                                x: point.x / originalSize.width,
+                                y: point.y / originalSize.height,
                             })),
                         } as ChangedElement),
                 ),
             )
         }
-    }, [orignalSize])
+    }, [originalSize])
 
     return (
         <div>
             <div>
-                <button onClick={() => setScale((old) => old - 0.25)}>
-                    Reduire
-                </button>
-                <button onClick={() => setScale((old) => old + 0.25)}>
-                    Agrandir
-                </button>
                 <button onClick={() => setMove((m) => !m)}>
                     {move ? 'Déplacer actif' : 'Déplacer inactif'}
                 </button>
-                <button onClick={() => setShowMarker((s) => !s)}>
-                    {showMarker ? 'Cacher' : 'Afficher'} marqueur
+                <button onClick={() => zoomOut()}>Réduire</button>
+                <button onClick={() => zoomIn()}>Agrandir</button>
+                <button onClick={() => toggleMarker()}>
+                    {isMarkerShown ? 'Cacher' : 'Afficher'} marqueur
                 </button>
+                <button onClick={() => reset()}>Reset (taille/position)</button>
             </div>
             <div
                 style={{
@@ -475,10 +546,7 @@ export function ScaleOut({}) {
                     remove={(id) =>
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
-                    scale={scale}
-                    mode={move ? 'move' : mode}
-                    showMarker={showMarker}
-                    setOriginalSize={setOriginalSize}
+                    mode={move ? 'move' : 'draw'}
                     sizeMode="fit"
                 >
                     {elements.map((element, index) => {
@@ -547,45 +615,46 @@ export function ScaleInRect({}) {
             color: '#00ff00',
         },
     ]
-    const [scale, setScale] = useState(1)
-    const mode = 'draw'
+    const {
+        isMarkerShown,
+        originalSize,
+        zoomIn,
+        zoomOut,
+        toggleMarker,
+        reset,
+    } = useDrawZone()
     const [move, setMove] = useState(false)
     const [elements, setElements] = useState<Array<Partial<ChangedElement>>>([])
-    const [showMarker, setShowMarker] = useState(false)
-    const [orignalSize, setOriginalSize] = useState<Size>()
 
     useEffect(() => {
-        if (orignalSize) {
+        if (originalSize) {
             setElements(
                 originalElements.map(
                     (element) =>
                         ({
                             ...element,
                             points: element.points.map((point) => ({
-                                x: point.x / orignalSize.width,
-                                y: point.y / orignalSize.height,
+                                x: point.x / originalSize.width,
+                                y: point.y / originalSize.height,
                             })),
                         } as ChangedElement),
                 ),
             )
         }
-    }, [orignalSize])
+    }, [originalSize])
 
     return (
         <div>
             <div>
-                <button onClick={() => setScale((old) => old - 0.25)}>
-                    Reduire
-                </button>
-                <button onClick={() => setScale((old) => old + 0.25)}>
-                    Agrandir
-                </button>
                 <button onClick={() => setMove((m) => !m)}>
                     {move ? 'Déplacer actif' : 'Déplacer inactif'}
                 </button>
-                <button onClick={() => setShowMarker((s) => !s)}>
-                    {showMarker ? 'Cacher' : 'Afficher'} marqueur
+                <button onClick={() => zoomOut()}>Réduire</button>
+                <button onClick={() => zoomIn()}>Agrandir</button>
+                <button onClick={() => toggleMarker()}>
+                    {isMarkerShown ? 'Cacher' : 'Afficher'} marqueur
                 </button>
+                <button onClick={() => reset()}>Reset (taille/position)</button>
             </div>
             <div
                 style={{
@@ -603,10 +672,7 @@ export function ScaleInRect({}) {
                     remove={(id) =>
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
-                    scale={scale}
-                    mode={move ? 'move' : mode}
-                    showMarker={showMarker}
-                    setOriginalSize={setOriginalSize}
+                    mode={move ? 'move' : 'draw'}
                     sizeMode="fit"
                 >
                     {elements.map((element, index) => {
@@ -665,28 +731,23 @@ export function ScaleInRect({}) {
 }
 
 export function None({}) {
-    const [scale, setScale] = useState(1)
-    const mode = 'none'
+    const { isMarkerShown, zoomIn, zoomOut, toggleMarker, reset } =
+        useDrawZone()
     const [move, setMove] = useState(false)
     const [elements, setElements] = useState<Array<Partial<ChangedElement>>>([])
-    const [showMarker, setShowMarker] = useState(false)
-    const [orignalSize, setOriginalSize] = useState<Size>()
 
     return (
         <div>
             <div>
-                <button onClick={() => setScale((old) => old - 0.25)}>
-                    Reduire
-                </button>
-                <button onClick={() => setScale((old) => old + 0.25)}>
-                    Agrandir
-                </button>
                 <button onClick={() => setMove((m) => !m)}>
                     {move ? 'Déplacer actif' : 'Déplacer inactif'}
                 </button>
-                <button onClick={() => setShowMarker((s) => !s)}>
-                    {showMarker ? 'Cacher' : 'Afficher'} marqueur
+                <button onClick={() => zoomOut()}>Réduire</button>
+                <button onClick={() => zoomIn()}>Agrandir</button>
+                <button onClick={() => toggleMarker()}>
+                    {isMarkerShown ? 'Cacher' : 'Afficher'} marqueur
                 </button>
+                <button onClick={() => reset()}>Reset (taille/position)</button>
             </div>
             <div
                 style={{
@@ -704,10 +765,7 @@ export function None({}) {
                     remove={(id) =>
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
-                    scale={scale}
-                    mode={move ? 'move' : mode}
-                    showMarker={showMarker}
-                    setOriginalSize={setOriginalSize}
+                    mode={move ? 'move' : 'none'}
                     sizeMode="fit"
                 />
             </div>

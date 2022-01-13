@@ -4,7 +4,11 @@ import React, {
     useLayoutEffect,
     useRef,
     Dispatch,
-    SetStateAction,
+    createContext,
+    useContext,
+    useCallback,
+    ReactNode,
+    useReducer,
 } from 'react'
 import {
     SVG,
@@ -51,10 +55,242 @@ export interface ChangedElement {
     readonly color?: string
 }
 
+export type DrawZoneState = {
+    readonly scale: number
+    readonly isMarkerShown: boolean
+    readonly isDisabled: boolean
+    readonly originalSize: Size | undefined
+}
+
+export const MAX_SCALE = 4
+export const SCALE_STEP = 0.25
+
+type DrawZoneStateInternal = DrawZoneState & {
+    readonly logicalScale: number
+    readonly positionTop: number
+    readonly positionLeft: number
+    readonly redraw: boolean
+}
+
+enum DrawZoneStateActionType {
+    RESET,
+    SET_SCALE,
+    ZOOM_IN,
+    ZOOM_OUT,
+    CHANGE_MODE,
+    CHANGE_SIZE_MODE,
+    SHOW_MARKER,
+    HIDE_MARKER,
+    DISABLE,
+    ENABLE,
+    SET_ORIGINAL_SIZE,
+    SET_POSITION,
+    FORCE_REDRAW,
+}
+
+type DrawZoneStateAction =
+    | { readonly type: DrawZoneStateActionType.RESET }
+    | {
+          readonly type: DrawZoneStateActionType.SET_SCALE
+          readonly payload: number
+      }
+    | {
+          readonly type: DrawZoneStateActionType.ZOOM_IN
+      }
+    | {
+          readonly type: DrawZoneStateActionType.ZOOM_OUT
+      }
+    | {
+          readonly type: DrawZoneStateActionType.SHOW_MARKER
+      }
+    | {
+          readonly type: DrawZoneStateActionType.HIDE_MARKER
+      }
+    | {
+          readonly type: DrawZoneStateActionType.DISABLE
+      }
+    | {
+          readonly type: DrawZoneStateActionType.ENABLE
+      }
+    | {
+          readonly type: DrawZoneStateActionType.SET_ORIGINAL_SIZE
+          readonly payload: Size | undefined
+      }
+    | {
+          readonly type: DrawZoneStateActionType.SET_POSITION
+          readonly payload: {
+              readonly top: number
+              readonly left: number
+          }
+      }
+    | {
+          readonly type: DrawZoneStateActionType.FORCE_REDRAW
+      }
+
+const drawZoneInitialState: DrawZoneStateInternal = {
+    scale: 1,
+    isMarkerShown: false,
+    isDisabled: false,
+    originalSize: undefined,
+    // Internal props
+    logicalScale: 1,
+    positionTop: 0,
+    positionLeft: 0,
+    redraw: false,
+}
+
+const drawZoneReducer = (
+    state: DrawZoneStateInternal,
+    action: DrawZoneStateAction,
+): DrawZoneStateInternal => {
+    switch (action.type) {
+        case DrawZoneStateActionType.RESET:
+            return {
+                ...state,
+                logicalScale: 1,
+                positionTop: 0,
+                positionLeft: 0,
+            }
+        case DrawZoneStateActionType.SET_SCALE:
+            return {
+                ...state,
+                scale: action.payload,
+            }
+        case DrawZoneStateActionType.ZOOM_IN:
+            return {
+                ...state,
+                logicalScale: Math.min(
+                    state.logicalScale + SCALE_STEP,
+                    MAX_SCALE,
+                ),
+            }
+        case DrawZoneStateActionType.ZOOM_OUT:
+            return {
+                ...state,
+                logicalScale: Math.max(
+                    SCALE_STEP,
+                    state.logicalScale - SCALE_STEP,
+                ),
+            }
+        case DrawZoneStateActionType.SHOW_MARKER:
+            return {
+                ...state,
+                isMarkerShown: true,
+            }
+        case DrawZoneStateActionType.HIDE_MARKER:
+            return {
+                ...state,
+                isMarkerShown: false,
+            }
+        case DrawZoneStateActionType.DISABLE:
+            return {
+                ...state,
+                isDisabled: true,
+            }
+        case DrawZoneStateActionType.ENABLE:
+            return {
+                ...state,
+                isDisabled: false,
+            }
+        case DrawZoneStateActionType.SET_ORIGINAL_SIZE:
+            return {
+                ...state,
+                originalSize: action.payload,
+            }
+        case DrawZoneStateActionType.SET_POSITION:
+            return {
+                ...state,
+                positionTop: action.payload.top,
+                positionLeft: action.payload.left,
+            }
+        case DrawZoneStateActionType.FORCE_REDRAW:
+            return {
+                ...state,
+                redraw: !state.redraw,
+            }
+        default:
+            return state
+    }
+}
+
+const DrawZoneContext = createContext<{
+    readonly state: DrawZoneStateInternal
+    readonly dispatch: Dispatch<DrawZoneStateAction>
+}>({
+    state: drawZoneInitialState,
+    dispatch: () => undefined,
+})
+
+export function useDrawZone() {
+    const { state, dispatch } = useContext(DrawZoneContext)
+
+    const zoomIn = useCallback(() => {
+        dispatch({ type: DrawZoneStateActionType.ZOOM_IN })
+    }, [dispatch])
+
+    const zoomOut = useCallback(() => {
+        dispatch({ type: DrawZoneStateActionType.ZOOM_OUT })
+    }, [dispatch])
+
+    const reset = useCallback(() => {
+        dispatch({ type: DrawZoneStateActionType.RESET })
+    }, [dispatch])
+
+    const toggleMarker = useCallback(() => {
+        if (state.isMarkerShown) {
+            dispatch({ type: DrawZoneStateActionType.HIDE_MARKER })
+        } else {
+            dispatch({ type: DrawZoneStateActionType.SHOW_MARKER })
+        }
+    }, [dispatch, state.isMarkerShown])
+
+    const disable = useCallback(() => {
+        dispatch({ type: DrawZoneStateActionType.DISABLE })
+    }, [dispatch])
+
+    const enable = useCallback(() => {
+        dispatch({ type: DrawZoneStateActionType.ENABLE })
+    }, [dispatch])
+
+    const redraw = useCallback(() => {
+        dispatch({ type: DrawZoneStateActionType.FORCE_REDRAW })
+    }, [dispatch])
+
+    return {
+        ...(state as DrawZoneState),
+        zoomIn,
+        zoomOut,
+        reset,
+        toggleMarker,
+        disable,
+        enable,
+        redraw,
+    }
+}
+
+export type DrawZoneContainerProps = Partial<DrawZoneState> & {
+    readonly children: ReactNode
+}
+export function DrawZoneContainer({
+    children,
+    ...props
+}: DrawZoneContainerProps) {
+    const [state, dispatch] = useReducer(drawZoneReducer, {
+        ...drawZoneInitialState,
+        ...props,
+    })
+
+    return (
+        <DrawZoneContext.Provider value={{ state, dispatch }}>
+            {children}
+        </DrawZoneContext.Provider>
+    )
+}
+
 const xns = 'http://www.w3.org/1999/xlink'
 const blue = '#2BB1FD'
 const defaultStroke = { color: '#fff', width: 2, opacity: 1 }
-const defaultFill = { color: '#000', opacity: 0.2 }
+const defaultFill = { color: '#000', opacity: 0.5 }
 
 function getRectCoords(rect: Rect) {
     const bbox = rect.bbox()
@@ -66,20 +302,20 @@ function getRectCoords(rect: Rect) {
     ]
 }
 
-export function useDraw(
+function useDraw(
     ref: React.RefObject<HTMLElement>,
     src: string,
     props: {
         onChange: (elements: Array<ChangedElement>) => void
         remove: (id: string) => void
-        disabled: boolean
         mode: DrawZoneMode
-        scale: number
         drawOnMouseDown?: boolean
-        showMarker: boolean
-        setForceRedraw: Dispatch<SetStateAction<boolean>>
     },
 ) {
+    const {
+        state: { isMarkerShown, isDisabled, scale, positionTop, positionLeft },
+        dispatch,
+    } = useContext(DrawZoneContext)
     const [svg, setSvg] = useState<Svg>()
     const [originalSize, setOriginalSize] = useState<Size>()
     let startPosition: Point | null
@@ -100,7 +336,7 @@ export function useDraw(
         }))
     }
 
-    function onChange() {
+    const onChange = useCallback(() => {
         if (svg && props.onChange) {
             const svgRect = svg.node.getBoundingClientRect()
 
@@ -160,7 +396,7 @@ export function useDraw(
                     }),
             )
         }
-    }
+    }, [svg, props.onChange])
 
     function onDelKeyPress(this: SVGElement, event: KeyboardEvent): boolean {
         if (event.defaultPrevented) return false
@@ -276,7 +512,7 @@ export function useDraw(
 
     function drawRect({
         points,
-        disabled = props.disabled ? true : false,
+        disabled = isDisabled,
         stroke = { ...defaultStroke },
         fill = { ...defaultFill },
         label,
@@ -536,7 +772,7 @@ export function useDraw(
 
     function drawPoly({
         points,
-        disabled = props.disabled,
+        disabled = isDisabled,
         stroke = { ...defaultStroke },
         fill = { ...defaultFill },
         label,
@@ -921,7 +1157,7 @@ export function useDraw(
 
         if (!svg.node.contains(e.target as Node)) return
 
-        if (props.mode === 'draw' && !props.disabled) {
+        if (props.mode === 'draw' && !isDisabled) {
             const svgRect = svg.node.getBoundingClientRect()
 
             startPosition = {
@@ -930,16 +1166,16 @@ export function useDraw(
             }
 
             if (!overlayRect || !overlayRect2) {
-                overlayRect = svg.rect(0, 0).fill({ opacity: 0.2 }).stroke({
+                overlayRect = svg.rect(0, 0).fill({ opacity: 0.5 }).stroke({
                     color: '#000',
                     width: 2,
-                    opacity: 0.5,
+                    opacity: 0.7,
                     dasharray: '5,5',
                 })
-                overlayRect2 = svg.rect(0, 0).fill({ opacity: 0.2 }).stroke({
+                overlayRect2 = svg.rect(0, 0).fill({ opacity: 0.5 }).stroke({
                     color: '#fff',
                     width: 2,
-                    opacity: 0.5,
+                    opacity: 0.7,
                     dasharray: '5,5',
                     dashoffset: 5,
                 })
@@ -976,13 +1212,21 @@ export function useDraw(
         if (e.defaultPrevented) return
         if (!svg || !startPosition) return
 
-        if (props.mode === 'draw' && !props.disabled) {
+        if (props.mode === 'draw' && !isDisabled) {
             if (overlayRect && overlayRect2) {
                 const svgRect = svg.node.getBoundingClientRect()
 
                 const currentPosition = {
-                    x: Math.max(Math.min(e.clientX, svgRect.right), svgRect.left) - svgRect.left,
-                    y: Math.max(Math.min(e.clientY, svgRect.bottom), svgRect.top) - svgRect.top,
+                    x:
+                        Math.max(
+                            Math.min(e.clientX, svgRect.right),
+                            svgRect.left,
+                        ) - svgRect.left,
+                    y:
+                        Math.max(
+                            Math.min(e.clientY, svgRect.bottom),
+                            svgRect.top,
+                        ) - svgRect.top,
                 }
 
                 const minX =
@@ -1070,7 +1314,7 @@ export function useDraw(
         if (e.defaultPrevented) return
         if (!svg) return
 
-        if (props.mode === 'draw' && !props.disabled) {
+        if (props.mode === 'draw' && !isDisabled) {
             if (!startPosition) {
                 return
             }
@@ -1089,8 +1333,12 @@ export function useDraw(
 
             const svgRect = svg.node.getBoundingClientRect()
             const currentPosition = {
-                x: Math.max(Math.min(e.clientX, svgRect.right), svgRect.left) - svgRect.left,
-                y: Math.max(Math.min(e.clientY, svgRect.bottom), svgRect.top) - svgRect.top,
+                x:
+                    Math.max(Math.min(e.clientX, svgRect.right), svgRect.left) -
+                    svgRect.left,
+                y:
+                    Math.max(Math.min(e.clientY, svgRect.bottom), svgRect.top) -
+                    svgRect.top,
             }
 
             // Prevent adding very small rects (mis-clicks).
@@ -1138,10 +1386,12 @@ export function useDraw(
                     const parentRect = grandParent.node.getBoundingClientRect()
                     const svgRect = parent.node.getBoundingClientRect()
 
-                    parent.css({
-                        left: `${svgRect.left - parentRect.left}px`,
-                        top: `${svgRect.top - parentRect.top}px`,
-                        transform: 'none',
+                    dispatch({
+                        type: DrawZoneStateActionType.SET_POSITION,
+                        payload: {
+                            top: svgRect.top - parentRect.top,
+                            left: svgRect.left - parentRect.left,
+                        },
                     })
 
                     svg.css({ cursor: 'grab' })
@@ -1247,7 +1497,7 @@ export function useDraw(
                         .polygon(plotline)
                         .fill({
                             color: '#f06',
-                            opacity: 0.2,
+                            opacity: 0.5,
                         })
                         .stroke({
                             color: '#f06',
@@ -1289,8 +1539,8 @@ export function useDraw(
         }
         image.src = src
         ref.current.style.background = `url('${src}') center center / 100% 100% no-repeat`
-        ref.current.style.left = '0'
-        ref.current.style.top = '0'
+        ref.current.style.top = `${positionTop}px`
+        ref.current.style.left = `${positionLeft}px`
 
         if (svg) {
             svg.node.remove()
@@ -1304,16 +1554,18 @@ export function useDraw(
     }, [ref, src])
 
     useEffect(() => {
-        if (ref.current && originalSize && props.scale) {
-            ref.current.style.width = `${originalSize.width * props.scale}px`
+        if (ref.current && originalSize && scale) {
+            ref.current.style.width = `${originalSize.width * scale}px`
 
-            ref.current.style.height = `${originalSize.height * props.scale}px`
+            ref.current.style.height = `${originalSize.height * scale}px`
 
             if (svg) {
-                props.setForceRedraw(true)
+                dispatch({
+                    type: DrawZoneStateActionType.FORCE_REDRAW,
+                })
             }
         }
-    }, [ref, originalSize, props.scale])
+    }, [ref, originalSize, scale])
 
     useLayoutEffect(() => {
         if (!svg) {
@@ -1322,9 +1574,9 @@ export function useDraw(
 
         svg.css({
             cursor:
-                props.mode === 'move' && !props.disabled
+                props.mode === 'move' && !isDisabled
                     ? 'grab'
-                    : props.mode === 'none' && !props.showMarker
+                    : props.mode === 'none' && !isMarkerShown
                     ? 'normal'
                     : 'crosshair',
             position: 'absolute',
@@ -1338,6 +1590,7 @@ export function useDraw(
             parent.css({
                 position: 'relative',
                 userSelect: 'none',
+                transform: 'none',
             })
         }
 
@@ -1363,55 +1616,66 @@ export function useDraw(
 }
 
 export interface DrawZoneProps {
-    children?: React.ReactNode
-    src: string
-    elements: Partial<ChangedElement>[]
-    onChange: (elements: ChangedElement[]) => void
-    remove: (id: string) => void
-    disabled?: boolean
-    mode: DrawZoneMode
-    scale: number
-    drawOnMouseDown?: boolean
-    showMarker?: boolean
-    setOriginalSize: Dispatch<SetStateAction<Size | undefined>>
-    sizeMode?: SizeMode
-    redraw?: boolean
+    readonly children?: React.ReactNode
+    readonly mode?: DrawZoneMode
+    readonly sizeMode?: SizeMode
+    readonly src: string
+    readonly elements: Partial<ChangedElement>[]
+    readonly onChange: (elements: ChangedElement[]) => void
+    readonly remove: (id: string) => void
 }
 
 export default function DrawZone({
+    children,
+    mode = 'draw',
+    sizeMode = 'auto',
     src,
     elements,
     onChange,
     remove,
-    children,
-    disabled = false,
-    mode = 'draw',
-    scale,
-    drawOnMouseDown,
-    showMarker = false,
-    setOriginalSize,
-    sizeMode = 'auto',
-    redraw = false,
-}: DrawZoneProps): JSX.Element {
+}: DrawZoneProps) {
+    const {
+        state: {
+            scale,
+            isMarkerShown,
+            positionTop,
+            positionLeft,
+            redraw,
+            logicalScale,
+        },
+        dispatch,
+    } = useContext(DrawZoneContext)
     const svgRef = useRef<HTMLDivElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
-    const [forceRedraw, setForceRedraw] = useState(false)
-    const [computedScale, setComputedScale] = useState(scale)
     const { svg, draw, originalSize } = useDraw(svgRef, src, {
         onChange,
         remove,
-        disabled,
         mode,
-        scale: computedScale,
-        drawOnMouseDown,
-        showMarker,
-        setForceRedraw,
+        drawOnMouseDown: false,
     })
     const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
+    const [forceRedraw, setForceRedraw] = useState(false)
+
+    const setScale = useCallback(
+        (scale: number) => {
+            dispatch({
+                type: DrawZoneStateActionType.SET_SCALE,
+                payload: scale,
+            })
+        },
+        [dispatch],
+    )
+
+    useEffect(() => {
+        dispatch({
+            type: DrawZoneStateActionType.SET_ORIGINAL_SIZE,
+            payload: originalSize,
+        })
+    }, [originalSize])
 
     useEffect(() => {
         if (sizeMode === 'auto') {
-            setComputedScale(scale)
+            setScale(logicalScale)
         } else if (containerRef.current && originalSize) {
             const rect = containerRef.current.getBoundingClientRect()
 
@@ -1429,29 +1693,25 @@ export default function DrawZone({
                 const coef2 = maxHeight / minHeight
 
                 if (originalSize.height * coef <= maxHeight) {
-                    setComputedScale(coef * scale)
+                    setScale(coef * logicalScale)
                 } else if (originalSize.width * coef2 <= maxWidth) {
-                    setComputedScale(coef2 * scale)
+                    setScale(coef2 * logicalScale)
                 } else {
-                    setComputedScale(scale)
+                    setScale(logicalScale)
                 }
             } else if (
                 minWidth < originalSize.width ||
                 minHeight < originalSize.height
             ) {
-                setComputedScale(
+                setScale(
                     Math.min(
                         minWidth / originalSize.width,
                         minHeight / originalSize.height,
-                    ) * scale,
+                    ) * logicalScale,
                 )
             }
         }
-    }, [containerRef, originalSize, sizeMode, scale])
-
-    useEffect(() => {
-        setOriginalSize(originalSize)
-    }, [originalSize])
+    }, [containerRef, originalSize, sizeMode, logicalScale])
 
     useEffect(() => {
         if (isTouchDevice) return
@@ -1479,6 +1739,14 @@ export default function DrawZone({
     }, [])
 
     useEffect(() => {
+        if (svgRef.current) {
+            svgRef.current.style.top = `${positionTop}px`
+            svgRef.current.style.left = `${positionLeft}px`
+            svgRef.current.style.transform = 'none'
+        }
+    }, [positionTop, positionLeft])
+
+    useEffect(() => {
         setForceRedraw(true)
     }, [mode, redraw])
 
@@ -1497,7 +1765,7 @@ export default function DrawZone({
                 return
             }
         }
-    }, [svg, elements, forceRedraw])
+    }, [svg, elements, forceRedraw, scale])
 
     return (
         <div
@@ -1510,7 +1778,7 @@ export default function DrawZone({
             ref={containerRef}
         >
             <div ref={svgRef}>
-                {canMarkerBeVisible && showMarker && (
+                {canMarkerBeVisible && isMarkerShown && (
                     <Marker src={src} svgRef={svgRef} />
                 )}
                 {children}
