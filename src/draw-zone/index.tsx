@@ -641,13 +641,6 @@ function useDraw(
         if (!disabled) {
             rect.css('cursor', 'move')
 
-            rect.on('click', (e: any) => {
-                rect.fire('select')
-            })
-            rect.on('mousedown', (e: any) => {
-                e.stopPropagation()
-            })
-
             interact(rect.node)
                 .resizable({
                     edges: { left: true, right: true, bottom: true, top: true },
@@ -732,9 +725,17 @@ function useDraw(
                             onChange()
                         },
                         end(event) {
+                            const coords = getRectCoords(event.target.instance)
+                            handles.forEach((h) => {
+                                h.x(coords[h.data('index')].x)
+                                h.y(coords[h.data('index')].y)
+                            })
+
                             handles.forEach((h) => h.show())
 
                             rect.css('cursor', 'move')
+
+                            onChange()
                         },
                     },
                     modifiers: [
@@ -826,6 +827,61 @@ function useDraw(
             }
         }
 
+        function makeHandlesGrabbable(svg: Svg) {
+            interact('.point-handle')
+                .draggable({
+                    onstart: function (event) {
+                        svg.css('cursor', 'grabbing')
+                        event.target.instance.css('cursor', 'grabbing')
+                    },
+                    onmove: function (event) {
+                        const i = event.target.getAttribute('data-index') | 0
+                        const point = poly.node.points.getItem(i)
+
+                        point.x += event.dx / rootMatrix.a
+                        point.y += event.dy / rootMatrix.d
+
+                        event.target.x.baseVal.value = point.x
+                        event.target.y.baseVal.value = point.y
+                    },
+                    onend: function (event) {
+                        event.target.instance.css('cursor', 'grab')
+                        svg.css('cursor', 'crosshair')
+                        const index = Number(
+                            event.target.getAttribute('data-index') || 0,
+                        )
+
+                        const currentPlot = [...poly.plot()]
+
+                        const newPlot: ArrayXY[] = [
+                            ...currentPlot.slice(0, index),
+                            [
+                                Number(event.target.getAttribute('x')),
+                                Number(event.target.getAttribute('y')),
+                            ] as ArrayXY,
+                            ...currentPlot.slice(index + 1),
+                        ]
+
+                        poly.plot(newPlot)
+
+                        svg.node.setAttribute('class', '')
+                        onChange()
+                    },
+                    modifiers: [
+                        interact.modifiers.restrict({
+                            restriction: 'parent',
+                            elementRect: {
+                                top: 0,
+                                left: 0,
+                                bottom: 1,
+                                right: 1,
+                            },
+                        }),
+                    ],
+                } as DraggableOptions)
+                .styleCursor(false)
+        }
+
         // Custom events.
         poly.on('select', () => {
             // Deselect all
@@ -897,59 +953,7 @@ function useDraw(
                     handles.push(handle)
                 }
 
-                interact('.point-handle')
-                    .draggable({
-                        onstart: function (event) {
-                            svg.css('cursor', 'grabbing')
-                            event.target.instance.css('cursor', 'grabbing')
-                        },
-                        onmove: function (event) {
-                            const i =
-                                event.target.getAttribute('data-index') | 0
-                            const point = poly.node.points.getItem(i)
-
-                            point.x += event.dx / rootMatrix.a
-                            point.y += event.dy / rootMatrix.d
-
-                            event.target.x.baseVal.value = point.x
-                            event.target.y.baseVal.value = point.y
-                        },
-                        onend: function (event) {
-                            event.target.instance.css('cursor', 'grab')
-                            svg.css('cursor', 'crosshair')
-                            const index = Number(
-                                event.target.getAttribute('data-index') || 0,
-                            )
-
-                            const currentPlot = [...poly.plot()]
-
-                            const newPlot: ArrayXY[] = [
-                                ...currentPlot.slice(0, index),
-                                [
-                                    Number(event.target.getAttribute('x')),
-                                    Number(event.target.getAttribute('y')),
-                                ] as ArrayXY,
-                                ...currentPlot.slice(index + 1),
-                            ]
-
-                            poly.plot(newPlot)
-
-                            svg.node.setAttribute('class', '')
-                            onChange()
-                        },
-                        modifiers: [
-                            interact.modifiers.restrict({
-                                restriction: 'parent',
-                                elementRect: {
-                                    top: 0,
-                                    left: 0,
-                                    bottom: 1,
-                                    right: 1,
-                                },
-                            }),
-                        ],
-                    } as DraggableOptions)
-                    .styleCursor(false)
+                makeHandlesGrabbable(svg)
 
                 document.addEventListener('dragstart', preventDrag)
             }
@@ -981,17 +985,10 @@ function useDraw(
         if (!disabled) {
             poly.css('cursor', 'move')
 
-            poly.on('click', (e: Event) => {
-                poly.fire('select')
-            })
-
-            poly.on('mousedown', (e: Event) => {
-                e.stopPropagation()
-            })
-
             interact(poly.node).draggable({
                 listeners: {
                     start(event) {
+                        interact('.point-handle').unset()
                         handles.forEach((handle) => {
                             handle.remove()
                         })
@@ -1053,14 +1050,18 @@ function useDraw(
                                 .y(point.y)
                                 .data('index', i)
 
-                            handle.on('mousedown', function mousedown(event) {
-                                event.preventDefault()
-                                event.stopPropagation()
-                            })
+                            handle
+                                .on('mousedown', function mousedown(event) {
+                                    event.preventDefault()
+                                    event.stopPropagation()
+                                })
+                                .css('cursor', 'grab')
 
                             circles.push(newCircle)
                             handles.push(handle)
                         }
+
+                        makeHandlesGrabbable(svg)
                     },
                 },
                 modifiers: [
@@ -1157,6 +1158,21 @@ function useDraw(
 
         if (!svg.node.contains(e.target as Node)) return
 
+        if (
+            svg.node.contains(e.target as Node) &&
+            svg.node !== e.target &&
+            !startPosition
+        ) {
+            const element = e.target as any
+            element.instance.fire('select')
+            return
+        } else if (e.target === svg.node) {
+            svg.each(function (this: Svg) {
+                this.fire('deselect')
+            })
+            onChange()
+        }
+
         if (props.mode === 'draw' && !isDisabled) {
             const svgRect = svg.node.getBoundingClientRect()
 
@@ -1192,235 +1208,7 @@ function useDraw(
             )
 
             e.preventDefault()
-        } else if (props.mode === 'move') {
-            startPosition = {
-                x: e.clientX,
-                y: e.clientY,
-            }
-
-            dragging = true
-
-            svg.css({
-                cursor: 'grabbing',
-            })
-
-            e.preventDefault()
-        }
-    }
-
-    function onMouseMove(this: Window, e: globalThis.MouseEvent) {
-        if (e.defaultPrevented) return
-        if (!svg || !startPosition) return
-
-        if (props.mode === 'draw' && !isDisabled) {
-            if (overlayRect && overlayRect2) {
-                const svgRect = svg.node.getBoundingClientRect()
-
-                const currentPosition = {
-                    x:
-                        Math.max(
-                            Math.min(e.clientX, svgRect.right),
-                            svgRect.left,
-                        ) - svgRect.left,
-                    y:
-                        Math.max(
-                            Math.min(e.clientY, svgRect.bottom),
-                            svgRect.top,
-                        ) - svgRect.top,
-                }
-
-                const minX =
-                    Math.min(startPosition.x, currentPosition.x) / svgRect.width
-                const minY =
-                    Math.min(startPosition.y, currentPosition.y) /
-                    svgRect.height
-                const maxX =
-                    Math.max(startPosition.x, currentPosition.x) / svgRect.width
-                const maxY =
-                    Math.max(startPosition.y, currentPosition.y) /
-                    svgRect.height
-
-                const width = Math.abs(maxX - minX)
-                const height = Math.abs(maxY - minY)
-
-                overlayRect.move(`${minX * 100}%`, `${minY * 100}%`)
-                overlayRect.width(`${width * 100}%`)
-                overlayRect.height(`${height * 100}%`)
-                overlayRect2.move(`${minX * 100}%`, `${minY * 100}%`)
-                overlayRect2.width(`${width * 100}%`)
-                overlayRect2.height(`${height * 100}%`)
-            }
-        } else if (props.mode === 'move' && dragging) {
-            if (!svg.node.contains(e.target as Node)) {
-                dragging = false
-                return
-            }
-            const parent = svg.parent()
-
-            if (!parent) return
-
-            const currentPosition = {
-                x: e.clientX,
-                y: e.clientY,
-            }
-            const translationX = currentPosition.x - startPosition.x
-            const translationY = currentPosition.y - startPosition.y
-
-            parent.css(
-                'transform',
-                `translate3d(${translationX}px, ${translationY}px, 0px)`,
-            )
-        } else if (props.mode === 'path') {
-            const svgRect = svg.node.getBoundingClientRect()
-
-            const currentPosition: Point = {
-                x: e.clientX - svgRect.left,
-                y: e.clientY - svgRect.top,
-            }
-
-            if (tmpPoly) {
-                tmpPoly.remove()
-                tmpPoly = undefined
-            }
-
-            const prev = poly
-                ? [...poly.plot()]
-                : [[startPosition.x, startPosition.y] as ArrayXY]
-
-            const plotline: PointArrayAlias = [
-                ...prev,
-                [currentPosition.x, currentPosition.y],
-            ]
-
-            tmpPoly = svg
-                .polyline(plotline)
-                .fill('none')
-                .stroke({
-                    color: '#f06',
-                    width: 1,
-                    linecap: 'round',
-                    linejoin: 'round',
-                    dasharray: '5,5',
-                })
-                .attr('data-draw-ignore', true)
-
-            if (Array.isArray(tmpPoints)) {
-                tmpPoints.forEach((point) => point.front())
-            }
-        }
-    }
-
-    function onMouseUp(this: Window, e: globalThis.MouseEvent) {
-        if (e.defaultPrevented) return
-        if (!svg) return
-
-        if (props.mode === 'draw' && !isDisabled) {
-            if (!startPosition) {
-                return
-            }
-
-            if (overlayRect || overlayRect2) {
-                overlayRect?.remove()
-                overlayRect = undefined
-                overlayRect2?.remove()
-                overlayRect2 = undefined
-            }
-
-            // Prevent drawing new rect on rect dragend...
-            if ((e.target as Node | null)?.parentNode === svg.node) {
-                return
-            }
-
-            const svgRect = svg.node.getBoundingClientRect()
-            const currentPosition = {
-                x:
-                    Math.max(Math.min(e.clientX, svgRect.right), svgRect.left) -
-                    svgRect.left,
-                y:
-                    Math.max(Math.min(e.clientY, svgRect.bottom), svgRect.top) -
-                    svgRect.top,
-            }
-
-            // Prevent adding very small rects (mis-clicks).
-            if (Math.abs(currentPosition.x - startPosition.x) <= 2) {
-                if (props.drawOnMouseDown) {
-                    currentPosition.x = startPosition.x + 50
-                    currentPosition.y = startPosition.y + 50
-                } else {
-                    return
-                }
-            }
-
-            const newRect = drawRect({
-                points: [
-                    {
-                        x:
-                            Math.min(startPosition.x, currentPosition.x) /
-                            svgRect.width,
-                        y:
-                            Math.min(startPosition.y, currentPosition.y) /
-                            svgRect.height,
-                    },
-                    {
-                        x:
-                            Math.max(startPosition.x, currentPosition.x) /
-                            svgRect.width,
-                        y:
-                            Math.max(startPosition.y, currentPosition.y) /
-                            svgRect.height,
-                    },
-                ],
-            })
-
-            setTimeout(() => {
-                newRect?.fire('select')
-                onChange()
-            }, 50)
-        } else if (props.mode === 'move' && dragging) {
-            const parent = svg.parent()
-
-            if (parent) {
-                const grandParent = parent.parent()
-
-                if (grandParent) {
-                    const parentRect = grandParent.node.getBoundingClientRect()
-                    const svgRect = parent.node.getBoundingClientRect()
-
-                    dispatch({
-                        type: DrawZoneStateActionType.SET_POSITION,
-                        payload: {
-                            top: svgRect.top - parentRect.top,
-                            left: svgRect.left - parentRect.left,
-                        },
-                    })
-
-                    svg.css({ cursor: 'grab' })
-
-                    dragging = false
-                }
-            }
-        }
-
-        if (props.mode !== 'path') startPosition = null
-    }
-
-    function onClick(e: globalThis.MouseEvent) {
-        if (e.defaultPrevented) return
-        if (!svg) return
-
-        // If click on main svg, and not an element, deselect everything.
-        if (e.target === svg.node) {
-            svg.each(function (this: Svg) {
-                this.fire('deselect')
-            })
-            onChange()
-        }
-
-        if (
-            svg.children().filter((c) => c.data('selected') === true).length ===
-                0 &&
-            props.mode === 'path'
-        ) {
+        } else if (props.mode === 'path' && !isDisabled) {
             const svgRect = svg.node.getBoundingClientRect()
 
             if (!tmpPoly) {
@@ -1522,7 +1310,212 @@ function useDraw(
                     startPosition = currentPosition
                 }
             }
+        } else if (props.mode === 'move') {
+            startPosition = {
+                x: e.clientX,
+                y: e.clientY,
+            }
+
+            dragging = true
+
+            svg.css({
+                cursor: 'grabbing',
+            })
+
+            e.preventDefault()
         }
+    }
+
+    function onMouseMove(this: Window, e: globalThis.MouseEvent) {
+        if (e.defaultPrevented) return
+        if (!svg || !startPosition) return
+
+        if (props.mode === 'draw' && !isDisabled) {
+            if (overlayRect && overlayRect2) {
+                const svgRect = svg.node.getBoundingClientRect()
+
+                const currentPosition = {
+                    x:
+                        Math.max(
+                            Math.min(e.clientX, svgRect.right),
+                            svgRect.left,
+                        ) - svgRect.left,
+                    y:
+                        Math.max(
+                            Math.min(e.clientY, svgRect.bottom),
+                            svgRect.top,
+                        ) - svgRect.top,
+                }
+
+                const minX =
+                    Math.min(startPosition.x, currentPosition.x) / svgRect.width
+                const minY =
+                    Math.min(startPosition.y, currentPosition.y) /
+                    svgRect.height
+                const maxX =
+                    Math.max(startPosition.x, currentPosition.x) / svgRect.width
+                const maxY =
+                    Math.max(startPosition.y, currentPosition.y) /
+                    svgRect.height
+
+                const width = Math.abs(maxX - minX)
+                const height = Math.abs(maxY - minY)
+
+                overlayRect.move(`${minX * 100}%`, `${minY * 100}%`)
+                overlayRect.width(`${width * 100}%`)
+                overlayRect.height(`${height * 100}%`)
+                overlayRect2.move(`${minX * 100}%`, `${minY * 100}%`)
+                overlayRect2.width(`${width * 100}%`)
+                overlayRect2.height(`${height * 100}%`)
+            }
+        } else if (props.mode === 'move' && dragging) {
+            if (!svg.node.contains(e.target as Node)) {
+                dragging = false
+                return
+            }
+            const parent = svg.parent()
+
+            if (!parent) return
+
+            const currentPosition = {
+                x: e.clientX,
+                y: e.clientY,
+            }
+            const translationX = currentPosition.x - startPosition.x
+            const translationY = currentPosition.y - startPosition.y
+
+            parent.css(
+                'transform',
+                `translate3d(${translationX}px, ${translationY}px, 0px)`,
+            )
+        } else if (props.mode === 'path') {
+            const svgRect = svg.node.getBoundingClientRect()
+
+            const currentPosition: Point = {
+                x: e.clientX - svgRect.left,
+                y: e.clientY - svgRect.top,
+            }
+
+            if (tmpPoly) {
+                tmpPoly.remove()
+                tmpPoly = undefined
+            }
+
+            const prev = poly
+                ? [...poly.plot()]
+                : [[startPosition.x, startPosition.y] as ArrayXY]
+
+            const plotline: PointArrayAlias = [
+                ...prev,
+                [currentPosition.x, currentPosition.y],
+            ]
+
+            tmpPoly = svg.polyline(plotline).fill('none').stroke({
+                color: '#f06',
+                width: 1,
+                linecap: 'round',
+                linejoin: 'round',
+                dasharray: '5,5',
+            })
+
+            if (Array.isArray(tmpPoints)) {
+                tmpPoints.forEach((point) => point.front())
+            }
+        }
+    }
+
+    function onMouseUp(this: Window, e: globalThis.MouseEvent) {
+        if (e.defaultPrevented) return
+        if (!svg) return
+
+        if (props.mode === 'draw' && !isDisabled) {
+            if (!startPosition) {
+                return
+            }
+
+            if (overlayRect || overlayRect2) {
+                overlayRect?.remove()
+                overlayRect = undefined
+                overlayRect2?.remove()
+                overlayRect2 = undefined
+            }
+
+            // Prevent drawing new rect on rect dragend...
+            if ((e.target as Node | null)?.parentNode === svg.node) {
+                return
+            }
+
+            const svgRect = svg.node.getBoundingClientRect()
+            const currentPosition = {
+                x:
+                    Math.max(Math.min(e.clientX, svgRect.right), svgRect.left) -
+                    svgRect.left,
+                y:
+                    Math.max(Math.min(e.clientY, svgRect.bottom), svgRect.top) -
+                    svgRect.top,
+            }
+
+            // Prevent adding very small rects (mis-clicks).
+            if (Math.abs(currentPosition.x - startPosition.x) <= 2) {
+                if (props.drawOnMouseDown) {
+                    currentPosition.x = startPosition.x + 50
+                    currentPosition.y = startPosition.y + 50
+                } else {
+                    return
+                }
+            }
+
+            const newRect = drawRect({
+                points: [
+                    {
+                        x:
+                            Math.min(startPosition.x, currentPosition.x) /
+                            svgRect.width,
+                        y:
+                            Math.min(startPosition.y, currentPosition.y) /
+                            svgRect.height,
+                    },
+                    {
+                        x:
+                            Math.max(startPosition.x, currentPosition.x) /
+                            svgRect.width,
+                        y:
+                            Math.max(startPosition.y, currentPosition.y) /
+                            svgRect.height,
+                    },
+                ],
+            })
+
+            setTimeout(() => {
+                newRect?.fire('select')
+                onChange()
+            }, 50)
+        } else if (props.mode === 'move' && dragging) {
+            const parent = svg.parent()
+
+            if (parent) {
+                const grandParent = parent.parent()
+
+                if (grandParent) {
+                    const parentRect = grandParent.node.getBoundingClientRect()
+                    const svgRect = parent.node.getBoundingClientRect()
+
+                    dispatch({
+                        type: DrawZoneStateActionType.SET_POSITION,
+                        payload: {
+                            top: svgRect.top - parentRect.top,
+                            left: svgRect.left - parentRect.left,
+                        },
+                    })
+
+                    svg.css({ cursor: 'grab' })
+
+                    dragging = false
+                }
+            }
+        }
+
+        if (props.mode !== 'path') startPosition = null
     }
 
     useEffect(() => {
@@ -1595,15 +1588,12 @@ function useDraw(
         }
 
         svg.on('mousedown', onMouseDown as unknown as EventListener)
-        svg.on('mouseup', onMouseUp as unknown as EventListener)
         window.addEventListener('mouseup', onMouseUp)
-        svg.on('click', onClick as unknown as EventListener)
         window.addEventListener('mousemove', onMouseMove)
 
         return () => {
             svg.off('mousedown', onMouseDown as unknown as EventListener)
             window.removeEventListener('mouseup', onMouseUp)
-            svg.off('click', onClick as unknown as EventListener)
             window.removeEventListener('mousemove', onMouseMove)
         }
     }, [svg, props.mode])
@@ -1670,6 +1660,9 @@ export default function DrawZone({
         dispatch({
             type: DrawZoneStateActionType.SET_ORIGINAL_SIZE,
             payload: originalSize,
+        })
+        dispatch({
+            type: DrawZoneStateActionType.FORCE_REDRAW,
         })
     }, [originalSize])
 
