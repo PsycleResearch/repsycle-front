@@ -1410,13 +1410,17 @@ function useDraw(
                 [currentPosition.x, currentPosition.y],
             ]
 
-            tmpPoly = svg.polyline(plotline).fill('none').stroke({
-                color: '#f06',
-                width: 1,
-                linecap: 'round',
-                linejoin: 'round',
-                dasharray: '5,5',
-            })
+            tmpPoly = svg
+                .polyline(plotline)
+                .fill('none')
+                .stroke({
+                    color: '#f06',
+                    width: 1,
+                    linecap: 'round',
+                    linejoin: 'round',
+                    dasharray: '5,5',
+                })
+                .attr('data-draw-ignore', true)
 
             if (Array.isArray(tmpPoints)) {
                 tmpPoints.forEach((point) => point.front())
