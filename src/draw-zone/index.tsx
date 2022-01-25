@@ -641,13 +641,6 @@ function useDraw(
         if (!disabled) {
             rect.css('cursor', 'move')
 
-            rect.on('click', (e: any) => {
-                rect.fire('select')
-            })
-            rect.on('mousedown', (e: any) => {
-                e.stopPropagation()
-            })
-
             interact(rect.node)
                 .resizable({
                     edges: { left: true, right: true, bottom: true, top: true },
@@ -732,9 +725,17 @@ function useDraw(
                             onChange()
                         },
                         end(event) {
+                            const coords = getRectCoords(event.target.instance)
+                            handles.forEach((h) => {
+                                h.x(coords[h.data('index')].x)
+                                h.y(coords[h.data('index')].y)
+                            })
+
                             handles.forEach((h) => h.show())
 
                             rect.css('cursor', 'move')
+
+                            onChange()
                         },
                     },
                     modifiers: [
@@ -826,6 +827,61 @@ function useDraw(
             }
         }
 
+        function makeHandlesGrabbable(svg: Svg) {
+            interact('.point-handle')
+                .draggable({
+                    onstart: function (event) {
+                        svg.css('cursor', 'grabbing')
+                        event.target.instance.css('cursor', 'grabbing')
+                    },
+                    onmove: function (event) {
+                        const i = event.target.getAttribute('data-index') | 0
+                        const point = poly.node.points.getItem(i)
+
+                        point.x += event.dx / rootMatrix.a
+                        point.y += event.dy / rootMatrix.d
+
+                        event.target.x.baseVal.value = point.x
+                        event.target.y.baseVal.value = point.y
+                    },
+                    onend: function (event) {
+                        event.target.instance.css('cursor', 'grab')
+                        svg.css('cursor', 'crosshair')
+                        const index = Number(
+                            event.target.getAttribute('data-index') || 0,
+                        )
+
+                        const currentPlot = [...poly.plot()]
+
+                        const newPlot: ArrayXY[] = [
+                            ...currentPlot.slice(0, index),
+                            [
+                                Number(event.target.getAttribute('x')),
+                                Number(event.target.getAttribute('y')),
+                            ] as ArrayXY,
+                            ...currentPlot.slice(index + 1),
+                        ]
+
+                        poly.plot(newPlot)
+
+                        svg.node.setAttribute('class', '')
+                        onChange()
+                    },
+                    modifiers: [
+                        interact.modifiers.restrict({
+                            restriction: 'parent',
+                            elementRect: {
+                                top: 0,
+                                left: 0,
+                                bottom: 1,
+                                right: 1,
+                            },
+                        }),
+                    ],
+                } as DraggableOptions)
+                .styleCursor(false)
+        }
+
         // Custom events.
         poly.on('select', () => {
             // Deselect all
@@ -897,59 +953,7 @@ function useDraw(
                     handles.push(handle)
                 }
 
-                interact('.point-handle')
-                    .draggable({
-                        onstart: function (event) {
-                            svg.css('cursor', 'grabbing')
-                            event.target.instance.css('cursor', 'grabbing')
-                        },
-                        onmove: function (event) {
-                            const i =
-                                event.target.getAttribute('data-index') | 0
-                            const point = poly.node.points.getItem(i)
-
-                            point.x += event.dx / rootMatrix.a
-                            point.y += event.dy / rootMatrix.d
-
-                            event.target.x.baseVal.value = point.x
-                            event.target.y.baseVal.value = point.y
-                        },
-                        onend: function (event) {
-                            event.target.instance.css('cursor', 'grab')
-                            svg.css('cursor', 'crosshair')
-                            const index = Number(
-                                event.target.getAttribute('data-index') || 0,
-                            )
-
-                            const currentPlot = [...poly.plot()]
-
-                            const newPlot: ArrayXY[] = [
-                                ...currentPlot.slice(0, index),
-                                [
-                                    Number(event.target.getAttribute('x')),
-                                    Number(event.target.getAttribute('y')),
-                                ] as ArrayXY,
-                                ...currentPlot.slice(index + 1),
-                            ]
-
-                            poly.plot(newPlot)
-
-                            svg.node.setAttribute('class', '')
-                            onChange()
-                        },
-                        modifiers: [
-                            interact.modifiers.restrict({
-                                restriction: 'parent',
-                                elementRect: {
-                                    top: 0,
-                                    left: 0,
-                                    bottom: 1,
-                                    right: 1,
-                                },
-                            }),
-                        ],
-                    } as DraggableOptions)
-                    .styleCursor(false)
+                makeHandlesGrabbable(svg)
 
                 document.addEventListener('dragstart', preventDrag)
             }
@@ -981,17 +985,10 @@ function useDraw(
         if (!disabled) {
             poly.css('cursor', 'move')
 
-            poly.on('click', (e: Event) => {
-                poly.fire('select')
-            })
-
-            poly.on('mousedown', (e: Event) => {
-                e.stopPropagation()
-            })
-
             interact(poly.node).draggable({
                 listeners: {
                     start(event) {
+                        interact('.point-handle').unset()
                         handles.forEach((handle) => {
                             handle.remove()
                         })
@@ -1053,14 +1050,18 @@ function useDraw(
                                 .y(point.y)
                                 .data('index', i)
 
-                            handle.on('mousedown', function mousedown(event) {
-                                event.preventDefault()
-                                event.stopPropagation()
-                            })
+                            handle
+                                .on('mousedown', function mousedown(event) {
+                                    event.preventDefault()
+                                    event.stopPropagation()
+                                })
+                                .css('cursor', 'grab')
 
                             circles.push(newCircle)
                             handles.push(handle)
                         }
+
+                        makeHandlesGrabbable(svg)
                     },
                 },
                 modifiers: [
@@ -1157,6 +1158,21 @@ function useDraw(
 
         if (!svg.node.contains(e.target as Node)) return
 
+        if (
+            svg.node.contains(e.target as Node) &&
+            svg.node !== e.target &&
+            !startPosition
+        ) {
+            const element = e.target as any
+            element.instance.fire('select')
+            return
+        } else if (e.target === svg.node) {
+            svg.each(function (this: Svg) {
+                this.fire('deselect')
+            })
+            onChange()
+        }
+
         if (props.mode === 'draw' && !isDisabled) {
             const svgRect = svg.node.getBoundingClientRect()
 
@@ -1192,6 +1208,108 @@ function useDraw(
             )
 
             e.preventDefault()
+        } else if (props.mode === 'path' && !isDisabled) {
+            const svgRect = svg.node.getBoundingClientRect()
+
+            if (!tmpPoly) {
+                startPosition = {
+                    x: e.clientX - svgRect.left,
+                    y: e.clientY - svgRect.top,
+                }
+
+                tmpPoints = [drawPoint(svg, startPosition.x, startPosition.y)]
+
+                window.addEventListener('keyup', onAbortPathDrawing, {
+                    capture: true,
+                })
+                window.addEventListener('keyup', onEnterKeyPress, {
+                    capture: true,
+                })
+            } else if (startPosition && tmpPoly) {
+                const currentPosition = {
+                    x: e.clientX - svgRect.left,
+                    y: e.clientY - svgRect.top,
+                }
+
+                const prev = poly
+                    ? [...poly.plot()]
+                    : [[startPosition.x, startPosition.y] as ArrayXY]
+
+                if (poly) {
+                    poly.remove()
+                    poly = undefined
+                }
+
+                const start = prev[0]
+                if (
+                    prev.length > 2 &&
+                    Math.abs(currentPosition.x - start[0]) <= 10 &&
+                    Math.abs(currentPosition.y - start[1]) <= 10
+                ) {
+                    if (tmpPoints && tmpPoints.length > 0) {
+                        tmpPoints.forEach((p) => p.remove())
+                        tmpPoints = undefined
+                    }
+
+                    if (tmpPoly) {
+                        tmpPoly.remove()
+                        tmpPoly = undefined
+                    }
+
+                    startPosition = null
+
+                    const poly = drawPoly({
+                        points: prev.map(([x, y]) => ({
+                            x: x / svgRect.width,
+                            y: y / svgRect.height,
+                        })),
+                    })
+
+                    window.removeEventListener('keyup', onAbortPathDrawing, {
+                        capture: true,
+                    })
+                    window.removeEventListener('keyup', onEnterKeyPress, {
+                        capture: true,
+                    })
+
+                    poly?.fire('select')
+
+                    onChange()
+                } else {
+                    const plotline: PointArrayAlias = [
+                        ...prev,
+                        [currentPosition.x, currentPosition.y],
+                    ]
+
+                    poly = svg
+                        .polygon(plotline)
+                        .fill({
+                            color: '#f06',
+                            opacity: 0.5,
+                        })
+                        .stroke({
+                            color: '#f06',
+                            width: 1,
+                            linecap: 'round',
+                            linejoin: 'round',
+                        })
+                        .attr('data-draw-ignore', true)
+
+                    if (Array.isArray(tmpPoints)) {
+                        tmpPoints.push(
+                            drawPoint(
+                                svg,
+                                currentPosition.x,
+                                currentPosition.y,
+                            ),
+                        )
+
+                        tmpPoints.forEach((p) => p.front())
+                    }
+
+                    startPosition = currentPosition
+                }
+            }
         } else if (props.mode === 'move') {
             startPosition = {
                 x: e.clientX,
@@ -1404,127 +1522,6 @@ function useDraw(
         if (props.mode !== 'path') startPosition = null
     }
 
-    function onClick(e: globalThis.MouseEvent) {
-        if (e.defaultPrevented) return
-        if (!svg) return
-
-        // If click on main svg, and not an element, deselect everything.
-        if (e.target === svg.node) {
-            svg.each(function (this: Svg) {
-                this.fire('deselect')
-            })
-            onChange()
-        }
-
-        if (
-            svg.children().filter((c) => c.data('selected') === true).length ===
-                0 &&
-            props.mode === 'path'
-        ) {
-            const svgRect = svg.node.getBoundingClientRect()
-
-            if (!tmpPoly) {
-                startPosition = {
-                    x: e.clientX - svgRect.left,
-                    y: e.clientY - svgRect.top,
-                }
-
-                tmpPoints = [drawPoint(svg, startPosition.x, startPosition.y)]
-
-                window.addEventListener('keyup', onAbortPathDrawing, {
-                    capture: true,
-                })
-                window.addEventListener('keyup', onEnterKeyPress, {
-                    capture: true,
-                })
-            } else if (startPosition && tmpPoly) {
-                const currentPosition = {
-                    x: e.clientX - svgRect.left,
-                    y: e.clientY - svgRect.top,
-                }
-
-                const prev = poly
-                    ? [...poly.plot()]
-                    : [[startPosition.x, startPosition.y] as ArrayXY]
-
-                if (poly) {
-                    poly.remove()
-                    poly = undefined
-                }
-
-                const start = prev[0]
-                if (
-                    prev.length > 2 &&
-                    Math.abs(currentPosition.x - start[0]) <= 10 &&
-                    Math.abs(currentPosition.y - start[1]) <= 10
-                ) {
-                    if (tmpPoints && tmpPoints.length > 0) {
-                        tmpPoints.forEach((p) => p.remove())
-                        tmpPoints = undefined
-                    }
-
-                    if (tmpPoly) {
-                        tmpPoly.remove()
-                        tmpPoly = undefined
-                    }
-
-                    startPosition = null
-
-                    const poly = drawPoly({
-                        points: prev.map(([x, y]) => ({
-                            x: x / svgRect.width,
-                            y: y / svgRect.height,
-                        })),
-                    })
-
-                    window.removeEventListener('keyup', onAbortPathDrawing, {
-                        capture: true,
-                    })
-                    window.removeEventListener('keyup', onEnterKeyPress, {
-                        capture: true,
-                    })
-
-                    poly?.fire('select')
-
-                    onChange()
-                } else {
-                    const plotline: PointArrayAlias = [
-                        ...prev,
-                        [currentPosition.x, currentPosition.y],
-                    ]
-
-                    poly = svg
-                        .polygon(plotline)
-                        .fill({
-                            color: '#f06',
-                            opacity: 0.5,
-                        })
-                        .stroke({
-                            color: '#f06',
-                            width: 1,
-                            linecap: 'round',
-                            linejoin: 'round',
-                        })
-                        .attr('data-draw-ignore', true)
-
-                    if (Array.isArray(tmpPoints)) {
-                        tmpPoints.push(
-                            drawPoint(
-                                svg,
-                                currentPosition.x,
-                                currentPosition.y,
-                            ),
-                        )
-
-                        tmpPoints.forEach((p) => p.front())
-                    }
-
-                    startPosition = currentPosition
-                }
-            }
-        }
-    }
-
     useEffect(() => {
         if (!ref.current) {
             return
@@ -1595,15 +1592,12 @@ function useDraw(
         }
 
         svg.on('mousedown', onMouseDown as unknown as EventListener)
-        svg.on('mouseup', onMouseUp as unknown as EventListener)
         window.addEventListener('mouseup', onMouseUp)
-        svg.on('click', onClick as unknown as EventListener)
         window.addEventListener('mousemove', onMouseMove)
 
         return () => {
             svg.off('mousedown', onMouseDown as unknown as EventListener)
             window.removeEventListener('mouseup', onMouseUp)
-            svg.off('click', onClick as unknown as EventListener)
             window.removeEventListener('mousemove', onMouseMove)
         }
     }, [svg, props.mode])
@@ -1670,6 +1664,9 @@ export default function DrawZone({
         dispatch({
             type: DrawZoneStateActionType.SET_ORIGINAL_SIZE,
             payload: originalSize,
+        })
+        dispatch({
+            type: DrawZoneStateActionType.FORCE_REDRAW,
         })
     }, [originalSize])
 
