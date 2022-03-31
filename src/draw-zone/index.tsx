@@ -26,8 +26,8 @@ import {
 import '@svgdotjs/svg.draggable.js'
 import interact from 'interactjs'
 import { DraggableOptions } from '@interactjs/types/index'
-import { uuid4 } from '../helpers'
-import { useMousePosition } from '../hooks'
+import { touchDistance, uuid4 } from '../helpers'
+import { usePointerPosition } from '../hooks'
 import { isTouchDevice } from '../utils'
 import { LinkedHTMLElement } from '@svgdotjs/svg.js'
 
@@ -1709,6 +1709,14 @@ export default function DrawZone({
         [dispatch],
     )
 
+    const zoomIn = useCallback(() => {
+        dispatch({ type: DrawZoneStateActionType.ZOOM_IN })
+    }, [dispatch])
+
+    const zoomOut = useCallback(() => {
+        dispatch({ type: DrawZoneStateActionType.ZOOM_OUT })
+    }, [dispatch])
+
     useEffect(() => {
         dispatch({
             type: DrawZoneStateActionType.SET_ORIGINAL_SIZE,
@@ -1760,26 +1768,84 @@ export default function DrawZone({
     }, [containerRef, originalSize, sizeMode, logicalScale])
 
     useEffect(() => {
-        if (isTouchDevice) return
+        const { current } = svgRef
+        const { current: container } = containerRef
 
-        const handleMouseEnter = () => setCanMarkerBeVisible(true)
-        const handleMouseLeave = () => setCanMarkerBeVisible(false)
+        if (current && container) {
+            let touchStartEvent: TouchEvent
 
-        if (svgRef.current) {
-            svgRef.current.addEventListener('mouseenter', handleMouseEnter)
-            svgRef.current.addEventListener('mouseleave', handleMouseLeave)
-        }
+            const handlePointerEnter = () => {
+                console.log('pointer enter')
+                setCanMarkerBeVisible(true)
+            }
+            const handlePointerLeave = () => {
+                console.log('pointer leave')
+                setCanMarkerBeVisible(false)
+            }
+            const handleTouchStart = (e: TouchEvent) => {
+                if (e.touches.length === 2) {
+                    console.log('touch start', e)
+                    touchStartEvent = e
+                }
+            }
+            const handleTouchMove = (e: TouchEvent) => {
+                if (e.touches.length === 2) {
+                    console.log('touch move', e)
 
-        return () => {
-            if (svgRef.current) {
-                svgRef.current.removeEventListener(
-                    'mouseenter',
-                    handleMouseEnter,
-                )
-                svgRef.current.removeEventListener(
-                    'mouseleave',
-                    handleMouseLeave,
-                )
+                    const distance1 = touchDistance(
+                        touchStartEvent.touches[0],
+                        touchStartEvent.touches[1],
+                    )
+                    const distance2 = touchDistance(e.touches[0], e.touches[1])
+                    const scale = distance2 / distance1
+
+                    if (scale > 1.2) {
+                        zoomIn()
+                    } else if (scale < 0.8) {
+                        zoomOut()
+                    }
+                }
+            }
+            const handleTouchEnd = (e: TouchEvent) => {
+                if (e.touches.length === 2) {
+                    console.log('touch end', e)
+                }
+            }
+            const handleWheel = (e: WheelEvent) => {
+                e.preventDefault()
+
+                if (e.deltaY > 0) {
+                    zoomIn()
+                } else if (e.deltaY < 0) {
+                    zoomOut()
+                }
+            }
+
+            current.addEventListener('pointerenter', handlePointerEnter)
+            current.addEventListener('pointerleave', handlePointerLeave)
+
+            if (isTouchDevice) {
+                container.addEventListener('touchstart', handleTouchStart)
+                container.addEventListener('touchmove', handleTouchMove)
+                container.addEventListener('touchend', handleTouchEnd)
+            }
+            
+            container.addEventListener('wheel', handleWheel)
+            
+            return () => {
+                current.removeEventListener('pointerenter', handlePointerEnter)
+                current.removeEventListener('pointerleave', handlePointerLeave)
+
+                if (isTouchDevice) {
+                    container.removeEventListener(
+                        'touchstart',
+                        handleTouchStart,
+                    )
+                    container.removeEventListener('touchmove', handleTouchMove)
+                    container.removeEventListener('touchend', handleTouchEnd)
+                }
+                
+                container.removeEventListener('wheel', handleWheel)
             }
         }
     }, [])
@@ -1820,6 +1886,8 @@ export default function DrawZone({
                 height: '100%',
                 overflow: 'hidden',
                 position: 'relative',
+                pointerEvents: 'auto',
+                touchAction: 'none',
             }}
             ref={containerRef}
         >
@@ -1838,7 +1906,7 @@ type MarkerProps = {
     readonly svgRef: React.RefObject<HTMLDivElement>
 }
 function Marker({ src, svgRef }: MarkerProps): JSX.Element {
-    const { clientX, clientY } = useMousePosition()
+    const { clientX, clientY } = usePointerPosition()
 
     const width = svgRef.current?.getBoundingClientRect().width
     const height = svgRef.current?.getBoundingClientRect().height
@@ -1860,6 +1928,7 @@ function Marker({ src, svgRef }: MarkerProps): JSX.Element {
                     backgroundBlendMode: 'difference',
                     zIndex: 20,
                     pointerEvents: 'none',
+                    touchAction: 'none',
                     willChange: 'transform, background',
                 }}
             />
@@ -1876,6 +1945,7 @@ function Marker({ src, svgRef }: MarkerProps): JSX.Element {
                     backgroundBlendMode: 'difference',
                     zIndex: 20,
                     pointerEvents: 'none',
+                    touchAction: 'none',
                     willChange: 'transform, background',
                 }}
             />
