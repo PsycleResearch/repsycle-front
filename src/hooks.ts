@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 
-export function useMousePosition() {
+export function usePointerPosition() {
     const [position, setPosition] = useState({ clientX: 0, clientY: 0 })
 
-    const updatePosition = (e: MouseEvent) => {
+    const updatePosition = (e: PointerEvent) => {
         const { clientX, clientY } = e
 
         setPosition({ clientX, clientY })
@@ -11,12 +11,21 @@ export function useMousePosition() {
 
     useAnimationFrame(() => {
         if (!global.window) return
-        global.window.addEventListener('mousemove', updatePosition, false)
-        global.window.addEventListener('mouseenter', updatePosition, false)
+
+        global.window.addEventListener('pointerenter', updatePosition, false)
+        global.window.addEventListener('pointermove', updatePosition, false)
 
         return () => {
-            global.window.removeEventListener('mousemove', updatePosition)
-            global.window.removeEventListener('mouseenter', updatePosition)
+            global.window.removeEventListener(
+                'pointermove',
+                updatePosition,
+                false,
+            )
+            global.window.removeEventListener(
+                'pointerenter',
+                updatePosition,
+                false,
+            )
         }
     })
 

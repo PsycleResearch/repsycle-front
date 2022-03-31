@@ -8,10 +8,15 @@ export default {
     decorators: [
         (Story: FunctionComponent) => (
             <DrawZoneContainer>
-                <Story />
+                <div style={{ height: '100vh' }}>
+                    <Story />
+                </div>
             </DrawZoneContainer>
         ),
     ],
+    parameters: {
+        layout: 'fullscreen',
+    },
 }
 
 export function Default() {
@@ -54,7 +59,7 @@ export function Default() {
     }, [originalSize])
 
     return (
-        <div>
+        <>
             <div>
                 <button onClick={() => setMove((m) => !m)}>
                     {move ? 'Déplacer actif' : 'Déplacer inactif'}
@@ -66,20 +71,17 @@ export function Default() {
                 </button>
                 <button onClick={() => reset()}>Reset (taille/position)</button>
             </div>
-            <div>
-                <DrawZone
-                    src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/250px-Image_created_with_a_mobile_phone.png"
-                    elements={elements}
-                    mode={move ? 'move' : 'draw'}
-                    onChange={(elements: ChangedElement[]) =>
-                        setElements(elements)
-                    }
-                    remove={(id) =>
-                        setElements((el) => el.filter((e) => e.id !== id))
-                    }
-                />
-            </div>
-        </div>
+            <DrawZone
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/250px-Image_created_with_a_mobile_phone.png"
+                elements={elements}
+                mode={move ? 'move' : 'draw'}
+                shape="rect"
+                onChange={(elements: ChangedElement[]) => setElements(elements)}
+                remove={(id) =>
+                    setElements((el) => el.filter((e) => e.id !== id))
+                }
+            />
+        </>
     )
 }
 
@@ -146,6 +148,7 @@ export function Rects() {
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
                     mode={move ? 'move' : 'draw'}
+                    shape="rect"
                 >
                     {elements.map((element, index) => {
                         const elem = element as ChangedElement
@@ -293,7 +296,8 @@ export function Polygons() {
                     remove={(id) =>
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
-                    mode={move ? 'move' : 'path'}
+                    mode={move ? 'move' : 'draw'}
+                    shape="poly"
                 >
                     {elements.map((element, index) => {
                         const elem = element as ChangedElement
@@ -420,7 +424,8 @@ export function ScaleIn() {
                     remove={(id) =>
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
-                    mode={move ? 'move' : 'path'}
+                    mode={move ? 'move' : 'draw'}
+                    shape="poly"
                     sizeMode="fit"
                 >
                     {elements.map((element, index) => {
@@ -547,6 +552,7 @@ export function ScaleOut() {
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
                     mode={move ? 'move' : 'draw'}
+                    shape="rect"
                     sizeMode="fit"
                 >
                     {elements.map((element, index) => {
@@ -673,6 +679,7 @@ export function ScaleInRect() {
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
                     mode={move ? 'move' : 'draw'}
+                    shape="rect"
                     sizeMode="fit"
                 >
                     {elements.map((element, index) => {
@@ -766,6 +773,7 @@ export function None() {
                         setElements((el) => el.filter((e) => e.id !== id))
                     }
                     mode={move ? 'move' : 'none'}
+                    shape="rect"
                     sizeMode="fit"
                 />
             </div>

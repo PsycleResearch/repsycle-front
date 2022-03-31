@@ -1,6 +1,6 @@
 {
   "name": "@psycle/repsycle",
-  "version": "0.0.26",
+  "version": "0.0.27-beta1",
   "description": "Psycle Research front-end toolkit",
   "author": "Psycle Research",
   "keywords": [
@@ -26,7 +26,8 @@
   "dependencies": {
     "@svgdotjs/svg.draggable.js": "^3.0.2",
     "@svgdotjs/svg.js": "^3.0.16",
-    "interactjs": "^1.9.20"
+    "interactjs": "^1.9.20",
+    "lodash": "^4.17.21"
   },
   "peerDependencies": {
     "react": "^17.0.2",
@@ -45,6 +46,7 @@
     "@storybook/builder-webpack5": "^6.5.8",
     "@storybook/manager-webpack5": "^6.5.8",
     "@storybook/react": "^6.5.8",
+    "@types/lodash": "^4.14.182",
     "@typescript-eslint/eslint-plugin": "^5.21.0",
     "@typescript-eslint/parser": "^5.21.0",
     "babel-loader": "^8.2.2",
