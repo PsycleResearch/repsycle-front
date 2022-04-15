@@ -290,7 +290,7 @@ export function DrawZoneContainer({
 const xns = 'http://www.w3.org/1999/xlink'
 const blue = '#2BB1FD'
 const defaultStroke = { color: '#fff', width: 2, opacity: 1 }
-const defaultFill = { color: '#000', opacity: 0.5 }
+const defaultFill = { color: '#000', opacity: 0 }
 
 function getRectCoords(rect: Rect) {
     const bbox = rect.bbox()
@@ -766,6 +766,7 @@ function useDraw(
         rect.data('label', label)
 
         if (stroke.color !== defaultStroke.color)
+        
             rect.data('color', stroke.color)
 
         return rect
@@ -1196,6 +1197,8 @@ function useDraw(
                     dashoffset: 5,
                 })
             }
+
+            console.log(overlayRect, overlayRect2)
 
             overlayRect.move(
                 startPosition.x / svgRect.width,
