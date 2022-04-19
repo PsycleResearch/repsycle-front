@@ -1184,13 +1184,13 @@ function useDraw(
             }
 
             if (!overlayRect || !overlayRect2) {
-                overlayRect = svg.rect(0, 0).fill({ opacity: 0.5 }).stroke({
+                overlayRect = svg.rect(0, 0).fill({ opacity: 0 }).stroke({
                     color: '#000',
                     width: 2,
                     opacity: 0.7,
                     dasharray: '5,5',
                 })
-                overlayRect2 = svg.rect(0, 0).fill({ opacity: 0.5 }).stroke({
+                overlayRect2 = svg.rect(0, 0).fill({ opacity: 0 }).stroke({
                     color: '#fff',
                     width: 2,
                     opacity: 0.7,
