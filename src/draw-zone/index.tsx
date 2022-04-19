@@ -290,8 +290,8 @@ export function DrawZoneContainer({
 const xns = 'http://www.w3.org/1999/xlink'
 const blue = '#2BB1FD'
 const defaultStroke = { color: '#fff', width: 2, opacity: 1 }
-const defaultFill = { color: '#000', opacity: 0.5 }
-const transparentFill = {color: '#000', opacity: 0}
+const defaultFill = { color: '#000', opacity: 0 }
+
 
 function getRectCoords(rect: Rect) {
     const bbox = rect.bbox()
@@ -515,7 +515,7 @@ function useDraw(
         points,
         disabled = isDisabled,
         stroke = { ...defaultStroke },
-        fill = { ...transparentFill },
+        fill = { ...defaultFill },
         label,
         id = null,
     }: {
@@ -777,7 +777,7 @@ function useDraw(
         points,
         disabled = isDisabled,
         stroke = { ...defaultStroke },
-        fill = { ...transparentFill },
+        fill = { ...defaultFill },
         label,
         id = null,
     }: {
