@@ -1287,7 +1287,7 @@ function useDraw(
                         .polygon(plotline)
                         .fill({
                             color: '#f06',
-                            opacity: 0.5,
+                            opacity: 0,
                         })
                         .stroke({
                             color: '#f06',
