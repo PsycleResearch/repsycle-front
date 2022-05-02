@@ -1,27 +1,27 @@
 import React, {
-    useState,
+    Dispatch,
+    ReactNode,
+    createContext,
+    useCallback,
+    useContext,
     useEffect,
     useLayoutEffect,
-    useRef,
-    Dispatch,
-    createContext,
-    useContext,
-    useCallback,
-    ReactNode,
     useReducer,
+    useRef,
+    useState,
 } from 'react'
 import {
-    SVG,
-    Rect,
-    Svg,
-    Polygon,
     ArrayXY,
     Circle,
-    Use,
-    PointArrayAlias,
     FillData,
+    PointArrayAlias,
+    Polygon,
     Polyline,
+    Rect,
+    SVG,
     StrokeData,
+    Svg,
+    Use,
 } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.draggable.js'
 import interact from 'interactjs'
@@ -29,6 +29,7 @@ import { DraggableOptions } from '@interactjs/types/index'
 import { uuid4 } from '../helpers'
 import { useMousePosition } from '../hooks'
 import { isTouchDevice } from '../utils'
+import { LinkedHTMLElement } from '@svgdotjs/svg.js'
 
 export type DrawZoneMode = 'draw' | 'path' | 'move' | 'none'
 export type SizeMode = 'auto' | 'fit'
@@ -292,7 +293,6 @@ const blue = '#2BB1FD'
 const defaultStroke = { color: '#fff', width: 2, opacity: 1 }
 const defaultFill = { color: '#000', opacity: 0 }
 
-
 function getRectCoords(rect: Rect) {
     const bbox = rect.bbox()
     return [
@@ -415,7 +415,7 @@ function useDraw(
         if (event.defaultPrevented) return false
         if (event.key === 'Escape' && this.closest('svg')) {
             event.preventDefault()
-            ;(this as any).instance.fire('deselect')
+            ;(this as unknown as LinkedHTMLElement).instance.fire('deselect')
 
             return true
         }
@@ -561,7 +561,7 @@ function useDraw(
         }
 
         let circle: Circle | undefined
-        let handles: Use[] = []
+        const handles: Use[] = []
 
         // Custom events.
         rect.on('select', () => {
@@ -618,7 +618,7 @@ function useDraw(
             onChange()
         })
         rect.on('deselect', (e) => {
-            if ((e as any).detail?.inst === rect) return
+            if ((e as CustomEvent).detail?.inst === rect) return
             rect.stroke(stroke)
             rect.data('selected', false)
 
@@ -767,7 +767,6 @@ function useDraw(
         rect.data('label', label)
 
         if (stroke.color !== defaultStroke.color)
-        
             rect.data('color', stroke.color)
 
         return rect
@@ -806,8 +805,8 @@ function useDraw(
         poly.stroke(stroke)
         poly.css('touch-action', 'none') // silence interactjs warning.
 
-        let circles: Circle[] = []
-        let handles: Use[] = []
+        const circles: Circle[] = []
+        const handles: Use[] = []
         let rootMatrix: DOMMatrix
 
         function polyDelKeyPress(ev: KeyboardEvent) {
@@ -963,7 +962,7 @@ function useDraw(
             onChange()
         })
         poly.on('deselect', (e) => {
-            if ((e as any).detail?.inst === poly) return
+            if ((e as CustomEvent).detail?.inst === poly) return
             poly.stroke(stroke)
             poly.data('selected', false)
 
@@ -989,7 +988,7 @@ function useDraw(
 
             interact(poly.node).draggable({
                 listeners: {
-                    start(event) {
+                    start() {
                         interact('.point-handle').unset()
                         handles.forEach((handle) => {
                             handle.remove()
@@ -1009,7 +1008,7 @@ function useDraw(
 
                         onChange()
                     },
-                    end(event) {
+                    end() {
                         for (
                             let i = 0;
                             i < poly.node.points.numberOfItems;
@@ -1165,7 +1164,7 @@ function useDraw(
             svg.node !== e.target &&
             !startPosition
         ) {
-            const element = e.target as any
+            const element = e.target as unknown as LinkedHTMLElement
             element.instance.fire('select')
             return
         } else if (e.target === svg.node) {

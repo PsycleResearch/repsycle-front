@@ -1,0 +1,59 @@
+{
+    "root": true,
+    "parser": "@typescript-eslint/parser",
+    "settings": {
+        "react": {
+            "version": "detect"
+        }
+    },
+    "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/eslint-recommended",
+        "plugin:@typescript-eslint/recommended",
+        "plugin:react/recommended",
+        "prettier",
+        "plugin:storybook/recommended"
+    ],
+    "plugins": [
+        "@typescript-eslint",
+        "unused-imports",
+        "react-hooks",
+        "jsx-a11y"
+    ],
+    "rules": {
+        "@typescript-eslint/no-unused-vars": "off",
+        "unused-imports/no-unused-imports": [
+            "error",
+            {
+                "ignoreRestSiblings": false
+            }
+        ],
+        "unused-imports/no-unused-vars": [
+            "error",
+            {
+                "ignoreRestSiblings": true,
+                "argsIgnorePattern": "^_",
+                "varsIgnorePattern": "^_",
+                "caughtErrorsIgnorePattern": "^_"
+            }
+        ],
+        "react/no-unescaped-entities": "off",
+        "react-hooks/rules-of-hooks": "error",
+        "react-hooks/exhaustive-deps": "warn",
+        "jsx-a11y/anchor-is-valid": "off",
+        "jsx-a11y/click-events-have-key-events": "warn",
+        "react/jsx-uses-react": "warn",
+        "react/jsx-uses-vars": "warn",
+        "no-console": ["error", { "allow": ["warn", "error"] }],
+        "@typescript-eslint/no-explicit-any": [
+            "error",
+            { "ignoreRestArgs": true }
+        ],
+        "sort-imports": [
+            "error",
+            {
+                "ignoreDeclarationSort": true
+            }
+        ]
+    }
+}
