@@ -1,6 +1,6 @@
 {
   "name": "@psycle/repsycle",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "description": "Psycle Research front-end toolkit",
   "author": "Psycle Research",
   "keywords": [
@@ -27,8 +27,7 @@
     "@svgdotjs/svg.draggable.js": "^3.0.2",
     "@svgdotjs/svg.js": "^3.0.16",
     "date-fns": "^2.21.3",
-    "interactjs": "^1.9.20",
-    "react-hook-form": "^7.30.0"
+    "interactjs": "^1.9.20"
   },
   "peerDependencies": {
     "react": "^17.0.2",
@@ -36,7 +35,6 @@
   },
   "devDependencies": {
     "@babel/core": "^7.15.0",
-    "@hookform/devtools": "^4.1.0",
     "@rollup/plugin-commonjs": "^20.0.0",
     "@rollup/plugin-node-resolve": "^13.0.4",
     "@rollup/plugin-typescript": "^8.3.0",
