@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { FunctionComponent, useEffect, useState } from 'react'
 
 import DrawZone, { ChangedElement, DrawZoneContainer, useDrawZone } from '.'
 
@@ -6,7 +6,7 @@ export default {
     title: 'Components/DrawZone',
     component: DrawZone,
     decorators: [
-        (Story: any) => (
+        (Story: FunctionComponent) => (
             <DrawZoneContainer>
                 <Story />
             </DrawZoneContainer>
@@ -14,7 +14,7 @@ export default {
     ],
 }
 
-export function Default({}) {
+export function Default() {
     const originalElements = [
         {
             id: 'rect1',
@@ -83,7 +83,7 @@ export function Default({}) {
     )
 }
 
-export function Rects({}) {
+export function Rects() {
     const originalElements = [
         {
             id: 'rect1',
@@ -202,7 +202,7 @@ export function Rects({}) {
     )
 }
 
-export function Polygons({}) {
+export function Polygons() {
     const originalElements = [
         /*
         {
@@ -350,7 +350,7 @@ export function Polygons({}) {
     )
 }
 
-export function ScaleIn({}) {
+export function ScaleIn() {
     const originalElements = [
         {
             id: 'poly2',
@@ -478,7 +478,7 @@ export function ScaleIn({}) {
     )
 }
 
-export function ScaleOut({}) {
+export function ScaleOut() {
     const originalElements = [
         {
             id: 'rect1',
@@ -604,7 +604,7 @@ export function ScaleOut({}) {
     )
 }
 
-export function ScaleInRect({}) {
+export function ScaleInRect() {
     const originalElements = [
         {
             id: 'rect1',
@@ -730,7 +730,7 @@ export function ScaleInRect({}) {
     )
 }
 
-export function None({}) {
+export function None() {
     const { isMarkerShown, zoomIn, zoomOut, toggleMarker, reset } =
         useDrawZone()
     const [move, setMove] = useState(false)
