@@ -1161,10 +1161,10 @@ function useDraw(
 
         if (
             svg.node.contains(e.target as Node) &&
-            svg.node !== e.target &&
-            !startPosition
+            svg.node !== e.target
         ) {
             const element = e.target as unknown as LinkedHTMLElement
+            startPosition = null
             element.instance.fire('select')
             return
         } else if (e.target === svg.node) {
