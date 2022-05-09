@@ -387,7 +387,7 @@ function useDraw(
                         const result = {
                             points,
                             rect,
-                            label: elt.data('label'),
+                            label: elt.data('label'), //récupérer les datas et les copier
                             selected: elt.data('selected') as boolean,
                             id: elt.data('id'),
                             color: elt.data('color'),
@@ -1174,7 +1174,7 @@ function useDraw(
             })
             onChange()
         }
-
+// si j'ai la props 
         if (props.mode === 'draw' && !isDisabled) {
             const svgRect = svg.node.getBoundingClientRect()
 
@@ -1647,7 +1647,7 @@ export default function DrawZone({
         onChange,
         remove,
         mode,
-        drawOnMouseDown: false,
+        drawOnMouseDown: true,
     })
     const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
     const [forceRedraw, setForceRedraw] = useState(false)
