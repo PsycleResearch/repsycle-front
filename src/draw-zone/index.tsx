@@ -1466,6 +1466,7 @@ function useDraw(
                     currentPosition.x = startPosition.x + 50
                     currentPosition.y = startPosition.y + 50
                 } else {
+                    startPosition = null
                     return
                 }
             }
