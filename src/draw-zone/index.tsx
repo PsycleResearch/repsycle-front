@@ -292,7 +292,6 @@ const blue = '#2BB1FD'
 const defaultStroke = { color: '#fff', width: 2, opacity: 1 }
 const defaultFill = { color: '#000', opacity: 0 }
 
-
 function getRectCoords(rect: Rect) {
     const bbox = rect.bbox()
     return [
@@ -311,6 +310,8 @@ function useDraw(
         remove: (id: string) => void
         mode: DrawZoneMode
         drawOnMouseDown?: boolean
+        getLastRectSize : () => void
+        getLastLabel : () => void
     },
 ) {
     const {
@@ -387,11 +388,19 @@ function useDraw(
                         const result = {
                             points,
                             rect,
-                            label: elt.data('label'), //récupérer les datas et les copier
+                            label: elt.data('label'), //récupérer les datas et les copier pour le label avec svg.clone()
                             selected: elt.data('selected') as boolean,
                             id: elt.data('id'),
                             color: elt.data('color'),
                         }
+
+                        // const lastWidth = result.rect.width
+                        // const lastHeight = result.rect.height
+                        // const lastLabel = result.label
+                        // setLastDrawedRectHeight(lastHeight)
+                        // setLastLabel(lastLabel)
+                        // setLastDrawedRectWidth(lasWidth)
+                      
 
                         return result
                     }),
@@ -511,11 +520,13 @@ function useDraw(
         event.preventDefault()
     }
 
+
     function drawRect({
         points,
         disabled = isDisabled,
         stroke = { ...defaultStroke },
         fill = { ...defaultFill },
+        getLastRectLabel,
         label,
         id = null,
     }: {
@@ -764,10 +775,10 @@ function useDraw(
 
         rect.data('disabled', disabled)
         rect.data('id', id || uuid4())
-        rect.data('label', label)
+        rect.data('label', getLastRectLabel ? getLastRectLabel() : null)
+        
 
         if (stroke.color !== defaultStroke.color)
-        
             rect.data('color', stroke.color)
 
         return rect
@@ -1174,7 +1185,7 @@ function useDraw(
             })
             onChange()
         }
-// si j'ai la props 
+
         if (props.mode === 'draw' && !isDisabled) {
             const svgRect = svg.node.getBoundingClientRect()
 
@@ -1428,7 +1439,9 @@ function useDraw(
                 tmpPoints.forEach((point) => point.front())
             }
         }
-    }
+    } 
+
+    function
 
     function onMouseUp(this: Window, e: globalThis.MouseEvent) {
         if (e.defaultPrevented) return
@@ -1463,7 +1476,13 @@ function useDraw(
 
             // Prevent adding very small rects (mis-clicks).
             if (Math.abs(currentPosition.x - startPosition.x) <= 2) {
+                console.log(props.getLastRectSize)
+               
+                // const lastRect = props.getLastRectSize()
+               
+               
                 if (props.drawOnMouseDown) {
+
                     currentPosition.x = startPosition.x + 50
                     currentPosition.y = startPosition.y + 50
                 } else {
@@ -1617,6 +1636,9 @@ export interface DrawZoneProps {
     readonly sizeMode?: SizeMode
     readonly src: string
     readonly elements: Partial<ChangedElement>[]
+    drawOnMouseDown: boolean
+    readonly getLastRectSize : () => void
+    readonly getLastRectLabel : () => void
     readonly onChange: (elements: ChangedElement[]) => void
     readonly remove: (id: string) => void
 }
@@ -1627,6 +1649,9 @@ export default function DrawZone({
     sizeMode = 'auto',
     src,
     elements,
+    getLastRectSize,
+    getLastRectLabel,
+    drawOnMouseDown,
     onChange,
     remove,
 }: DrawZoneProps) {
@@ -1645,9 +1670,12 @@ export default function DrawZone({
     const containerRef = useRef<HTMLDivElement>(null)
     const { svg, draw, originalSize } = useDraw(svgRef, src, {
         onChange,
+        getLastRectSize,
+        getLastRectLabel,
         remove,
         mode,
-        drawOnMouseDown: true,
+        drawOnMouseDown: true, 
+        // passe drawOnMouseDown à true pour générer des carrés au click
     })
     const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
     const [forceRedraw, setForceRedraw] = useState(false)
