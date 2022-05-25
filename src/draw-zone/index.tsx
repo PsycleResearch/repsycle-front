@@ -1161,10 +1161,11 @@ function useDraw(
 
         if (
             svg.node.contains(e.target as Node) &&
-            svg.node !== e.target
+            svg.node !== e.target &&
+            !startPosition
         ) {
             const element = e.target as unknown as LinkedHTMLElement
-            startPosition = null
+
             element.instance.fire('select')
             return
         } else if (e.target === svg.node) {
@@ -1447,6 +1448,7 @@ function useDraw(
 
             // Prevent drawing new rect on rect dragend...
             if ((e.target as Node | null)?.parentNode === svg.node) {
+                startPosition = null
                 return
             }
 
