@@ -310,8 +310,8 @@ function useDraw(
         remove: (id: string) => void
         mode: DrawZoneMode
         drawOnMouseDown?: boolean
-        getLastRectSize : () => void
-        getLastLabel : () => void
+        getLastRectSize: () => void
+        getLastLabel: () => void
     },
 ) {
     const {
@@ -400,7 +400,6 @@ function useDraw(
                         // setLastDrawedRectHeight(lastHeight)
                         // setLastLabel(lastLabel)
                         // setLastDrawedRectWidth(lasWidth)
-                      
 
                         return result
                     }),
@@ -519,7 +518,6 @@ function useDraw(
     const preventDrag = (event: DragEvent) => {
         event.preventDefault()
     }
-
 
     function drawRect({
         points,
@@ -776,7 +774,6 @@ function useDraw(
         rect.data('disabled', disabled)
         rect.data('id', id || uuid4())
         rect.data('label', getLastRectLabel ? getLastRectLabel() : null)
-        
 
         if (stroke.color !== defaultStroke.color)
             rect.data('color', stroke.color)
@@ -1439,11 +1436,11 @@ function useDraw(
                 tmpPoints.forEach((point) => point.front())
             }
         }
-    } 
-
-    function
+    }
 
     function onMouseUp(this: Window, e: globalThis.MouseEvent) {
+        // let lastRect = props.getLastRectSize()
+        // console.log
         if (e.defaultPrevented) return
         if (!svg) return
 
@@ -1476,19 +1473,79 @@ function useDraw(
 
             // Prevent adding very small rects (mis-clicks).
             if (Math.abs(currentPosition.x - startPosition.x) <= 2) {
-                console.log(props.getLastRectSize)
-               
-                // const lastRect = props.getLastRectSize()
-               
-               
-                if (props.drawOnMouseDown) {
+                let lastRect = props.getLastRectSize(svg
+                    .children()
+                    .filter((e) => !e.attr('data-draw-ignore'))
+                    .map((elt) => {
+                        const elementRect = elt.node.getBoundingClientRect()
 
-                    currentPosition.x = startPosition.x + 50
-                    currentPosition.y = startPosition.y + 50
+                        const rect: ChangedElement['rect'] = {
+                            height: (elementRect.height / svgRect.height) * 100,
+                            width: (elementRect.width / svgRect.width) * 100,
+                            x:
+                                ((elementRect.x - svgRect.x) / svgRect.width) *
+                                100,
+                            y:
+                                ((elementRect.y - svgRect.y) / svgRect.height) *
+                                100,
+                        }
+
+                        let points: Point[]
+
+                        if (elt instanceof Polygon) {
+                            const polygon = elt as Polygon
+
+                            points = getAbsoluteCoordinates(
+                                polygon.plot().map((p) => ({
+                                    x: p[0],
+                                    y: p[1],
+                                })),
+                            )
+                        } else {
+                            const box = elt.bbox()
+                            points = getAbsoluteCoordinates([
+                                {
+                                    x: box.x,
+                                    y: box.y,
+                                },
+                                {
+                                    x: box.x2,
+                                    y: box.y2,
+                                },
+                            ])
+                        }
+
+                        const result = {
+                            points,
+                            rect,
+                            label: elt.data('label'), //récupérer les datas et les copier pour le label avec svg.clone()
+                            selected: elt.data('selected') as boolean,
+                            id: elt.data('id'),
+                            color: elt.data('color'),
+                        }
+
+                        // const lastWidth = result.rect.width
+                        // const lastHeight = result.rect.height
+                        // const lastLabel = result.label
+                        // setLastDrawedRectHeight(lastHeight)
+                        // setLastLabel(lastLabel)
+                        // setLastDrawedRectWidth(lasWidth)
+
+                        return result
+                    }),
+            ))
+                if (props.drawOnMouseDown) {
+                    currentPosition.x = startPosition.x + (lastRect.width * svgRect.width / 100)
+                    currentPosition.y = startPosition.y + (lastRect.height * svgRect.height / 100)
                 } else {
                     return
                 }
+
+                console.log("final lastRect:", lastRect)
             }
+
+            
+            console.log("final currentPosition:", currentPosition)
 
             const newRect = drawRect({
                 points: [
@@ -1637,8 +1694,8 @@ export interface DrawZoneProps {
     readonly src: string
     readonly elements: Partial<ChangedElement>[]
     drawOnMouseDown: boolean
-    readonly getLastRectSize : () => void
-    readonly getLastRectLabel : () => void
+    readonly getLastRectSize: () => void
+    readonly getLastRectLabel: () => void
     readonly onChange: (elements: ChangedElement[]) => void
     readonly remove: (id: string) => void
 }
@@ -1674,7 +1731,7 @@ export default function DrawZone({
         getLastRectLabel,
         remove,
         mode,
-        drawOnMouseDown: true, 
+        drawOnMouseDown: true,
         // passe drawOnMouseDown à true pour générer des carrés au click
     })
     const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
