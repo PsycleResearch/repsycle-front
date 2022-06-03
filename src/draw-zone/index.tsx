@@ -311,7 +311,6 @@ function useDraw(
         mode: DrawZoneMode
         drawOnMouseDown?: boolean
         getLastRectSize: () => void
-        getLastLabel: () => void
     },
 ) {
     const {
@@ -320,6 +319,7 @@ function useDraw(
     } = useContext(DrawZoneContext)
     const [svg, setSvg] = useState<Svg>()
     const [originalSize, setOriginalSize] = useState<Size>()
+    const [lastLabel, setLastLabel] = useState('')
     let startPosition: Point | null
     let overlayRect: Rect | undefined
     let overlayRect2: Rect | undefined
@@ -388,20 +388,14 @@ function useDraw(
                         const result = {
                             points,
                             rect,
-                            label: elt.data('label'), //récupérer les datas et les copier pour le label avec svg.clone()
+                            label: elt.data('label'), 
                             selected: elt.data('selected') as boolean,
                             id: elt.data('id'),
                             color: elt.data('color'),
                         }
-
-                        // const lastWidth = result.rect.width
-                        // const lastHeight = result.rect.height
-                        // const lastLabel = result.label
-                        // setLastDrawedRectHeight(lastHeight)
-                        // setLastLabel(lastLabel)
-                        // setLastDrawedRectWidth(lasWidth)
-
-                        return result
+                        
+                    
+                        return result 
                     }),
             )
         }
@@ -461,6 +455,7 @@ function useDraw(
                 x: x / svgRect.width,
                 y: y / svgRect.height,
             })),
+            
         })
 
         window.removeEventListener('keyup', onAbortPathDrawing, {
@@ -524,7 +519,7 @@ function useDraw(
         disabled = isDisabled,
         stroke = { ...defaultStroke },
         fill = { ...defaultFill },
-        getLastRectLabel,
+
         label,
         id = null,
     }: {
@@ -773,7 +768,7 @@ function useDraw(
 
         rect.data('disabled', disabled)
         rect.data('id', id || uuid4())
-        rect.data('label', getLastRectLabel ? getLastRectLabel() : null)
+        rect.data('label', label)
 
         if (stroke.color !== defaultStroke.color)
             rect.data('color', stroke.color)
@@ -1439,8 +1434,7 @@ function useDraw(
     }
 
     function onMouseUp(this: Window, e: globalThis.MouseEvent) {
-        // let lastRect = props.getLastRectSize()
-        // console.log
+
         if (e.defaultPrevented) return
         if (!svg) return
 
@@ -1473,7 +1467,8 @@ function useDraw(
 
             // Prevent adding very small rects (mis-clicks).
             if (Math.abs(currentPosition.x - startPosition.x) <= 2) {
-                let lastRect = props.getLastRectSize(svg
+                let lastRect = props.getLastRectSize(
+                    svg
                     .children()
                     .filter((e) => !e.attr('data-draw-ignore'))
                     .map((elt) => {
@@ -1518,34 +1513,27 @@ function useDraw(
                         const result = {
                             points,
                             rect,
-                            label: elt.data('label'), //récupérer les datas et les copier pour le label avec svg.clone()
+                            label: elt.data('label')
                             selected: elt.data('selected') as boolean,
                             id: elt.data('id'),
                             color: elt.data('color'),
                         }
+                        const lastLabel = result.label
+                        setLastLabel(lastLabel)
 
-                        // const lastWidth = result.rect.width
-                        // const lastHeight = result.rect.height
-                        // const lastLabel = result.label
-                        // setLastDrawedRectHeight(lastHeight)
-                        // setLastLabel(lastLabel)
-                        // setLastDrawedRectWidth(lasWidth)
 
                         return result
                     }),
             ))
                 if (props.drawOnMouseDown) {
-                    currentPosition.x = startPosition.x + (lastRect.width * svgRect.width / 100)
-                    currentPosition.y = startPosition.y + (lastRect.height * svgRect.height / 100)
+                    currentPosition.x = startPosition.x + Math.max((lastRect.width * svgRect.width / 100))
+                    currentPosition.y = startPosition.y + Math.max((lastRect.height * svgRect.height / 100))
+
                 } else {
                     return
                 }
-
-                console.log("final lastRect:", lastRect)
             }
 
-            
-            console.log("final currentPosition:", currentPosition)
 
             const newRect = drawRect({
                 points: [
@@ -1566,7 +1554,9 @@ function useDraw(
                             svgRect.height,
                     },
                 ],
+                label : lastLabel
             })
+        
 
             setTimeout(() => {
                 newRect?.fire('select')
@@ -1695,7 +1685,6 @@ export interface DrawZoneProps {
     readonly elements: Partial<ChangedElement>[]
     drawOnMouseDown: boolean
     readonly getLastRectSize: () => void
-    readonly getLastRectLabel: () => void
     readonly onChange: (elements: ChangedElement[]) => void
     readonly remove: (id: string) => void
 }
@@ -1707,7 +1696,6 @@ export default function DrawZone({
     src,
     elements,
     getLastRectSize,
-    getLastRectLabel,
     drawOnMouseDown,
     onChange,
     remove,
@@ -1728,14 +1716,15 @@ export default function DrawZone({
     const { svg, draw, originalSize } = useDraw(svgRef, src, {
         onChange,
         getLastRectSize,
-        getLastRectLabel,
         remove,
         mode,
         drawOnMouseDown: true,
-        // passe drawOnMouseDown à true pour générer des carrés au click
+
     })
     const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
     const [forceRedraw, setForceRedraw] = useState(false)
+
+    console.log('elements',elements)
 
     const setScale = useCallback(
         (scale: number) => {
