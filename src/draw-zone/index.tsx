@@ -1474,9 +1474,9 @@ function useDraw(
             // Prevent adding very small rects (mis-clicks).
             if (Math.abs(currentPosition.x - startPosition.x) <= 2) {
                 let lastRect = props.getLastRectSize(convertForOnChange())
-                label = lastRect.label
+                label = lastRect?.label
 
-                if (props.drawOnMouseDown) {
+                if (props.drawOnMouseDown && lastRect !=undefined) {
                     currentPosition.x = startPosition.x + Math.max((lastRect.width * svgRect.width / 100))
                     currentPosition.y = startPosition.y + Math.max((lastRect.height * svgRect.height / 100))
                 } else {
