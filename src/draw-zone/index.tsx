@@ -1525,7 +1525,7 @@ function useDraw(
                         return result
                     }),
             ))
-                if (props.drawOnMouseDown) {
+                if (props.drawOnMouseDown && lastRect != undefined) {
                     currentPosition.x = startPosition.x + Math.max((lastRect.width * svgRect.width / 100))
                     currentPosition.y = startPosition.y + Math.max((lastRect.height * svgRect.height / 100))
 
