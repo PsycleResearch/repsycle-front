@@ -319,7 +319,6 @@ function useDraw(
     } = useContext(DrawZoneContext)
     const [svg, setSvg] = useState<Svg>()
     const [originalSize, setOriginalSize] = useState<Size>()
-    const [lastLabel, setLastLabel] = useState('')
     let startPosition: Point | null
     let overlayRect: Rect | undefined
     let overlayRect2: Rect | undefined
@@ -338,68 +337,74 @@ function useDraw(
         }))
     }
 
-    const onChange = useCallback(() => {
-        if (svg && props.onChange) {
-            const svgRect = svg.node.getBoundingClientRect()
-
-            props.onChange(
-                svg
-                    .children()
-                    .filter((e) => !e.attr('data-draw-ignore'))
-                    .map((elt) => {
-                        const elementRect = elt.node.getBoundingClientRect()
-
-                        const rect: ChangedElement['rect'] = {
-                            height: (elementRect.height / svgRect.height) * 100,
-                            width: (elementRect.width / svgRect.width) * 100,
-                            x:
-                                ((elementRect.x - svgRect.x) / svgRect.width) *
-                                100,
-                            y:
-                                ((elementRect.y - svgRect.y) / svgRect.height) *
-                                100,
-                        }
-
-                        let points: Point[]
-
-                        if (elt instanceof Polygon) {
-                            const polygon = elt as Polygon
-
-                            points = getAbsoluteCoordinates(
-                                polygon.plot().map((p) => ({
-                                    x: p[0],
-                                    y: p[1],
-                                })),
-                            )
-                        } else {
-                            const box = elt.bbox()
-                            points = getAbsoluteCoordinates([
-                                {
-                                    x: box.x,
-                                    y: box.y,
-                                },
-                                {
-                                    x: box.x2,
-                                    y: box.y2,
-                                },
-                            ])
-                        }
-
-                        const result = {
-                            points,
-                            rect,
-                            label: elt.data('label'), 
-                            selected: elt.data('selected') as boolean,
-                            id: elt.data('id'),
-                            color: elt.data('color'),
-                        }
-                        
-                    
-                        return result 
-                    }),
-            )
+    const convertForOnChange = useCallback(function() {
+        if (!svg) {
+            return []
         }
-    }, [svg, props.onChange])
+
+        const svgRect = svg.node.getBoundingClientRect()
+
+        return svg
+            .children()
+            .filter((e) => !e.attr('data-draw-ignore'))
+            .map((elt) => {
+                const elementRect = elt.node.getBoundingClientRect()
+
+                const rect: ChangedElement['rect'] = {
+                    height: (elementRect.height / svgRect.height) * 100,
+                    width: (elementRect.width / svgRect.width) * 100,
+                    x:
+                        ((elementRect.x - svgRect.x) / svgRect.width) *
+                        100,
+                    y:
+                        ((elementRect.y - svgRect.y) / svgRect.height) *
+                        100,
+                }
+
+                let points: Point[]
+
+                if (elt instanceof Polygon) {
+                    const polygon = elt as Polygon
+
+                    points = getAbsoluteCoordinates(
+                        polygon.plot().map((p) => ({
+                            x: p[0],
+                            y: p[1],
+                        })),
+                    )
+                } else {
+                    const box = elt.bbox()
+                    points = getAbsoluteCoordinates([
+                        {
+                            x: box.x,
+                            y: box.y,
+                        },
+                        {
+                            x: box.x2,
+                            y: box.y2,
+                        },
+                    ])
+                }
+
+                const result = {
+                    points,
+                    rect,
+                    label: elt.data('label'), 
+                    selected: elt.data('selected') as boolean,
+                    id: elt.data('id'),
+                    color: elt.data('color'),
+                }
+                
+            
+                return result 
+            })
+    }, [svg])
+
+    const onChange = useCallback(() => {
+        if (props.onChange) {
+            props.onChange(convertForOnChange())
+        }
+    }, [props.onChange])
 
     function onDelKeyPress(this: SVGElement, event: KeyboardEvent): boolean {
         if (event.defaultPrevented) return false
@@ -1465,75 +1470,19 @@ function useDraw(
                     svgRect.top,
             }
 
+            let label = null
             // Prevent adding very small rects (mis-clicks).
             if (Math.abs(currentPosition.x - startPosition.x) <= 2) {
-                let lastRect = props.getLastRectSize(
-                    svg
-                    .children()
-                    .filter((e) => !e.attr('data-draw-ignore'))
-                    .map((elt) => {
-                        const elementRect = elt.node.getBoundingClientRect()
+                let lastRect = props.getLastRectSize(convertForOnChange())
+                label = lastRect.label
 
-                        const rect: ChangedElement['rect'] = {
-                            height: (elementRect.height / svgRect.height) * 100,
-                            width: (elementRect.width / svgRect.width) * 100,
-                            x:
-                                ((elementRect.x - svgRect.x) / svgRect.width) *
-                                100,
-                            y:
-                                ((elementRect.y - svgRect.y) / svgRect.height) *
-                                100,
-                        }
-
-                        let points: Point[]
-
-                        if (elt instanceof Polygon) {
-                            const polygon = elt as Polygon
-
-                            points = getAbsoluteCoordinates(
-                                polygon.plot().map((p) => ({
-                                    x: p[0],
-                                    y: p[1],
-                                })),
-                            )
-                        } else {
-                            const box = elt.bbox()
-                            points = getAbsoluteCoordinates([
-                                {
-                                    x: box.x,
-                                    y: box.y,
-                                },
-                                {
-                                    x: box.x2,
-                                    y: box.y2,
-                                },
-                            ])
-                        }
-
-                        const result = {
-                            points,
-                            rect,
-                            label: elt.data('label')
-                            selected: elt.data('selected') as boolean,
-                            id: elt.data('id'),
-                            color: elt.data('color'),
-                        }
-                        const lastLabel = result.label
-                        setLastLabel(lastLabel)
-
-
-                        return result
-                    }),
-            ))
-                if (props.drawOnMouseDown && lastRect != undefined) {
+                if (props.drawOnMouseDown) {
                     currentPosition.x = startPosition.x + Math.max((lastRect.width * svgRect.width / 100))
                     currentPosition.y = startPosition.y + Math.max((lastRect.height * svgRect.height / 100))
-
                 } else {
                     return
                 }
             }
-
 
             const newRect = drawRect({
                 points: [
@@ -1554,7 +1503,7 @@ function useDraw(
                             svgRect.height,
                     },
                 ],
-                label : lastLabel
+                label: label
             })
         
 
@@ -1723,8 +1672,6 @@ export default function DrawZone({
     })
     const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
     const [forceRedraw, setForceRedraw] = useState(false)
-
-    console.log('elements',elements)
 
     const setScale = useCallback(
         (scale: number) => {
