@@ -23,7 +23,7 @@ export function useMousePosition() {
     return position
 }
 
-export function useAnimationFrame(callback: Function) {
+export function useAnimationFrame(callback: CallableFunction) {
     // Use useRef for mutable variables that we want to persist
     // without triggering a re-render on their change
     const requestRef = useRef<number>()

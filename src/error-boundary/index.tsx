@@ -2,11 +2,17 @@ import React, { Component } from 'react'
 
 import { truncate } from '../helpers'
 
+interface ErrorBoundaryState {
+    readonly title: string | null
+    readonly hasError: boolean
+    readonly error: Error | null
+    readonly more: boolean
+}
 export default class ErrorBoundary extends Component<
-    {},
-    { [key: string]: any }
+    Record<string, never>,
+    ErrorBoundaryState
 > {
-    constructor(props: any) {
+    constructor(props: Record<string, never>) {
         super(props)
 
         this.state = {
@@ -17,12 +23,12 @@ export default class ErrorBoundary extends Component<
         }
     }
 
-    static getDerivedStateFromError(error: any) {
+    static getDerivedStateFromError() {
         // Update state so the next render will show the fallback UI.
         return { hasError: true }
     }
 
-    componentDidCatch(error: any) {
+    componentDidCatch(error: Error) {
         this.setState({ error })
     }
 
@@ -43,9 +49,12 @@ export default class ErrorBoundary extends Component<
                                 <br />
                                 <br />
                                 <code>
-                                    {truncate(error.stack, {
-                                        length: more ? error.stack.length : 128,
-                                    })}
+                                    {error.stack &&
+                                        truncate(error.stack, {
+                                            length: more
+                                                ? error.stack.length
+                                                : 128,
+                                        })}
                                 </code>
                                 &nbsp;&nbsp;
                                 <button
