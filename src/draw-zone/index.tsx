@@ -86,7 +86,6 @@ enum DrawZoneStateActionType {
     ENABLE,
     SET_ORIGINAL_SIZE,
     SET_POSITION,
-    // SET_INITIAL_RECT,
     FORCE_REDRAW,
 }
 
@@ -137,13 +136,11 @@ const drawZoneInitialState: DrawZoneStateInternal = {
     isMarkerShown: false,
     isDisabled: false,
     originalSize: undefined,
-    // Internal props
     logicalScale: 1,
     positionTop: 0,
     positionLeft: 0,
     redraw: false,
-    // initialRectWidth: 0,
-    // initialRectHeight: 0
+
 }
 
 const drawZoneReducer = (
@@ -215,12 +212,6 @@ const drawZoneReducer = (
                 ...state,
                 redraw: !state.redraw,
             }
-        // case DrawZoneStateActionType.SET_INITIAL_RECT:
-        //     return {
-        //         ...state,
-        //         initialRectWidth: action.payload.width,
-        //         initialRectHeight:action.payload.height
-        //     }
         default:
             return state
     }
