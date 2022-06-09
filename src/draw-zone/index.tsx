@@ -84,8 +84,10 @@ enum DrawZoneStateActionType {
     DISABLE,
     ENABLE,
     SET_ORIGINAL_SIZE,
-    SET_POSITION,
+    SET_POSITION, 
+    // SET_INITIAL_RECT,
     FORCE_REDRAW,
+   
 }
 
 type DrawZoneStateAction =
@@ -126,7 +128,11 @@ type DrawZoneStateAction =
     | {
           readonly type: DrawZoneStateActionType.FORCE_REDRAW
       }
-
+    |
+      {
+        readonly type: DrawZoneStateActionType.FORCE_REDRAW
+    }
+ 
 const drawZoneInitialState: DrawZoneStateInternal = {
     scale: 1,
     isMarkerShown: false,
@@ -137,6 +143,8 @@ const drawZoneInitialState: DrawZoneStateInternal = {
     positionTop: 0,
     positionLeft: 0,
     redraw: false,
+    // initialRectWidth: 0,
+    // initialRectHeight: 0
 }
 
 const drawZoneReducer = (
@@ -208,6 +216,12 @@ const drawZoneReducer = (
                 ...state,
                 redraw: !state.redraw,
             }
+        // case DrawZoneStateActionType.SET_INITIAL_RECT:
+        //     return {
+        //         ...state,
+        //         initialRectWidth: action.payload.width,
+        //         initialRectHeight:action.payload.height
+        //     }
         default:
             return state
     }
@@ -337,68 +351,66 @@ function useDraw(
         }))
     }
 
-    const convertForOnChange = useCallback(function() {
-        if (!svg) {
-            return []
-        }
+    const convertForOnChange = useCallback(
+        function () {
+            if (!svg) {
+                return []
+            }
 
-        const svgRect = svg.node.getBoundingClientRect()
+            const svgRect = svg.node.getBoundingClientRect()
 
-        return svg
-            .children()
-            .filter((e) => !e.attr('data-draw-ignore'))
-            .map((elt) => {
-                const elementRect = elt.node.getBoundingClientRect()
+            return svg
+                .children()
+                .filter((e) => !e.attr('data-draw-ignore'))
+                .map((elt) => {
+                    const elementRect = elt.node.getBoundingClientRect()
 
-                const rect: ChangedElement['rect'] = {
-                    height: (elementRect.height / svgRect.height) * 100,
-                    width: (elementRect.width / svgRect.width) * 100,
-                    x:
-                        ((elementRect.x - svgRect.x) / svgRect.width) *
-                        100,
-                    y:
-                        ((elementRect.y - svgRect.y) / svgRect.height) *
-                        100,
-                }
+                    const rect: ChangedElement['rect'] = {
+                        height: (elementRect.height / svgRect.height) * 100,
+                        width: (elementRect.width / svgRect.width) * 100,
+                        x: ((elementRect.x - svgRect.x) / svgRect.width) * 100,
+                        y: ((elementRect.y - svgRect.y) / svgRect.height) * 100,
+                    }
 
-                let points: Point[]
+                    let points: Point[]
 
-                if (elt instanceof Polygon) {
-                    const polygon = elt as Polygon
+                    if (elt instanceof Polygon) {
+                        const polygon = elt as Polygon
 
-                    points = getAbsoluteCoordinates(
-                        polygon.plot().map((p) => ({
-                            x: p[0],
-                            y: p[1],
-                        })),
-                    )
-                } else {
-                    const box = elt.bbox()
-                    points = getAbsoluteCoordinates([
-                        {
-                            x: box.x,
-                            y: box.y,
-                        },
-                        {
-                            x: box.x2,
-                            y: box.y2,
-                        },
-                    ])
-                }
+                        points = getAbsoluteCoordinates(
+                            polygon.plot().map((p) => ({
+                                x: p[0],
+                                y: p[1],
+                            })),
+                        )
+                    } else {
+                        const box = elt.bbox()
+                        points = getAbsoluteCoordinates([
+                            {
+                                x: box.x,
+                                y: box.y,
+                            },
+                            {
+                                x: box.x2,
+                                y: box.y2,
+                            },
+                        ])
+                    }
 
-                const result = {
-                    points,
-                    rect,
-                    label: elt.data('label'), 
-                    selected: elt.data('selected') as boolean,
-                    id: elt.data('id'),
-                    color: elt.data('color'),
-                }
-                
-            
-                return result 
-            })
-    }, [svg])
+                    const result = {
+                        points,
+                        rect,
+                        label: elt.data('label'),
+                        selected: elt.data('selected') as boolean,
+                        id: elt.data('id'),
+                        color: elt.data('color'),
+                    }
+
+                    return result
+                })
+        },
+        [svg],
+    )
 
     const onChange = useCallback(() => {
         if (props.onChange) {
@@ -460,7 +472,6 @@ function useDraw(
                 x: x / svgRect.width,
                 y: y / svgRect.height,
             })),
-            
         })
 
         window.removeEventListener('keyup', onAbortPathDrawing, {
@@ -1439,7 +1450,6 @@ function useDraw(
     }
 
     function onMouseUp(this: Window, e: globalThis.MouseEvent) {
-
         if (e.defaultPrevented) return
         if (!svg) return
 
@@ -1473,16 +1483,27 @@ function useDraw(
             let label = null
             // Prevent adding very small rects (mis-clicks).
             if (Math.abs(currentPosition.x - startPosition.x) <= 2) {
+
+    
                 let lastRect = props.getLastRectSize(convertForOnChange())
+                 
                 label = lastRect?.label
 
-                if (props.drawOnMouseDown && lastRect !=undefined) {
-                    currentPosition.x = startPosition.x + Math.max((lastRect.width * svgRect.width / 100))
-                    currentPosition.y = startPosition.y + Math.max((lastRect.height * svgRect.height / 100))
+
+                if (props.drawOnMouseDown && lastRect) {
+                    currentPosition.x =
+                        startPosition.x +
+                        Math.max((lastRect.rect.width * svgRect.width) / 100)
+                    currentPosition.y =
+                        startPosition.y +
+                        Math.max((lastRect.rect.height * svgRect.height) / 100)
+
+
                 } else {
                     return
                 }
             }
+
 
             const newRect = drawRect({
                 points: [
@@ -1503,9 +1524,8 @@ function useDraw(
                             svgRect.height,
                     },
                 ],
-                label: label
+                label: label,
             })
-        
 
             setTimeout(() => {
                 newRect?.fire('select')
@@ -1633,6 +1653,7 @@ export interface DrawZoneProps {
     readonly src: string
     readonly elements: Partial<ChangedElement>[]
     drawOnMouseDown: boolean
+    readonly initialRect : Object
     readonly getLastRectSize: () => void
     readonly onChange: (elements: ChangedElement[]) => void
     readonly remove: (id: string) => void
@@ -1645,6 +1666,7 @@ export default function DrawZone({
     src,
     elements,
     getLastRectSize,
+    initialRect,
     drawOnMouseDown,
     onChange,
     remove,
@@ -1668,7 +1690,6 @@ export default function DrawZone({
         remove,
         mode,
         drawOnMouseDown: true,
-
     })
     const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
     const [forceRedraw, setForceRedraw] = useState(false)
