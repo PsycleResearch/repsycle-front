@@ -84,10 +84,9 @@ enum DrawZoneStateActionType {
     DISABLE,
     ENABLE,
     SET_ORIGINAL_SIZE,
-    SET_POSITION, 
+    SET_POSITION,
     // SET_INITIAL_RECT,
     FORCE_REDRAW,
-   
 }
 
 type DrawZoneStateAction =
@@ -128,11 +127,10 @@ type DrawZoneStateAction =
     | {
           readonly type: DrawZoneStateActionType.FORCE_REDRAW
       }
-    |
-      {
-        readonly type: DrawZoneStateActionType.FORCE_REDRAW
-    }
- 
+    | {
+          readonly type: DrawZoneStateActionType.FORCE_REDRAW
+      }
+
 const drawZoneInitialState: DrawZoneStateInternal = {
     scale: 1,
     isMarkerShown: false,
@@ -324,7 +322,8 @@ function useDraw(
         remove: (id: string) => void
         mode: DrawZoneMode
         drawOnMouseDown?: boolean
-        getLastRectSize: () => void
+        initialRect: any
+        onInitialRectChange: () => void
     },
 ) {
     const {
@@ -1483,27 +1482,30 @@ function useDraw(
             let label = null
             // Prevent adding very small rects (mis-clicks).
             if (Math.abs(currentPosition.x - startPosition.x) <= 2) {
+                const elements = convertForOnChange()
+                let lastRect = elements[elements.length - 1]
 
-    
-                let lastRect = props.getLastRectSize(convertForOnChange())
-                 
+                if (props.initialRect) {
+                    lastRect = props.initialRect
+                }
+
                 label = lastRect?.label
 
-
                 if (props.drawOnMouseDown && lastRect) {
-                    currentPosition.x =
+                    currentPosition.x = Math.min(
                         startPosition.x +
-                        Math.max((lastRect.rect.width * svgRect.width) / 100)
-                    currentPosition.y =
+                            (lastRect.rect.width * svgRect.width) / 100,
+                        svgRect.width,
+                    )
+                    currentPosition.y = Math.min(
                         startPosition.y +
-                        Math.max((lastRect.rect.height * svgRect.height) / 100)
-
-
+                            (lastRect.rect.height * svgRect.height) / 100,
+                        svgRect.height,
+                    )
                 } else {
                     return
                 }
             }
-
 
             const newRect = drawRect({
                 points: [
@@ -1525,6 +1527,19 @@ function useDraw(
                     },
                 ],
                 label: label,
+            })
+
+            const elementRect = newRect.node.getBoundingClientRect()
+            const rect: ChangedElement['rect'] = {
+                height: (elementRect.height / svgRect.height) * 100,
+                width: (elementRect.width / svgRect.width) * 100,
+                x: ((elementRect.x - svgRect.x) / svgRect.width) * 100,
+                y: ((elementRect.y - svgRect.y) / svgRect.height) * 100,
+            }
+            props.onInitialRectChange({
+                rect: rect,
+                label: newRect.data('label'),
+                id: newRect.data('id'),
             })
 
             setTimeout(() => {
@@ -1637,7 +1652,7 @@ function useDraw(
             window.removeEventListener('mouseup', onMouseUp)
             window.removeEventListener('mousemove', onMouseMove)
         }
-    }, [svg, props.mode])
+    }, [svg, props.mode, props.initialRect])
 
     return {
         svg,
@@ -1652,9 +1667,7 @@ export interface DrawZoneProps {
     readonly sizeMode?: SizeMode
     readonly src: string
     readonly elements: Partial<ChangedElement>[]
-    drawOnMouseDown: boolean
-    readonly initialRect : Object
-    readonly getLastRectSize: () => void
+    readonly initialRect: Object
     readonly onChange: (elements: ChangedElement[]) => void
     readonly remove: (id: string) => void
 }
@@ -1665,11 +1678,10 @@ export default function DrawZone({
     sizeMode = 'auto',
     src,
     elements,
-    getLastRectSize,
-    initialRect,
-    drawOnMouseDown,
     onChange,
     remove,
+    initialRect,
+    onInitialRectChange,
 }: DrawZoneProps) {
     const {
         state: {
@@ -1686,10 +1698,11 @@ export default function DrawZone({
     const containerRef = useRef<HTMLDivElement>(null)
     const { svg, draw, originalSize } = useDraw(svgRef, src, {
         onChange,
-        getLastRectSize,
         remove,
         mode,
         drawOnMouseDown: true,
+        initialRect,
+        onInitialRectChange,
     })
     const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
     const [forceRedraw, setForceRedraw] = useState(false)
