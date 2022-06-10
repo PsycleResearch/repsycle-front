@@ -127,9 +127,6 @@ type DrawZoneStateAction =
     | {
           readonly type: DrawZoneStateActionType.FORCE_REDRAW
       }
-    | {
-          readonly type: DrawZoneStateActionType.FORCE_REDRAW
-      }
 
 const drawZoneInitialState: DrawZoneStateInternal = {
     scale: 1,
@@ -315,7 +312,7 @@ function useDraw(
         mode: DrawZoneMode
         drawOnMouseDown?: boolean
         initialRect: any
-        onInitialRectChange: () => void
+        onInitialRectChange: (obj: Object) => void
     },
 ) {
     const {
@@ -403,11 +400,9 @@ function useDraw(
         [svg],
     )
 
-    const onChange = useCallback(() => {
-        if (props.onChange) {
-            props.onChange(convertForOnChange())
-        }
-    }, [props.onChange])
+    function onChange() {
+        props.onChange(convertForOnChange())
+    }
 
     function onDelKeyPress(this: SVGElement, event: KeyboardEvent): boolean {
         if (event.defaultPrevented) return false
@@ -1524,18 +1519,20 @@ function useDraw(
                 label: label,
             })
 
-            const elementRect = newRect.node.getBoundingClientRect()
-            const rect: ChangedElement['rect'] = {
-                height: (elementRect.height / svgRect.height) * 100,
-                width: (elementRect.width / svgRect.width) * 100,
-                x: ((elementRect.x - svgRect.x) / svgRect.width) * 100,
-                y: ((elementRect.y - svgRect.y) / svgRect.height) * 100,
+            if (newRect) {
+                const elementRect = newRect.node.getBoundingClientRect()
+                const rect: ChangedElement['rect'] = {
+                    height: (elementRect.height / svgRect.height) * 100,
+                    width: (elementRect.width / svgRect.width) * 100,
+                    x: ((elementRect.x - svgRect.x) / svgRect.width) * 100,
+                    y: ((elementRect.y - svgRect.y) / svgRect.height) * 100,
+                }
+                props.onInitialRectChange({
+                    rect: rect,
+                    label: newRect.data('label'),
+                    id: newRect.data('id'),
+                })
             }
-            props.onInitialRectChange({
-                rect: rect,
-                label: newRect.data('label'),
-                id: newRect.data('id'),
-            })
 
             setTimeout(() => {
                 newRect?.fire('select')
@@ -1665,7 +1662,7 @@ export interface DrawZoneProps {
     readonly initialRect: Object
     readonly onChange: (elements: ChangedElement[]) => void
     readonly remove: (id: string) => void
-    readonly onInitialRectChange : ({}) => void
+    readonly onInitialRectChange : (obj: Object) => void
 }
 
 export default function DrawZone({
