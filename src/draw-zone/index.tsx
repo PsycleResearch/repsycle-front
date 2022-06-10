@@ -45,9 +45,9 @@ export interface Point {
 export interface ChangedElement {
     readonly id: string
     readonly selected?: boolean
-    readonly points?: Point[]
+    readonly points: Point[]
     readonly label: string
-    readonly rect?: {
+    readonly rect: {
         readonly height: number
         readonly width: number
         readonly x: number
@@ -137,7 +137,6 @@ const drawZoneInitialState: DrawZoneStateInternal = {
     positionTop: 0,
     positionLeft: 0,
     redraw: false,
-
 }
 
 const drawZoneReducer = (
@@ -303,7 +302,6 @@ function getRectCoords(rect: Rect) {
     ]
 }
 
-
 function useDraw(
     ref: React.RefObject<HTMLElement>,
     src: string,
@@ -312,8 +310,10 @@ function useDraw(
         remove: (id: string) => void
         mode: DrawZoneMode
         drawOnMouseDown?: boolean
-        initialRect: ChangedElement
-        onInitialRectChange: (arg:ChangedElement) => void
+        initialRect?: ChangedElement
+        onInitialRectChange?: (
+            arg: Pick<ChangedElement, 'id' | 'label' | 'rect'>,
+        ) => void
     },
 ) {
     const {
@@ -341,7 +341,7 @@ function useDraw(
     }
 
     const convertForOnChange = useCallback(
-        function ():ChangedElement[] {
+        function convertForOnChange(): ChangedElement[] {
             if (!svg) {
                 return []
             }
@@ -1143,13 +1143,14 @@ function useDraw(
         const fill = color ? { ...defaultFill, color } : defaultFill
         const stroke = color ? { ...defaultStroke, color } : defaultStroke
 
-        const points = inputPoints ? inputPoints.map(
-            (point) =>
-                ({
-                    x: point.x,
-                    y: point.y,
-                } as Point),
-        ) :[]
+        const points =
+            inputPoints?.map(
+                (point) =>
+                    ({
+                        x: point.x,
+                        y: point.y,
+                    } as Point),
+            ) ?? []
 
         if (points.length === 2) drawRect({ points, id, fill, stroke, label })
         else drawPoly({ points, id, fill, stroke, label })
@@ -1476,10 +1477,10 @@ function useDraw(
 
                 label = lastRect?.label
 
-                if (props.drawOnMouseDown && lastRect &&lastRect.rect) {
+                if (props.drawOnMouseDown && lastRect && lastRect.rect) {
                     currentPosition.x = Math.min(
                         startPosition.x +
-                            (lastRect.rect.width* svgRect.width) / 100,
+                            (lastRect.rect.width * svgRect.width) / 100,
                         svgRect.width,
                     )
                     currentPosition.y = Math.min(
@@ -1515,7 +1516,7 @@ function useDraw(
                 label: label,
             })
 
-            if (newRect) {
+            if (newRect && props.onInitialRectChange) {
                 const elementRect = newRect.node.getBoundingClientRect()
                 const rect: ChangedElement['rect'] = {
                     height: (elementRect.height / svgRect.height) * 100,
@@ -1655,11 +1656,12 @@ export interface DrawZoneProps {
     readonly sizeMode?: SizeMode
     readonly src: string
     readonly elements: Partial<ChangedElement>[]
-    readonly initialRect: ChangedElement
+    readonly initialRect?: ChangedElement
     readonly onChange: (elements: ChangedElement[]) => void
     readonly remove: (id: string) => void
-    readonly onInitialRectChange : (arg:ChangedElement) => void
-    readonly drawOnMouseDown:boolean
+    readonly onInitialRectChange?: (
+        arg: Pick<ChangedElement, 'id' | 'label' | 'rect'>,
+    ) => void
 }
 
 export default function DrawZone({
