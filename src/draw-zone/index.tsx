@@ -1527,8 +1527,6 @@ function useDraw(
                     rect: rect,
                     label: newRect.data('label'),
                     id: newRect.data('id'),
-                    // color:newRect.data('color'),
-                    // selected:newRect.data('selected')
                 })
             }
 
