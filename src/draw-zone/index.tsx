@@ -1661,6 +1661,7 @@ export interface DrawZoneProps {
     readonly onChange: (elements: ChangedElement[]) => void
     readonly remove: (id: string) => void
     readonly onInitialRectChange : (arg:ChangedElement) => void
+    readonly drawOnMouseDown:boolean
 }
 
 export default function DrawZone({
