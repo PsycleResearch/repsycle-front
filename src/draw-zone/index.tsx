@@ -1662,6 +1662,7 @@ export interface DrawZoneProps {
     readonly onInitialRectChange?: (
         arg: Pick<ChangedElement, 'id' | 'label' | 'rect'>,
     ) => void
+    readonly drawOnMouseDown?: bool
 }
 
 export default function DrawZone({
@@ -1674,6 +1675,7 @@ export default function DrawZone({
     remove,
     initialRect,
     onInitialRectChange,
+    drawOnMouseDown,
 }: DrawZoneProps) {
     const {
         state: {
@@ -1692,7 +1694,7 @@ export default function DrawZone({
         onChange,
         remove,
         mode,
-        drawOnMouseDown: true,
+        drawOnMouseDown,
         initialRect,
         onInitialRectChange,
     })
