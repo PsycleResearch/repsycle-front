@@ -38,6 +38,10 @@ const blue = '#2BB1FD'
 const defaultStroke = { color: '#fff', width: 2, opacity: 1 }
 const defaultFill = { color: '#000', opacity: 0 }
 
+const CIRCLE_SCALE_IN = 1.4
+const CIRCLE_SCALE_OUT = 1 / CIRCLE_SCALE_IN
+const CIRCLE_SIZE = isTouchDevice ? 14 : 7
+
 function getAbsoluteCoordinates(svg: Svg, points: Point[]) {
     const svgRect = svg.node.getBoundingClientRect()
 
@@ -507,20 +511,20 @@ export function useDraw(
                     const circle = svg
                         .defs()
                         .attr('data-draw-ignore', true)
-                        .circle(isTouchDevice ? 14 : 7)
+                        .circle(CIRCLE_SIZE)
                         .center(0, 0)
                         .fill({ opacity: 1, color: blue })
                         .stroke({ width: 1, color: '#fff' })
                         .id(handleId)
 
                     const mouseenter = () => {
-                        circle.scale(1.4)
+                        circle.scale(CIRCLE_SCALE_IN)
 
                         circle.on('mouseleave', mouseleave)
                         circle.off('mouseenter', mouseenter)
                     }
                     const mouseleave = () => {
-                        circle.scale(5 / 7)
+                        circle.scale(CIRCLE_SCALE_OUT)
 
                         circle.on('mouseenter', mouseenter)
                         circle.off('mouseleave', mouseleave)
@@ -615,20 +619,20 @@ export function useDraw(
                             const newCircle = svg
                                 .defs()
                                 .attr('data-draw-ignore', true)
-                                .circle(isTouchDevice ? 14 : 7)
+                                .circle(CIRCLE_SIZE)
                                 .center(0, 0)
                                 .fill({ opacity: 1, color: blue })
                                 .stroke({ width: 1, color: '#fff' })
                                 .id(handleId)
 
                             const mouseenter = () => {
-                                newCircle.scale(1.4)
+                                newCircle.scale(CIRCLE_SCALE_IN)
 
                                 newCircle.on('mouseleave', mouseleave)
                                 newCircle.off('mouseenter', mouseenter)
                             }
                             const mouseleave = () => {
-                                newCircle.scale(5 / 7)
+                                newCircle.scale(CIRCLE_SCALE_OUT)
 
                                 newCircle.on('mouseenter', mouseenter)
                                 newCircle.off('mouseleave', mouseleave)
@@ -689,10 +693,10 @@ export function useDraw(
     }
 
     function drawPoint(svg: Svg, x: number, y: number): Circle {
-        const delta = isTouchDevice ? 6 : 3
+        const delta = CIRCLE_SIZE / 2
 
         const point = svg
-            .circle(isTouchDevice ? 12 : 6)
+            .circle(CIRCLE_SIZE)
             .center(0, 0)
             .fill({ opacity: 1, color: '#f06' })
             .stroke({ width: 1, color: '#fff' })
@@ -700,13 +704,13 @@ export function useDraw(
             .move(x - delta, y - delta)
 
         const mouseenter = () => {
-            point.scale(1.4)
+            point.scale(CIRCLE_SCALE_IN)
 
             point.on('mouseleave', mouseleave)
             point.off('mouseenter', mouseenter)
         }
         const mouseleave = () => {
-            point.scale(5 / 7)
+            point.scale(CIRCLE_SCALE_OUT)
 
             point.on('mouseenter', mouseenter)
             point.off('mouseleave', mouseleave)
