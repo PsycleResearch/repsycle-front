@@ -24,7 +24,6 @@
     "prepare": "install-peers"
   },
   "dependencies": {
-    "@svgdotjs/svg.draggable.js": "^3.0.2",
     "@svgdotjs/svg.js": "^3.0.16",
     "interactjs": "^1.9.20"
   },
@@ -39,12 +38,12 @@
     "@rollup/plugin-commonjs": "^20.0.0",
     "@rollup/plugin-node-resolve": "^13.0.4",
     "@rollup/plugin-typescript": "^8.3.0",
-    "@storybook/addon-actions": "^6.5.8",
-    "@storybook/addon-essentials": "^6.5.8",
-    "@storybook/addon-links": "^6.5.8",
-    "@storybook/builder-webpack5": "^6.5.8",
-    "@storybook/manager-webpack5": "^6.5.8",
-    "@storybook/react": "^6.5.8",
+    "@storybook/addon-actions": "^6.5.9",
+    "@storybook/addon-essentials": "^6.5.9",
+    "@storybook/addon-links": "^6.5.9",
+    "@storybook/builder-webpack5": "^6.5.9",
+    "@storybook/manager-webpack5": "^6.5.9",
+    "@storybook/react": "^6.5.9",
     "@typescript-eslint/eslint-plugin": "^5.21.0",
     "@typescript-eslint/parser": "^5.21.0",
     "babel-loader": "^8.2.2",
