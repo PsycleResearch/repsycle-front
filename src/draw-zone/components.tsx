@@ -194,6 +194,7 @@ export default function DrawZone({
                 position: 'relative',
                 pointerEvents: 'auto',
                 touchAction: 'none',
+                userSelect: 'none',
             }}
             ref={containerRef}
         >

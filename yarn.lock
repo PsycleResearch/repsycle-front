@@ -2059,10 +2059,10 @@
   resolved "https://registry.yarnpkg.com/@humanwhocodes/object-schema/-/object-schema-1.2.1.tgz#b520529ec21d8e5945a1851dfd1c32e94e39ff45"
   integrity sha512-ZnQMnLV4e7hDlUvw8H+U8ASL02SS2Gn6+9Ac3wGGLIe7+je2AeAOxPY+izIPJDfFDb7eDjev0Us8MO1iFRN8hA==
 
-"@interactjs/types@1.10.13":
-  version "1.10.13"
-  resolved "https://registry.yarnpkg.com/@interactjs/types/-/types-1.10.13.tgz#0ebcc9ab582cb27e84ccdd2a7a33c87076cd511e"
-  integrity sha512-VdsUBs2YSdrgB2ZuL2UL0WW3fH6XuINjdk7XE9K+r64X9k2IC3nQm7pIg7HjO3iiLtuBNUVEGy+eJwU1G8t/Lg==
+"@interactjs/types@1.10.14":
+  version "1.10.14"
+  resolved "https://registry.yarnpkg.com/@interactjs/types/-/types-1.10.14.tgz#0466d8f3c3681554a55bb09fc5d4ccc3ef4e5cf5"
+  integrity sha512-ds6wAI9aDzojzr7UBvifUJIgogCL1ZL0nfBrXDv5GVMaW7gBglqejaeiQ1a0cRiHII/8p8s5AwPhhODTDM8RCQ==
 
 "@istanbuljs/load-nyc-config@^1.0.0":
   version "1.1.0"
@@ -7337,12 +7337,12 @@ install-peers-cli@^2.2.0:
     commander "^2.20.0"
     executioner "^2.0.1"
 
-interactjs@^1.9.20:
-  version "1.10.13"
-  resolved "https://registry.yarnpkg.com/interactjs/-/interactjs-1.10.13.tgz#6a501fb447c1fcda8917b1f59e4384bd4f70adbb"
-  integrity sha512-wvzcTBjB4gGITQvWGAEKVTfgs/oyxDRas+j948W/E8B/46Ogac1jsLHWvaM1Qka5GqvLKAqABocY7jx4T7VDNg==
+interactjs@^1.10.14:
+  version "1.10.14"
+  resolved "https://registry.yarnpkg.com/interactjs/-/interactjs-1.10.14.tgz#9357fa8053ec00fb0533f3da47b646a742c23151"
+  integrity sha512-UhwZhuFqmKLSJ1o04LlvFMdxohwvuMjVrQC96TI8/dEhF/dS47Tqm3Po5i4yKXaCMIqI8qdvmyfeIWdGLYSClA==
   dependencies:
-    "@interactjs/types" "1.10.13"
+    "@interactjs/types" "1.10.14"
 
 internal-slot@^1.0.3:
   version "1.0.3"
