@@ -1,5 +1,5 @@
 export type DrawZoneMode = 'draw' | 'move' | 'none'
-export type DrawZoneShape = 'rect' | 'poly'
+export type DrawZoneShape = 'rect' | 'poly' | 'none'
 export type SizeMode = 'auto' | 'fit'
 
 export interface Size {
