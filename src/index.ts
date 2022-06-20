@@ -12,6 +12,7 @@ export type {
     DrawZoneContainerProps,
     DrawZoneProps,
     DrawZoneMode,
+    DrawZoneShape,
     SizeMode,
     DrawZoneState,
 } from './draw-zone'

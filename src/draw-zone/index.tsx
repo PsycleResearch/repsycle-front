@@ -7,6 +7,7 @@ import { useDrawZone } from './hooks'
 import {
     ChangedElement,
     DrawZoneMode,
+    DrawZoneShape,
     DrawZoneState,
     Point,
     Size,
@@ -20,6 +21,7 @@ export type {
     DrawZoneProps,
     ChangedElement,
     DrawZoneMode,
+    DrawZoneShape,
     DrawZoneState,
     Point,
     Size,
