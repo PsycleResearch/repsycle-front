@@ -24,7 +24,8 @@
   },
   "dependencies": {
     "@svgdotjs/svg.js": "^3.0.16",
-    "interactjs": "^1.10.14"
+    "interactjs": "^1.10.14",
+    "lodash": "^4.17.21"
   },
   "peerDependencies": {
     "react": "^17.0.0 || ^18.0.0",
