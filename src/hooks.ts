@@ -12,7 +12,7 @@ import {
     useRef,
     useState,
 } from 'react'
-import { getRandomId } from './utils'
+import { getRandomId } from './helpers'
 
 export function usePointerPosition() {
     const [position, setPosition] = useState({ clientX: 0, clientY: 0 })

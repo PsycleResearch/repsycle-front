@@ -18,6 +18,6 @@ export type {
 } from './draw-zone'
 export { default as ErrorBoundary } from './error-boundary'
 
-export * as helpers from './helpers'
-export * as hooks from './hooks'
-export * as utils from './utils'
+export * from './helpers'
+export * from './hooks'
+export * from './utils'
