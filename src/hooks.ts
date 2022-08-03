@@ -1,4 +1,4 @@
-import { debounce, isEqual } from 'lodash'
+import { DebouncedFunc, debounce, isEqual } from 'lodash'
 import {
     DependencyList,
     Dispatch,
@@ -183,9 +183,7 @@ export function useLocalStorage<T>(
     return [value, setValue]
 }
 
-export function usePrevious<T>(
-    value: T,
-): MutableRefObject<T | undefined>['current'] {
+export function usePrevious<T>(value: T): T | undefined {
     const ref = useRef<T>()
 
     useEffect(() => {
@@ -195,8 +193,13 @@ export function usePrevious<T>(
     return ref.current
 }
 
-export function useDebounce<T>(delay: number) {
-    const [debouncedValue, setDebouncedValue] = useState<T>()
+export function useDebounce<T>(
+    delay: number,
+    initialValue?: T,
+): [T | undefined, DebouncedFunc<(value: T) => void>] {
+    const [debouncedValue, setDebouncedValue] = useState<T | undefined>(
+        initialValue,
+    )
 
     const debounceHandler = useMemo(
         () => debounce((value: T) => setDebouncedValue(value), delay),
@@ -248,7 +251,9 @@ export function useUpdateEffect(
     }, deps)
 }
 
-export function useSetState<T>(initState: T) {
+export function useSetState<T>(
+    initState: T,
+): [T, Dispatch<SetStateAction<T | Partial<T>>>] {
     const [state, setState] = useState<T>(initState)
 
     const setMergeState = useCallback(
