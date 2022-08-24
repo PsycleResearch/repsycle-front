@@ -1,4 +1,11 @@
-import React, { FunctionComponent, useEffect, useState } from 'react'
+import { isEmpty } from 'lodash'
+import React, {
+    FunctionComponent,
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from 'react'
 
 import DrawZone, { ChangedElement, DrawZoneContainer, useDrawZone } from '.'
 
@@ -233,7 +240,6 @@ export function Polygons() {
                 { x: 200, y: 50 },
             ],
         },
-        */
         {
             id: 'poly2',
             points: [
@@ -244,6 +250,7 @@ export function Polygons() {
             ],
             color: '#00ff00',
         },
+        */
     ]
     const {
         isMarkerShown,
@@ -416,7 +423,7 @@ export function ScaleIn() {
                 }}
             >
                 <DrawZone
-                    src="https://picsum.photos/seed/drawzone/5000/4000"
+                    src="https://picsum.photos/seed/drawzone/2000/1000"
                     elements={elements}
                     onChange={(elements: ChangedElement[]) =>
                         setElements(elements)
@@ -670,7 +677,7 @@ export function ScaleInRect() {
                 }}
             >
                 <DrawZone
-                    src="https://picsum.photos/seed/drawzone/5000/4000"
+                    src="https://picsum.photos/seed/drawzone/2000/1000"
                     elements={elements}
                     onChange={(elements: ChangedElement[]) =>
                         setElements(elements)
@@ -764,7 +771,7 @@ export function None() {
                 }}
             >
                 <DrawZone
-                    src="https://picsum.photos/seed/drawzone/5000/4000"
+                    src="https://picsum.photos/seed/drawzone/2000/1000"
                     elements={elements}
                     onChange={(elements: ChangedElement[]) =>
                         setElements(elements)
@@ -776,6 +783,179 @@ export function None() {
                     shape="rect"
                     sizeMode="fit"
                 />
+            </div>
+        </div>
+    )
+}
+
+export function BugRepro() {
+    const originalElements = [
+        {
+            id: 'rect1',
+            points: [
+                { x: 125, y: 94 },
+                { x: 250, y: 1 },
+            ],
+            color: '#00ff00',
+        },
+    ]
+    const {
+        isMarkerShown,
+        originalSize,
+        zoomIn,
+        zoomOut,
+        toggleMarker,
+        reset,
+    } = useDrawZone()
+    const [move, setMove] = useState(false)
+    const [elements, setElements] = useState<Array<Partial<ChangedElement>>>([])
+
+    useEffect(() => {
+        if (originalSize) {
+            setElements(
+                originalElements.map(
+                    (element) =>
+                        ({
+                            ...element,
+                            points: element.points.map((point) => ({
+                                x: point.x / originalSize.width,
+                                y: point.y / originalSize.height,
+                            })),
+                        } as ChangedElement),
+                ),
+            )
+        }
+    }, [originalSize])
+
+    const buildMetas = useCallback(
+        (elem: ChangedElement) => {
+            return {
+                width: Math.floor(
+                    (elem.rect.width * originalSize.width) / 100,
+                ).toString(),
+                height: Math.floor(
+                    (elem.rect.height * originalSize.height) / 100,
+                ).toString(),
+                diagonal: Math.floor(
+                    Math.hypot(
+                        (elem.rect.height * originalSize.height) / 100,
+                        (elem.rect.width * originalSize.width) / 100,
+                    ),
+                ).toString(),
+                area: Math.floor(
+                    ((elem.rect.width * originalSize.width) / 100) *
+                        ((elem.rect.height * originalSize.height) / 100),
+                ).toString(),
+            }
+        },
+        [originalSize],
+    )
+
+    const onChange = useCallback(
+        (elements: ChangedElement[]) => {
+            const newElements = elements.map((elem) => {
+                return {
+                    ...elem,
+                    metadata: buildMetas(elem),
+                }
+            })
+
+            setElements([...newElements])
+        },
+        [buildMetas, setElements],
+    )
+
+    const element = useMemo(
+        () => elements.find(({ selected }) => selected),
+        [elements],
+    )
+
+    return (
+        <div>
+            <div>
+                <button onClick={() => setMove((m) => !m)}>
+                    {move ? 'Déplacer actif' : 'Déplacer inactif'}
+                </button>
+                <button onClick={() => zoomOut()}>Réduire</button>
+                <button onClick={() => zoomIn()}>Agrandir</button>
+                <button onClick={() => toggleMarker()}>
+                    {isMarkerShown ? 'Cacher' : 'Afficher'} marqueur
+                </button>
+                <button onClick={() => reset()}>Reset (taille/position)</button>
+            </div>
+            <div>
+                {element && !isEmpty(element.metadata) && (
+                    <pre><code>{JSON.stringify(element.metadata)}</code></pre>
+                )}
+            </div>
+            <div
+                style={{
+                    backgroundColor: '#aaa',
+                    width: '500px',
+                    height: '500px',
+                }}
+            >
+                <DrawZone
+                    src="https://picsum.photos/seed/drawzone/2000/1000"
+                    elements={elements}
+                    onChange={onChange}
+                    remove={(id) =>
+                        setElements((el) => el.filter((e) => e.id !== id))
+                    }
+                    mode={move ? 'move' : 'draw'}
+                    shape="rect"
+                    sizeMode="fit"
+                >
+                    {elements.map((element, index) => {
+                        const elem = element as ChangedElement
+
+                        if (!elem.selected) return null
+
+                        return (
+                            <div
+                                key={index}
+                                style={{
+                                    position: 'absolute',
+                                    zIndex: 10,
+                                    top: elem.rect
+                                        ? `${elem.rect.y}%`
+                                        : `${elem.points[0].y * 100}%`,
+                                    left: elem.rect
+                                        ? `${elem.rect.x}%`
+                                        : `${elem.points[0].x * 100}%`,
+                                    border:
+                                        elem.rect && elem.selected
+                                            ? '1px dashed black'
+                                            : 'none',
+                                    width:
+                                        elem.rect && elem.selected
+                                            ? `${elem.rect.width}%`
+                                            : 'auto',
+                                    height:
+                                        elem.rect && elem.selected
+                                            ? `${elem.rect.height}%`
+                                            : 'auto',
+                                    pointerEvents: 'none',
+                                }}
+                            >
+                                <button
+                                    style={{
+                                        pointerEvents: 'auto',
+                                    }}
+                                    onClick={() => {
+                                        setElements(
+                                            elements.filter(
+                                                (_, idx) => index !== idx,
+                                            ),
+                                        )
+                                    }}
+                                >
+                                    supprimer
+                                </button>
+                            </div>
+                        )
+                    })}
+                </DrawZone>
             </div>
         </div>
     )

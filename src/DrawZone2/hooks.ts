@@ -12,7 +12,6 @@ import {
     Svg,
     Use,
 } from '@svgdotjs/svg.js'
-import interact from 'interactjs'
 import {
     useCallback,
     useContext,
@@ -20,18 +19,72 @@ import {
     useLayoutEffect,
     useState,
 } from 'react'
-import { uuid4 } from '../helpers'
 import { isTouchDevice } from '../utils'
-import { DrawZoneContext } from './state'
+import { bgrToHex, uuid4 } from '../helpers'
 import {
-    ChangedElement,
-    DrawZoneMode,
-    DrawZoneShape,
-    DrawZoneState,
-    DrawZoneStateActionType,
+    DrawZone2Context,
+    DrawZone2ControlsContext,
+    DrawZone2PrivateContext,
+} from './state'
+import {
+    DrawZone2Mode,
+    DrawZone2Shape,
+    DrawZoneElement,
+    PictureLoadingState,
     Point,
     Size,
 } from './types'
+import interact from 'interactjs'
+
+export function useLoadImage(src: string) {
+    const [status, setStatus] = useState<PictureLoadingState>(
+        PictureLoadingState.Idle,
+    )
+    const [pictureSize, setPictureSize] = useState<Size>({
+        width: 0,
+        height: 0,
+    })
+
+    useEffect(() => {
+        setStatus(PictureLoadingState.Loading)
+
+        async function preloadImage(src: string) {
+            return new Promise<Event>((resolve, reject) => {
+                const image = new Image()
+                image.onload = resolve
+                image.onerror = reject
+                image.src = src
+            })
+        }
+
+        preloadImage(src)
+            .then(function afterLoad(this: GlobalEventHandlers, ev: Event) {
+                const target = ev.target as HTMLImageElement
+                const { width, height } = target
+
+                setPictureSize({
+                    width,
+                    height,
+                })
+                setStatus(PictureLoadingState.Done)
+            })
+            .catch(() => {
+                setStatus(PictureLoadingState.Error)
+            })
+    }, [src])
+
+    return { status, pictureSize }
+}
+
+export function useDrawZone2() {
+    return useContext(DrawZone2Context)
+}
+export function useControls() {
+    return useContext(DrawZone2ControlsContext)
+}
+export function useDrawZone2PrivateState() {
+    return useContext(DrawZone2PrivateContext)
+}
 
 const xns = 'http://www.w3.org/1999/xlink'
 const blue = '#2BB1FD'
@@ -49,72 +102,23 @@ function getAbsoluteCoordinates(svg: Svg, points: Point[]) {
     }))
 }
 
-export function useDrawZone() {
-    const { state, dispatch } = useContext(DrawZoneContext)
-
-    const zoomIn = useCallback(() => {
-        dispatch({ type: DrawZoneStateActionType.ZOOM_IN })
-    }, [dispatch])
-
-    const zoomOut = useCallback(() => {
-        dispatch({ type: DrawZoneStateActionType.ZOOM_OUT })
-    }, [dispatch])
-
-    const reset = useCallback(() => {
-        dispatch({ type: DrawZoneStateActionType.RESET })
-    }, [dispatch])
-
-    const toggleMarker = useCallback(() => {
-        if (state.isMarkerShown) {
-            dispatch({ type: DrawZoneStateActionType.HIDE_MARKER })
-        } else {
-            dispatch({ type: DrawZoneStateActionType.SHOW_MARKER })
-        }
-    }, [dispatch, state.isMarkerShown])
-
-    const disable = useCallback(() => {
-        dispatch({ type: DrawZoneStateActionType.DISABLE })
-    }, [dispatch])
-
-    const enable = useCallback(() => {
-        dispatch({ type: DrawZoneStateActionType.ENABLE })
-    }, [dispatch])
-
-    const redraw = useCallback(() => {
-        dispatch({ type: DrawZoneStateActionType.FORCE_REDRAW })
-    }, [dispatch])
-
-    return {
-        ...(state as DrawZoneState),
-        zoomIn,
-        zoomOut,
-        reset,
-        toggleMarker,
-        disable,
-        enable,
-        redraw,
-    }
-}
-
 export function useDraw(
     ref: React.RefObject<HTMLElement>,
-    src: string,
-    onChange: (elements: Array<ChangedElement>) => void,
-    remove: (id: string) => void,
-    mode: DrawZoneMode,
-    shape: DrawZoneShape,
+    onChange: (elements: DrawZoneElement[]) => void,
+    mode: DrawZone2Mode,
+    shape: DrawZone2Shape,
     drawOnMouseDown?: boolean,
-    initialRect?: ChangedElement,
+    initialRect?: DrawZoneElement,
     onInitialRectChange?: (
-        arg: Pick<ChangedElement, 'id' | 'label' | 'rect'>,
+        arg: Pick<DrawZoneElement, 'id' | 'label' | 'rect'>,
     ) => void,
 ) {
-    const {
-        state: { isMarkerShown, isDisabled, scale, positionTop, positionLeft },
-        dispatch,
-    } = useContext(DrawZoneContext)
+    const { disabled: isDisabled, pictureSize, src } = useDrawZone2()
+    const { positionLeft, positionTop, scale, setPosition } =
+        useDrawZone2PrivateState()
+    const { move, markerVisible, redraw } = useControls()
     const [svg, setSvg] = useState<Svg>()
-    const [originalSize, setOriginalSize] = useState<Size>()
+
     let startPosition: Point | null
     let overlayRect: Rect | undefined
     let overlayRect2: Rect | undefined
@@ -124,7 +128,7 @@ export function useDraw(
     let dragging: boolean
 
     const convertForOnChange = useCallback(
-        function convertForOnChange(): ChangedElement[] {
+        function convertForOnChange(): DrawZoneElement[] {
             if (!svg) {
                 return []
             }
@@ -137,7 +141,7 @@ export function useDraw(
                 .map((elt) => {
                     const elementRect = elt.node.getBoundingClientRect()
 
-                    const rect: ChangedElement['rect'] = {
+                    const rect: DrawZoneElement['rect'] = {
                         height: (elementRect.height / svgRect.height) * 100,
                         width: (elementRect.width / svgRect.width) * 100,
                         x: ((elementRect.x - svgRect.x) / svgRect.width) * 100,
@@ -171,13 +175,17 @@ export function useDraw(
                     return result
                 })
         },
-        [svg],
+        [shape, svg],
     )
 
-    function innerOnChange() {
-        onChange(convertForOnChange())
-    }
+    const innerOnChange = useCallback(
+        function innerOnChange() {
+            onChange(convertForOnChange())
+        },
+        [convertForOnChange, onChange],
+    )
 
+    /*
     function onDelKeyPress(this: SVGElement, event: KeyboardEvent): boolean {
         if (event.defaultPrevented) return false
         if (event.key === 'Delete' && this.closest('svg')) {
@@ -285,10 +293,11 @@ export function useDraw(
             })
         }
     }
+    */
 
-    const preventDrag = (event: DragEvent) => {
+    const preventDrag = useCallback((event: DragEvent) => {
         event.preventDefault()
-    }
+    }, [])
 
     function drawRect({
         points,
@@ -348,8 +357,8 @@ export function useDraw(
         }
         const svgRect = svg.node.getBoundingClientRect()
 
-        const svgWidth = svgRect.width || originalSize?.width || 0
-        const svgHeight = svgRect.height || originalSize?.height || 0
+        const svgWidth = svgRect.width || pictureSize?.width || 0
+        const svgHeight = svgRect.height || pictureSize?.height || 0
 
         const poly = svg.polygon(
             points.map(
@@ -365,6 +374,7 @@ export function useDraw(
         const circles: Circle[] = []
         const handles: Use[] = []
 
+        /*
         function polyDelKeyPress(ev: KeyboardEvent) {
             const result = onDelKeyPress.call(poly.node, ev)
 
@@ -383,6 +393,7 @@ export function useDraw(
                 })
             }
         }
+        */
 
         function makeHandlesGrabbable(svg: Svg) {
             interact('.point-handle')
@@ -532,12 +543,14 @@ export function useDraw(
             })
             poly.stroke({ color: blue })
             poly.data('selected', true)
+            /*
             window.addEventListener('keyup', polyDelKeyPress, {
                 capture: true,
             })
             window.addEventListener('keyup', polyEscKeyPress, {
                 capture: true,
             })
+            */
 
             if (!disabled) {
                 cleanHandles()
@@ -553,12 +566,14 @@ export function useDraw(
 
             cleanHandles()
 
+            /*
             window.removeEventListener('keyup', polyDelKeyPress, {
                 capture: true,
             })
             window.removeEventListener('keyup', polyEscKeyPress, {
                 capture: true,
             })
+            */
 
             innerOnChange()
         })
@@ -630,29 +645,21 @@ export function useDraw(
             event.preventDefault()
             event.stopPropagation()
 
-            endPolyDrawing(event)
+            //endPolyDrawing(event)
         })
 
         return point
     }
 
-    const draw = ({
-        points: inputPoints,
-        id,
-        color,
-        label,
-    }: ChangedElement) => {
-        const fill = color ? { ...defaultFill, color } : defaultFill
-        const stroke = color ? { ...defaultStroke, color } : defaultStroke
+    function draw({ id, points, color, label }: DrawZoneElement) {
+        const hexColor = color ? bgrToHex(...color) : null
 
-        const points =
-            inputPoints?.map(
-                (point) =>
-                    ({
-                        x: point.x,
-                        y: point.y,
-                    } as Point),
-            ) ?? []
+        const fill = hexColor
+            ? { ...defaultFill, color: hexColor }
+            : defaultFill
+        const stroke = hexColor
+            ? { ...defaultStroke, color: hexColor }
+            : defaultStroke
 
         if (points.length === 2) drawRect({ points, id, fill, stroke, label })
         else drawPoly({ points, id, fill, stroke, label })
@@ -680,7 +687,20 @@ export function useDraw(
             innerOnChange()
         }
 
-        if (mode === 'draw' && !isDisabled) {
+        if (move) {
+            startPosition = {
+                x: e.clientX,
+                y: e.clientY,
+            }
+
+            dragging = true
+
+            svg.css({
+                cursor: 'grabbing',
+            })
+
+            e.preventDefault()
+        } else if (mode === 'draw' && !isDisabled) {
             const svgRect = svg.node.getBoundingClientRect()
 
             if (shape === 'poly' && !isDisabled) {
@@ -694,12 +714,14 @@ export function useDraw(
                         drawPoint(svg, startPosition.x, startPosition.y),
                     ]
 
+                    /*
                     window.addEventListener('keyup', onAbortPathDrawing, {
                         capture: true,
                     })
                     window.addEventListener('keyup', onEnterKeyPress, {
                         capture: true,
                     })
+                    */
                 } else if (startPosition && Array.isArray(tmpPoints)) {
                     const currentPosition = {
                         x: e.clientX - svgRect.left,
@@ -740,6 +762,7 @@ export function useDraw(
                             })),
                         })
 
+                        /*
                         window.removeEventListener(
                             'keyup',
                             onAbortPathDrawing,
@@ -750,6 +773,7 @@ export function useDraw(
                         window.removeEventListener('keyup', onEnterKeyPress, {
                             capture: true,
                         })
+                        */
 
                         poly?.fire('select')
 
@@ -821,19 +845,6 @@ export function useDraw(
 
                 e.preventDefault()
             }
-        } else if (mode === 'move') {
-            startPosition = {
-                x: e.clientX,
-                y: e.clientY,
-            }
-
-            dragging = true
-
-            svg.css({
-                cursor: 'grabbing',
-            })
-
-            e.preventDefault()
         }
     }
 
@@ -841,7 +852,27 @@ export function useDraw(
         if (e.defaultPrevented) return
         if (!svg || !startPosition) return
 
-        if (mode === 'draw' && !isDisabled) {
+        if (move && dragging) {
+            if (!svg.node.contains(e.target as Node)) {
+                dragging = false
+                return
+            }
+            const parent = svg.parent()
+
+            if (!parent) return
+
+            const currentPosition = {
+                x: e.clientX,
+                y: e.clientY,
+            }
+            const translationX = currentPosition.x - startPosition.x
+            const translationY = currentPosition.y - startPosition.y
+
+            parent.css(
+                'transform',
+                `translate3d(${translationX}px, ${translationY}px, 0px)`,
+            )
+        } else if (mode === 'draw' && !isDisabled) {
             if (shape === 'poly' && !isTouchDevice) {
                 const svgRect = svg.node.getBoundingClientRect()
 
@@ -916,26 +947,6 @@ export function useDraw(
                 overlayRect2.width(`${width * 100}%`)
                 overlayRect2.height(`${height * 100}%`)
             }
-        } else if (mode === 'move' && dragging) {
-            if (!svg.node.contains(e.target as Node)) {
-                dragging = false
-                return
-            }
-            const parent = svg.parent()
-
-            if (!parent) return
-
-            const currentPosition = {
-                x: e.clientX,
-                y: e.clientY,
-            }
-            const translationX = currentPosition.x - startPosition.x
-            const translationY = currentPosition.y - startPosition.y
-
-            parent.css(
-                'transform',
-                `translate3d(${translationX}px, ${translationY}px, 0px)`,
-            )
         }
     }
 
@@ -943,7 +954,27 @@ export function useDraw(
         if (e.defaultPrevented) return
         if (!svg) return
 
-        if (mode === 'draw' && shape === 'rect' && !isDisabled) {
+        if (move && dragging) {
+            const parent = svg.parent()
+
+            if (parent) {
+                const grandParent = parent.parent()
+
+                if (grandParent) {
+                    const parentRect = grandParent.node.getBoundingClientRect()
+                    const svgRect = parent.node.getBoundingClientRect()
+
+                    setPosition(
+                        svgRect.top - parentRect.top,
+                        svgRect.left - parentRect.left,
+                    )
+
+                    svg.css({ cursor: 'grab' })
+
+                    dragging = false
+                }
+            }
+        } else if (mode === 'draw' && shape === 'rect' && !isDisabled) {
             if (!startPosition) {
                 return
             }
@@ -1024,7 +1055,7 @@ export function useDraw(
 
             if (newRect && onInitialRectChange) {
                 const elementRect = newRect.node.getBoundingClientRect()
-                const rect: ChangedElement['rect'] = {
+                const rect: DrawZoneElement['rect'] = {
                     height: (elementRect.height / svgRect.height) * 100,
                     width: (elementRect.width / svgRect.width) * 100,
                     x: ((elementRect.x - svgRect.x) / svgRect.width) * 100,
@@ -1041,32 +1072,9 @@ export function useDraw(
                 newRect?.fire('select')
                 innerOnChange()
             }, 50)
-        } else if (mode === 'move' && dragging) {
-            const parent = svg.parent()
-
-            if (parent) {
-                const grandParent = parent.parent()
-
-                if (grandParent) {
-                    const parentRect = grandParent.node.getBoundingClientRect()
-                    const svgRect = parent.node.getBoundingClientRect()
-
-                    dispatch({
-                        type: DrawZoneStateActionType.SET_POSITION,
-                        payload: {
-                            top: svgRect.top - parentRect.top,
-                            left: svgRect.left - parentRect.left,
-                        },
-                    })
-
-                    svg.css({ cursor: 'grab' })
-
-                    dragging = false
-                }
-            }
         }
 
-        if (mode !== 'draw' || (mode === 'draw' && shape !== 'poly'))
+        if (!move && (mode !== 'draw' || (mode === 'draw' && shape !== 'poly')))
             startPosition = null
     }
 
@@ -1075,14 +1083,6 @@ export function useDraw(
             return
         }
 
-        const image = new Image()
-        image.onload = () => {
-            setOriginalSize({
-                width: image.naturalWidth,
-                height: image.naturalHeight,
-            })
-        }
-        image.src = src
         ref.current.style.background = `url('${src}') center center / 100% 100% no-repeat`
         ref.current.style.top = `${positionTop}px`
         ref.current.style.left = `${positionLeft}px`
@@ -1099,18 +1099,16 @@ export function useDraw(
     }, [ref, src])
 
     useEffect(() => {
-        if (ref.current && originalSize && scale) {
-            ref.current.style.width = `${originalSize.width * scale}px`
+        if (ref.current && pictureSize && scale) {
+            ref.current.style.width = `${pictureSize.width * scale}px`
 
-            ref.current.style.height = `${originalSize.height * scale}px`
+            ref.current.style.height = `${pictureSize.height * scale}px`
 
             if (svg) {
-                dispatch({
-                    type: DrawZoneStateActionType.FORCE_REDRAW,
-                })
+                redraw()
             }
         }
-    }, [ref, originalSize, scale])
+    }, [ref, pictureSize, scale])
 
     useLayoutEffect(() => {
         if (!svg) {
@@ -1119,9 +1117,9 @@ export function useDraw(
 
         svg.css({
             cursor:
-                mode === 'move' && !isDisabled
+                move && !isDisabled
                     ? 'grab'
-                    : mode === 'none' && !isMarkerShown
+                    : mode === 'none' && !markerVisible
                     ? 'normal'
                     : 'crosshair',
             position: 'absolute',
@@ -1150,9 +1148,5 @@ export function useDraw(
         }
     }, [svg, mode, initialRect])
 
-    return {
-        svg,
-        draw,
-        originalSize,
-    }
+    return { svg, draw }
 }

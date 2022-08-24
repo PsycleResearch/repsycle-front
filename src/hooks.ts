@@ -267,7 +267,13 @@ export function useSetState<T>(
                               ) => T | Partial<T>
                           )(prevValue)
                         : value
-                return newValue ? { ...prevValue, ...newValue } : prevValue
+                const finalValue = newValue
+                    ? { ...prevValue, ...newValue }
+                    : prevValue
+
+                if (isEqual(finalValue, prevValue)) return prevValue
+
+                return finalValue
             })
         },
         [],

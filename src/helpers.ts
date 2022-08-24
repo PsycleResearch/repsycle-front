@@ -1,3 +1,5 @@
+import { BGR } from "./types"
+
 export function uuid4() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(
         /[xy]/g,
@@ -83,7 +85,7 @@ export function bgrToHex(b: number, g: number, r: number) {
     return `#${numberToHex(r)}${numberToHex(g)}${numberToHex(b)}`
 }
 
-export function hexToBgr(hex: string): [number, number, number] | null {
+export function hexToBgr(hex: string): BGR | null {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
     return result
         ? [

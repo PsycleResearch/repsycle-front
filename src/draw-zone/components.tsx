@@ -17,6 +17,7 @@ import {
     DrawZoneShape,
     DrawZoneState,
     DrawZoneStateActionType,
+    Size,
     SizeMode,
 } from './types'
 
@@ -62,7 +63,9 @@ export default function DrawZone({
     } = useContext(DrawZoneContext)
     const svgRef = useRef<HTMLDivElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
-    const { svg, draw, originalSize } = useDraw(svgRef, src, {
+    const { svg, draw, originalSize } = useDraw(
+        svgRef,
+        src,
         onChange,
         remove,
         mode,
@@ -70,7 +73,7 @@ export default function DrawZone({
         drawOnMouseDown,
         initialRect,
         onInitialRectChange,
-    })
+    )
     const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
     const [forceRedraw, setForceRedraw] = useState(false)
 
@@ -87,12 +90,12 @@ export default function DrawZone({
     useEffect(() => {
         dispatch({
             type: DrawZoneStateActionType.SET_ORIGINAL_SIZE,
-            payload: originalSize,
+            payload: { ...originalSize } as Size,
         })
         dispatch({
             type: DrawZoneStateActionType.FORCE_REDRAW,
         })
-    }, [originalSize])
+    }, [dispatch, originalSize])
 
     useEffect(() => {
         if (sizeMode === 'auto') {
@@ -132,7 +135,7 @@ export default function DrawZone({
                 )
             }
         }
-    }, [containerRef, originalSize, sizeMode, logicalScale])
+    }, [containerRef, originalSize, sizeMode, logicalScale, setScale])
 
     useEffect(() => {
         const { current } = svgRef
@@ -183,7 +186,7 @@ export default function DrawZone({
                 return
             }
         }
-    }, [svg, elements, forceRedraw, scale])
+    }, [svg, elements, forceRedraw, scale, draw])
 
     return (
         <div
