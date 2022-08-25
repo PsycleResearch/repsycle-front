@@ -111,6 +111,7 @@ function DrawZoneInner({
     onInitialRectChange,
 }: DrawZoneInnerProps) {
     const {
+        contentHidden,
         markerVisible,
         positionTop,
         positionLeft,
@@ -118,7 +119,6 @@ function DrawZoneInner({
         scale,
         setScale,
     } = useControls()
-    const svgRef = useRef<SVGElement>(null)
     const svgContainerRef = useRef<HTMLDivElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
@@ -164,11 +164,10 @@ function DrawZoneInner({
     }, [containerRef, pictureSize, fitMode, logicalScale, setScale])
 
     useEffect(() => {
-        const { current: svg } = svgRef
         const { current } = svgContainerRef
         const { current: container } = containerRef
 
-        if (current && container && svg) {
+        if (current && container) {
             const handlePointerEnter = () => {
                 setCanMarkerBeVisible(true)
             }
@@ -196,6 +195,8 @@ function DrawZoneInner({
 
     const localOnChange = useCallback(
         (elements: DrawZoneElement[]) => {
+            if (contentHidden) return
+
             onChange(
                 elements.map((element) => {
                     const minX = Math.min(...element.points.map(({ x }) => x))
@@ -218,7 +219,7 @@ function DrawZoneInner({
                 }),
             )
         },
-        [onChange, shape],
+        [contentHidden, onChange, shape],
     )
 
     return (
@@ -245,19 +246,19 @@ function DrawZoneInner({
                     height: `${pictureSize?.height * scale}px`,
                 }}
             >
+                {canMarkerBeVisible && markerVisible && (
+                    <Marker src={src} svgRef={svgContainerRef} />
+                )}
                 <SvgZone
                     disabled={disabled}
                     drawOnPointerDown={drawOnPointerDown}
-                    elements={elements}
+                    elements={contentHidden ? [] : elements}
                     initialRect={initialRect}
                     mode={mode}
                     shape={shape}
                     onChange={localOnChange}
                     onInitialRectChange={onInitialRectChange}
                 />
-                {canMarkerBeVisible && markerVisible && (
-                    <Marker src={src} svgRef={svgContainerRef} />
-                )}
                 {children}
             </div>
         </div>
@@ -295,7 +296,7 @@ function SvgZone({
     const polyPoints = useRef<Circle[]>()
     const polygon = useRef<Polygon>()
     const polyline = useRef<Polyline>()
-    const { move, scale, setPosition } = useControls()
+    const { contentHidden, move, scale, setPosition } = useControls()
 
     const unselectElements = useCallback(() => {
         onChange(elements.map(unSelectElement))
@@ -386,6 +387,8 @@ function SvgZone({
 
         function onPointerDown(e: globalThis.PointerEvent) {
             if (!svg.node.contains(e.target as Node)) return
+
+            if (contentHidden) return
 
             if (
                 svg.node.contains(e.target as Node) &&
@@ -847,6 +850,7 @@ function SvgZone({
             window.removeEventListener('pointermove', onPointerMove)
         }
     }, [
+        contentHidden,
         disabled,
         drawOnPointerDown,
         drawPoint,
