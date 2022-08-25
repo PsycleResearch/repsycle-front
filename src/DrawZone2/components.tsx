@@ -7,212 +7,100 @@ import React, {
     useState,
 } from 'react'
 import { useId, usePointerPosition, useSetState } from '../hooks'
-import { MAX_SCALE, SCALE_STEP } from './constants'
-import {
-    useControls,
-    useDrawZone2,
-    useDrawZone2PrivateState,
-    useLoadImage,
-} from './hooks'
-import {
-    DrawZone2Context,
-    DrawZone2ControlsContext,
-    DrawZone2PrivateContext,
-} from './state'
+import { DRAW_ZONE_2_INITIAL_STATE } from './constants'
+import { useControls, useLoadImage } from './hooks'
+import { DrawZone2Context } from './state'
 import {
     DrawZone2Mode,
-    DrawZone2PrivateState,
     DrawZone2Shape,
     DrawZone2State,
     DrawZoneElement,
     DrawZoneFitMode,
     PictureLoadingState,
     Point,
+    Size,
 } from './types'
 import interact from 'interactjs'
+import { Rect, SVG, Svg } from '@svgdotjs/svg.js'
+import { uuid4 } from '../helpers'
+
+import type { Interactable } from '@interactjs/types'
 
 const xns = 'http://www.w3.org/1999/xlink'
 
-type DrawZone2Props = PropsWithChildren<{
-    readonly src: string
-    readonly disabled?: boolean
-}>
-export default function DrawZone2({ children, disabled, src }: DrawZone2Props) {
-    return (
-        <DrawZone2ContextProvider disabled={disabled} src={src}>
-            <DrawZone2PrivateContextProvider>
-                {children}
-            </DrawZone2PrivateContextProvider>
-        </DrawZone2ContextProvider>
-    )
-}
-
-type DrawZone2ContextProviderProps = PropsWithChildren<{
-    readonly disabled?: boolean
-    readonly src: string
-}>
-function DrawZone2ContextProvider({
-    children,
-    disabled,
-    src,
-}: DrawZone2ContextProviderProps) {
-    const { status, pictureSize } = useLoadImage(src)
+export function DrawZone2Container({ children }: PropsWithChildren<unknown>) {
     const [state, setState] = useSetState<DrawZone2State>({
-        src,
-        pictureSize,
-        disabled,
+        ...DRAW_ZONE_2_INITIAL_STATE,
     })
-
-    useEffect(() => {
-        setState({ src })
-    }, [setState, src])
-
-    useEffect(() => {
-        setState({ pictureSize })
-    }, [pictureSize, setState])
-
-    if (status === PictureLoadingState.Error)
-        throw new Error('Failed to load image')
-
     return (
-        <DrawZone2Context.Provider value={state}>
+        <DrawZone2Context.Provider value={{ state, setState }}>
             {children}
         </DrawZone2Context.Provider>
     )
 }
 
-function DrawZone2PrivateContextProvider({
-    children,
-}: PropsWithChildren<unknown>) {
-    const [move, setMove] = useState(false)
-    const [markerVisible, setMarkerVisible] = useState(false)
-    const [hideContent, setHideContent] = useState(false)
-    const [state, setState] = useSetState<DrawZone2PrivateState>({
-        logicalScale: 1,
-        positionLeft: 0,
-        positionTop: 0,
-        redraw: false,
-        scale: 1,
-    })
-
-    const zoomIn = useCallback(() => {
-        setState((prev) => ({
-            logicalScale: Math.min(
-                (prev.logicalScale as number) + SCALE_STEP,
-                MAX_SCALE,
-            ),
-        }))
-    }, [setState])
-
-    const zoomOut = useCallback(() => {
-        setState((prev) => ({
-            logicalScale: Math.max(
-                SCALE_STEP,
-                (prev.logicalScale as number) - SCALE_STEP,
-            ),
-        }))
-    }, [setState])
-
-    const reset = useCallback(() => {
-        setState({
-            logicalScale: 1,
-            positionTop: 0,
-            positionLeft: 0,
-        })
-    }, [setState])
-
-    const toggleContent = useCallback(() => {
-        setHideContent((prev) => !prev)
-    }, [])
-
-    const toggleMarker = useCallback(() => {
-        setMarkerVisible((prev) => !prev)
-    }, [])
-
-    const toggleMove = useCallback(() => {
-        setMove((prev) => !prev)
-    }, [])
-
-    const redraw = useCallback(() => {
-        setState((prev) => ({ redraw: !prev.redraw }))
-    }, [setState])
-
-    const setPosition = useCallback(
-        (top: number, left: number) => {
-            setState({
-                positionTop: top,
-                positionLeft: left,
-            })
-        },
-        [setState],
-    )
-
-    const setScale = useCallback(
-        (scale: number) => {
-            setState({ scale })
-        },
-        [setState],
-    )
-
-    const finaleState = useMemo(
-        () => ({
-            ...state,
-            setPosition,
-            setScale,
-        }),
-        [setPosition, setScale, state],
-    )
-
-    return (
-        <DrawZone2PrivateContext.Provider value={finaleState}>
-            <DrawZone2ControlsContext.Provider
-                value={{
-                    contentHidden: hideContent,
-                    markerVisible: markerVisible,
-                    move: move,
-                    redraw,
-                    reset,
-                    toggleContent,
-                    toggleMarker,
-                    toggleMove,
-                    zoomIn,
-                    zoomOut,
-                }}
-            >
-                {children}
-            </DrawZone2ControlsContext.Provider>
-        </DrawZone2PrivateContext.Provider>
-    )
-}
-
-type DrawZone2EditorProps = PropsWithChildren<{
+type DrawZone2Props = PropsWithChildren<{
+    readonly disabled?: boolean
+    readonly drawOnMouseDown?: boolean
     readonly elements: DrawZoneElement[]
     readonly fitMode: DrawZoneFitMode
-    readonly mode: DrawZone2Mode
-    readonly onChange: (elements: DrawZoneElement[]) => void
-    readonly shape: DrawZone2Shape
-
-    readonly drawOnMouseDown?: boolean
     readonly initialRect?: DrawZoneElement
+    readonly mode: DrawZone2Mode
+    readonly shape: DrawZone2Shape
+    readonly src: string
+    readonly onChange: (elements: DrawZoneElement[]) => void
     readonly onInitialRectChange?: (
         arg: Pick<DrawZoneElement, 'id' | 'label' | 'rect'>,
     ) => void
 }>
-export function DrawZone2Editor({
+export default function DrawZone2({ children, src, ...props }: DrawZone2Props) {
+    const { status, pictureSize } = useLoadImage(src)
+
+    if (status === PictureLoadingState.Error)
+        throw new Error('Failed to load image')
+
+    if (status !== PictureLoadingState.Done) return null
+
+    return (
+        <DrawZone2Inner pictureSize={pictureSize} src={src} {...props}>
+            {children}
+        </DrawZone2Inner>
+    )
+}
+
+function filterPoints(shape: DrawZone2Shape) {
+    return function filter(_: Point, index: number, arr: Point[]): boolean {
+        if (arr.length === 2) return true
+
+        return shape === 'poly' || index % 2 === 0
+    }
+}
+
+type DrawZone2InnerProps = DrawZone2Props & {
+    readonly pictureSize: Size
+}
+function DrawZone2Inner({
     children,
+    disabled,
+    drawOnMouseDown,
     elements,
     fitMode,
-    mode,
-    onChange,
-    shape,
-    drawOnMouseDown,
     initialRect,
+    mode,
+    pictureSize,
+    shape,
+    src,
+    onChange,
     onInitialRectChange,
-}: DrawZone2EditorProps) {
-    const { src, pictureSize } = useDrawZone2()
-    const { markerVisible } = useControls()
-    const { positionTop, positionLeft, logicalScale, scale, setScale } =
-        useDrawZone2PrivateState()
+}: DrawZone2InnerProps) {
+    const {
+        markerVisible,
+        positionTop,
+        positionLeft,
+        logicalScale,
+        scale,
+        setScale,
+    } = useControls()
     const svgRef = useRef<SVGElement>(null)
     const svgContainerRef = useRef<HTMLDivElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
@@ -308,9 +196,7 @@ export function DrawZone2Editor({
                     return {
                         ...element,
                         rect,
-                        points: element.points.filter(
-                            (_, index) => shape === 'poly' || index % 2 === 0,
-                        ),
+                        points: element.points.filter(filterPoints(shape)),
                     }
                 }),
             )
@@ -334,6 +220,7 @@ export function DrawZone2Editor({
             <div
                 ref={svgContainerRef}
                 style={{
+                    position: 'relative',
                     top: `${positionTop}px`,
                     left: `${positionLeft}px`,
                     background: `url('${src}') center center / 100% 100% no-repeat`,
@@ -341,7 +228,13 @@ export function DrawZone2Editor({
                     height: `${pictureSize?.height * scale}px`,
                 }}
             >
-                <SvgZone elements={elements} onChange={localOnChange} />
+                <SvgZone
+                    disabled={disabled}
+                    elements={elements}
+                    mode={mode}
+                    shape={shape}
+                    onChange={localOnChange}
+                />
                 {canMarkerBeVisible && markerVisible && (
                     <Marker src={src} svgRef={svgContainerRef} />
                 )}
@@ -352,20 +245,338 @@ export function DrawZone2Editor({
 }
 
 type SvgZoneProps = {
+    readonly disabled?: boolean
     readonly elements: DrawZoneElement[]
+    readonly mode: DrawZone2Mode
+    readonly shape: DrawZone2Shape
     readonly onChange: (elements: DrawZoneElement[]) => void
 }
-function SvgZone({ elements, onChange }: SvgZoneProps) {
+function SvgZone({ disabled, elements, mode, shape, onChange }: SvgZoneProps) {
     const id = useId()
     const ref = useRef<SVGSVGElement>(null)
+    const startPosition = useRef<Point>()
+    const dragging = useRef<boolean>(false)
+    const overlayRect = useRef<Rect>()
+    const overlayRect2 = useRef<Rect>()
+    const { move, scale, setPosition } = useControls()
 
-    /*
+    const unselectElements = useCallback(() => {
+        onChange(elements.map(unSelectElement))
+    }, [elements, onChange])
+
     useEffect(() => {
-        const svg = SVG(ref.current) as Svg
+        const { current } = ref
 
-        console.log('PSYC--SVG', svg, ref.current)
-    }, [])
-    */
+        if (!current) return
+
+        const svg = SVG(current) as Svg
+
+        function onPointerDown(e: globalThis.PointerEvent) {
+            if (!svg.node.contains(e.target as Node)) return
+
+            if (svg.node.contains(e.target as Node) && svg.node !== e.target) {
+                return
+            } else if (e.target === svg.node) {
+                e.preventDefault()
+                e.stopImmediatePropagation()
+
+                unselectElements()
+            }
+
+            if (move) {
+                e.preventDefault()
+                e.stopImmediatePropagation()
+
+                startPosition.current = {
+                    x: e.clientX,
+                    y: e.clientY,
+                }
+
+                dragging.current = true
+
+                return
+            }
+
+            if (mode !== 'draw' || disabled) return
+
+            const svgRect = svg.node.getBoundingClientRect()
+
+            if (shape === 'rect') {
+                startPosition.current = {
+                    x: e.clientX - svgRect.left,
+                    y: e.clientY - svgRect.top,
+                }
+
+                if (!overlayRect.current || !overlayRect2.current) {
+                    overlayRect.current = svg
+                        .rect(0, 0)
+                        .fill({ opacity: 0 })
+                        .stroke({
+                            color: '#000',
+                            width: 2,
+                            opacity: 0.7,
+                            dasharray: '5,5',
+                        })
+                    overlayRect2.current = svg
+                        .rect(0, 0)
+                        .fill({ opacity: 0 })
+                        .stroke({
+                            color: '#fff',
+                            width: 2,
+                            opacity: 0.7,
+                            dasharray: '5,5',
+                            dashoffset: 5,
+                        })
+                }
+
+                overlayRect.current.move(
+                    startPosition.current.x / svgRect.width,
+                    startPosition.current.y / svgRect.height,
+                )
+
+                overlayRect2.current.move(
+                    startPosition.current.x / svgRect.width,
+                    startPosition.current.y / svgRect.height,
+                )
+
+                e.preventDefault()
+            }
+        }
+
+        function onPointerMove(this: Window, e: globalThis.PointerEvent) {
+            if (e.defaultPrevented || !startPosition.current) return
+
+            if (move && dragging.current) {
+                if (!svg.node.contains(e.target as Node)) {
+                    dragging.current = false
+                    return
+                }
+
+                const parent = svg.parent()
+
+                if (!parent) return
+
+                const currentPosition = {
+                    x: e.clientX,
+                    y: e.clientY,
+                }
+                const translationX = currentPosition.x - startPosition.current.x
+                const translationY = currentPosition.y - startPosition.current.y
+
+                parent.css(
+                    'transform',
+                    `translate3d(${translationX}px, ${translationY}px, 0px)`,
+                )
+
+                e.preventDefault()
+                e.stopImmediatePropagation()
+
+                return
+            }
+
+            if (mode !== 'draw' || disabled) return
+
+            const svgRect = svg.node.getBoundingClientRect()
+
+            if (
+                shape === 'rect' &&
+                overlayRect.current &&
+                overlayRect2.current
+            ) {
+                const currentPosition = {
+                    x:
+                        Math.max(
+                            Math.min(e.clientX, svgRect.right),
+                            svgRect.left,
+                        ) - svgRect.left,
+                    y:
+                        Math.max(
+                            Math.min(e.clientY, svgRect.bottom),
+                            svgRect.top,
+                        ) - svgRect.top,
+                }
+
+                const minX =
+                    Math.min(startPosition.current.x, currentPosition.x) /
+                    svgRect.width
+                const minY =
+                    Math.min(startPosition.current.y, currentPosition.y) /
+                    svgRect.height
+                const maxX =
+                    Math.max(startPosition.current.x, currentPosition.x) /
+                    svgRect.width
+                const maxY =
+                    Math.max(startPosition.current.y, currentPosition.y) /
+                    svgRect.height
+
+                const width = Math.abs(maxX - minX)
+                const height = Math.abs(maxY - minY)
+
+                overlayRect.current.move(`${minX * 100}%`, `${minY * 100}%`)
+                overlayRect.current.width(`${width * 100}%`)
+                overlayRect.current.height(`${height * 100}%`)
+                overlayRect2.current.move(`${minX * 100}%`, `${minY * 100}%`)
+                overlayRect2.current.width(`${width * 100}%`)
+                overlayRect2.current.height(`${height * 100}%`)
+            }
+        }
+
+        function onPointerUp(this: Window, e: globalThis.PointerEvent) {
+            if (e.defaultPrevented) return
+
+            if (move && dragging.current) {
+                const parent = svg.parent()
+
+                if (!parent) return
+                const grandParent = parent.parent()
+
+                if (!grandParent) return
+
+                const parentRect = grandParent.node.getBoundingClientRect()
+                const svgRect = parent.node.getBoundingClientRect()
+
+                setPosition(
+                    svgRect.top - parentRect.top,
+                    svgRect.left - parentRect.left,
+                )
+
+                svg.css({ cursor: 'grab' })
+
+                dragging.current = false
+
+                return
+            }
+
+            if (mode === 'draw' && shape === 'rect' && !disabled) {
+                if (!startPosition.current) return
+
+                if (overlayRect.current || overlayRect2.current) {
+                    overlayRect.current?.remove()
+                    overlayRect.current = undefined
+                    overlayRect2.current?.remove()
+                    overlayRect2.current = undefined
+                }
+
+                // Prevent drawing new rect on rect dragend...
+                if ((e.target as Node | null)?.parentNode === svg.node) {
+                    startPosition.current = undefined
+                    return
+                }
+
+                const svgRect = svg.node.getBoundingClientRect()
+                const currentPosition = {
+                    x:
+                        Math.max(
+                            Math.min(e.clientX, svgRect.right),
+                            svgRect.left,
+                        ) - svgRect.left,
+                    y:
+                        Math.max(
+                            Math.min(e.clientY, svgRect.bottom),
+                            svgRect.top,
+                        ) - svgRect.top,
+                }
+
+                const label = ''
+                /*
+                if (Math.abs(currentPosition.x - startPosition.current.x) <= 2) {
+                    let lastRect = elements[elements.length - 1]
+
+                    if (initialRect) {
+                        lastRect = initialRect
+                    }
+    
+                    label = lastRect?.label
+    
+                    if (drawOnMouseDown && lastRect && lastRect.rect) {
+                        currentPosition.x = Math.min(
+                            startPosition.current.x +
+                                (lastRect.rect.width * svgRect.width) / 100,
+                            svgRect.width,
+                        )
+                        currentPosition.y = Math.min(
+                            startPosition.current.y +
+                                (lastRect.rect.height * svgRect.height) / 100,
+                            svgRect.height,
+                        )
+                    } else {
+                        startPosition.current = undefined
+                        return
+                    }
+                }
+                */
+
+                const xMin =
+                    Math.min(startPosition.current.x, currentPosition.x) / scale
+                const yMin =
+                    Math.min(startPosition.current.y, currentPosition.y) / scale
+                const xMax =
+                    Math.max(startPosition.current.x, currentPosition.x) / scale
+                const yMax =
+                    Math.max(startPosition.current.y, currentPosition.y) / scale
+
+                const width = xMax - xMin
+                const height = yMax - yMin
+
+                const newElement: DrawZoneElement = {
+                    id: uuid4(),
+                    label,
+                    points: [
+                        {
+                            x: xMin,
+                            y: yMin,
+                        },
+                        {
+                            x: xMax,
+                            y: yMax,
+                        },
+                    ],
+                    rect: {
+                        height,
+                        width,
+                        x: xMin,
+                        y: yMin,
+                    },
+                    selected: true,
+                }
+
+                /*
+                if (onInitialRectChange) {
+                    onInitialRectChange({
+                        rect: rect,
+                        label: newRect.data('label'),
+                        id: newRect.data('id'),
+                    })
+                }
+                */
+
+                onChange([...elements, newElement])
+            }
+
+            if (mode !== 'draw' || (mode === 'draw' && shape !== 'poly'))
+                startPosition.current = undefined
+        }
+
+        svg.on('pointerdown', onPointerDown as unknown as EventListener)
+        window.addEventListener('pointerup', onPointerUp)
+        window.addEventListener('pointermove', onPointerMove)
+
+        return () => {
+            svg.off('pointerdown', onPointerDown as unknown as EventListener)
+            window.removeEventListener('pointerup', onPointerUp)
+            window.removeEventListener('pointermove', onPointerMove)
+        }
+    }, [
+        disabled,
+        elements,
+        mode,
+        move,
+        onChange,
+        scale,
+        setPosition,
+        shape,
+        unselectElements,
+    ])
 
     return (
         <svg
@@ -377,27 +588,52 @@ function SvgZone({ elements, onChange }: SvgZoneProps) {
             version="1.1"
             xmlnsXlink={xns}
         >
+            <SvgElements
+                disabled={disabled}
+                elements={elements}
+                onChange={onChange}
+            />
+        </svg>
+    )
+}
+
+type SvgElementsProps = {
+    readonly disabled?: boolean
+    readonly elements: DrawZoneElement[]
+    readonly onChange: (elements: DrawZoneElement[]) => void
+}
+function SvgElements({ disabled, elements, onChange }: SvgElementsProps) {
+    return (
+        <>
             {elements.map((element) => (
                 <DrawElement
                     key={element.id}
+                    disabled={disabled}
                     elements={elements}
                     element={element}
                     onChange={onChange}
                 />
             ))}
-        </svg>
+        </>
     )
 }
 
 type DrawElementProps = {
+    readonly disabled?: boolean
     readonly element: DrawZoneElement
     readonly elements: DrawZoneElement[]
     readonly onChange: (elements: DrawZoneElement[]) => void
 }
-function DrawElement({ element, elements, onChange }: DrawElementProps) {
+function DrawElement({
+    disabled,
+    element,
+    elements,
+    onChange,
+}: DrawElementProps) {
     if (element.points?.length === 2) {
         return (
             <DrawRectElement
+                disabled={disabled}
                 element={element}
                 elements={elements}
                 onChange={onChange}
@@ -409,11 +645,13 @@ function DrawElement({ element, elements, onChange }: DrawElementProps) {
 }
 
 type DrawRectElementProps = {
+    readonly disabled?: boolean
     readonly element: DrawZoneElement
     readonly elements: DrawZoneElement[]
     readonly onChange: (elements: DrawZoneElement[]) => void
 }
 function DrawRectElement({
+    disabled,
     element,
     elements,
     onChange,
@@ -455,6 +693,7 @@ function DrawRectElement({
 
     return (
         <DrawPolygonElement
+            disabled={disabled}
             element={newElement}
             elements={elements}
             onChange={onChange}
@@ -463,45 +702,30 @@ function DrawRectElement({
 }
 
 type DrawPolygonElementProps = {
+    readonly disabled?: boolean
     readonly element: DrawZoneElement
     readonly elements: DrawZoneElement[]
     readonly onChange: (elements: DrawZoneElement[]) => void
 }
 function DrawPolygonElement({
+    disabled,
     element,
     elements,
     onChange,
 }: DrawPolygonElementProps) {
     const ref = useRef<SVGPolygonElement>(null)
-    //const [interactInstance, setInteractInstance] = useState<Interactable>()
-    const { scale } = useDrawZone2PrivateState()
+    const { scale } = useControls()
+    const instance = useRef<Interactable>()
 
     const path = element.points
         .map((point) => [point.x * scale, point.y * scale].join(','))
         .join(' ')
 
-    const onClick = useCallback(() => {
-        if (!element.selected) {
-            const elem = elements.find((elem) => elem.id === element.id)
-            const index = elements.findIndex((e) => e === elem)
-            const newElements = [
-                ...elements.slice(0, index).map(unSelectElement),
-                {
-                    ...element,
-                    selected: true,
-                },
-                ...elements.slice(index + 1).map(unSelectElement),
-            ]
-
-            onChange(newElements)
-        }
-    }, [elements, element, onChange])
-
-    useEffect(() => {
+    const setInstance = useCallback(() => {
         const { current } = ref
-        if (!element.selected || !current) return
+        if (!current || instance.current) return
 
-        const instance = interact(ref.current as SVGPolygonElement).draggable({
+        instance.current = interact(current as SVGPolygonElement).draggable({
             listeners: {
                 start() {
                     // TODO: Remove handles
@@ -540,6 +764,7 @@ function DrawPolygonElement({
                         {
                             ...element,
                             points: points,
+                            selected: true,
                         },
                         ...elements.slice(index + 1).map(unSelectElement),
                     ]
@@ -550,7 +775,12 @@ function DrawPolygonElement({
             modifiers: [
                 interact.modifiers.restrict({
                     restriction: 'parent',
-                    elementRect: { top: 0, left: 0, bottom: 1, right: 1 },
+                    elementRect: {
+                        top: 0,
+                        left: 0,
+                        bottom: 1,
+                        right: 1,
+                    },
                 }),
             ],
             cursorChecker: (action, interactable, element, interacting) => {
@@ -564,18 +794,54 @@ function DrawPolygonElement({
                 }
             },
         })
-
-        return () => {
-            instance.unset()
-        }
     }, [element, elements, onChange, scale])
+
+    const onPointerDown: React.PointerEventHandler<SVGPolygonElement> =
+        useCallback(
+            (event) => {
+                if (disabled || event.defaultPrevented) return
+
+                if (!element.selected) {
+                    const elem = elements.find((elem) => elem.id === element.id)
+                    const index = elements.findIndex((e) => e === elem)
+                    const newElements = [
+                        ...elements.slice(0, index).map(unSelectElement),
+                        {
+                            ...element,
+                            selected: true,
+                        },
+                        ...elements.slice(index + 1).map(unSelectElement),
+                    ]
+
+                    setInstance()
+
+                    onChange(newElements)
+                }
+            },
+            [disabled, element, elements, onChange, setInstance],
+        )
+
+    useEffect(() => {
+        if (element.selected) {
+            setInstance()
+
+        } else {
+            instance.current?.unset()
+            instance.current = undefined
+        }
+    }, [element.selected, setInstance])
+
+    const stroke = useMemo(
+        () => (element.selected ? '#2BB1FD' : '#00ff00'),
+        [element.selected],
+    )
 
     return (
         <polygon
             ref={ref}
-            onClick={onClick}
+            onPointerDown={onPointerDown}
             points={path}
-            stroke="#00ff00"
+            stroke={stroke}
             strokeOpacity={1}
             strokeWidth={2}
         />
@@ -586,7 +852,7 @@ function unSelectElement(element: DrawZoneElement): DrawZoneElement {
     if (element.selected)
         return {
             ...element,
-            selected: true,
+            selected: false,
         }
 
     return element

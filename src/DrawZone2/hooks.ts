@@ -1,40 +1,23 @@
-import {
-    ArrayXY,
-    Circle,
-    FillData,
-    LinkedHTMLElement,
-    PointArrayAlias,
-    Polygon,
-    Polyline,
-    Rect,
-    SVG,
-    StrokeData,
-    Svg,
-    Use,
-} from '@svgdotjs/svg.js'
-import {
-    useCallback,
-    useContext,
-    useEffect,
-    useLayoutEffect,
-    useState,
-} from 'react'
-import { isTouchDevice } from '../utils'
-import { bgrToHex, uuid4 } from '../helpers'
-import {
-    DrawZone2Context,
-    DrawZone2ControlsContext,
-    DrawZone2PrivateContext,
-} from './state'
-import {
-    DrawZone2Mode,
-    DrawZone2Shape,
-    DrawZoneElement,
-    PictureLoadingState,
-    Point,
-    Size,
-} from './types'
-import interact from 'interactjs'
+import { useCallback, useContext, useEffect, useState } from 'react'
+import { DrawZone2Context } from './state'
+import { PictureLoadingState, Size } from './types'
+import { MAX_SCALE, SCALE_STEP } from './constants'
+import { memoize } from 'lodash'
+
+async function preloadImage(src: string): Promise<Size> {
+    const ev = await new Promise<Event>((resolve, reject) => {
+        const image = new Image()
+        image.onload = resolve
+        image.onerror = reject
+        image.src = src
+    })
+
+    const target = ev.target as HTMLImageElement
+    const { width, height } = target
+    return { width, height }
+}
+
+const preloadImageMemo = memoize(preloadImage)
 
 export function useLoadImage(src: string) {
     const [status, setStatus] = useState<PictureLoadingState>(
@@ -48,27 +31,13 @@ export function useLoadImage(src: string) {
     useEffect(() => {
         setStatus(PictureLoadingState.Loading)
 
-        async function preloadImage(src: string) {
-            return new Promise<Event>((resolve, reject) => {
-                const image = new Image()
-                image.onload = resolve
-                image.onerror = reject
-                image.src = src
-            })
-        }
-
-        preloadImage(src)
-            .then(function afterLoad(this: GlobalEventHandlers, ev: Event) {
-                const target = ev.target as HTMLImageElement
-                const { width, height } = target
-
-                setPictureSize({
-                    width,
-                    height,
-                })
+        preloadImageMemo(src)
+            .then(function afterLoad(value: Size) {
+                setPictureSize(value)
                 setStatus(PictureLoadingState.Done)
             })
             .catch(() => {
+                preloadImageMemo.cache.delete(src)
                 setStatus(PictureLoadingState.Error)
             })
     }, [src])
@@ -76,16 +45,78 @@ export function useLoadImage(src: string) {
     return { status, pictureSize }
 }
 
-export function useDrawZone2() {
-    return useContext(DrawZone2Context)
-}
 export function useControls() {
-    return useContext(DrawZone2ControlsContext)
-}
-export function useDrawZone2PrivateState() {
-    return useContext(DrawZone2PrivateContext)
+    const { state, setState } = useContext(DrawZone2Context)
+
+    const zoomIn = useCallback(() => {
+        setState((prev) => ({
+            logicalScale: Math.min(
+                (prev.logicalScale as number) + SCALE_STEP,
+                MAX_SCALE,
+            ),
+        }))
+    }, [setState])
+
+    const zoomOut = useCallback(() => {
+        setState((prev) => ({
+            logicalScale: Math.max(
+                SCALE_STEP,
+                (prev.logicalScale as number) - SCALE_STEP,
+            ),
+        }))
+    }, [setState])
+
+    const reset = useCallback(() => {
+        setState({
+            logicalScale: 1,
+            positionTop: 0,
+            positionLeft: 0,
+        })
+    }, [setState])
+
+    const toggleContent = useCallback(() => {
+        setState((prev) => ({ contentHidden: !prev.contentHidden }))
+    }, [setState])
+
+    const toggleMarker = useCallback(() => {
+        setState((prev) => ({ markerVisible: !prev.markerVisible }))
+    }, [setState])
+
+    const toggleMove = useCallback(() => {
+        setState((prev) => ({ move: !prev.move }))
+    }, [setState])
+
+    const setPosition = useCallback(
+        (top: number, left: number) => {
+            setState({
+                positionTop: top,
+                positionLeft: left,
+            })
+        },
+        [setState],
+    )
+
+    const setScale = useCallback(
+        (scale: number) => {
+            setState({ scale })
+        },
+        [setState],
+    )
+
+    return {
+        ...state,
+        zoomIn,
+        zoomOut,
+        reset,
+        toggleContent,
+        toggleMarker,
+        toggleMove,
+        setPosition,
+        setScale,
+    }
 }
 
+/*
 const xns = 'http://www.w3.org/1999/xlink'
 const blue = '#2BB1FD'
 const defaultStroke = { color: '#fff', width: 2, opacity: 1 }
@@ -293,7 +324,7 @@ export function useDraw(
             })
         }
     }
-    */
+    *
 
     const preventDrag = useCallback((event: DragEvent) => {
         event.preventDefault()
@@ -393,7 +424,7 @@ export function useDraw(
                 })
             }
         }
-        */
+        *
 
         function makeHandlesGrabbable(svg: Svg) {
             interact('.point-handle')
@@ -550,7 +581,7 @@ export function useDraw(
             window.addEventListener('keyup', polyEscKeyPress, {
                 capture: true,
             })
-            */
+            *
 
             if (!disabled) {
                 cleanHandles()
@@ -573,7 +604,7 @@ export function useDraw(
             window.removeEventListener('keyup', polyEscKeyPress, {
                 capture: true,
             })
-            */
+            *
 
             innerOnChange()
         })
@@ -721,7 +752,7 @@ export function useDraw(
                     window.addEventListener('keyup', onEnterKeyPress, {
                         capture: true,
                     })
-                    */
+                    *
                 } else if (startPosition && Array.isArray(tmpPoints)) {
                     const currentPosition = {
                         x: e.clientX - svgRect.left,
@@ -773,7 +804,7 @@ export function useDraw(
                         window.removeEventListener('keyup', onEnterKeyPress, {
                             capture: true,
                         })
-                        */
+                        *
 
                         poly?.fire('select')
 
@@ -1150,3 +1181,4 @@ export function useDraw(
 
     return { svg, draw }
 }
+*/

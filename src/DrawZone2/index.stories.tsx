@@ -6,9 +6,10 @@ import React, {
     useState,
 } from 'react'
 
-import DrawZone2, { DrawZone2Editor, useControls, useDrawZone2 } from '.'
+import DrawZone2, { DrawZone2Container, useControls, useLoadImage } from '.'
 import type { DrawZoneElement } from '.'
 import { isEmpty } from 'lodash'
+import { PictureLoadingState } from './types'
 
 export default {
     title: 'Components/DrawZone2',
@@ -59,16 +60,15 @@ interface StoryZoneElement extends DrawZoneElement {
 
 type EditorProps = {
     readonly initialElements: StoryZoneElement[]
+    readonly src: string
 }
-function Editor({ initialElements }: EditorProps) {
-    const { pictureSize } = useDrawZone2()
+function Editor({ initialElements, src }: EditorProps) {
+    const { status, pictureSize } = useLoadImage(src)
     const [elements, setElements] = useState<Array<StoryZoneElement>>([])
 
     useEffect(() => {
-        if (pictureSize) {
-            setElements(initialElements)
-        }
-    }, [pictureSize, initialElements])
+        setElements(initialElements)
+    }, [initialElements])
 
     const buildMetas = useCallback(
         (elem: DrawZoneElement) => {
@@ -137,13 +137,16 @@ function Editor({ initialElements }: EditorProps) {
                     height: '500px',
                 }}
             >
-                <DrawZone2Editor
-                    elements={elements}
-                    fitMode="fit"
-                    mode="draw"
-                    onChange={onChange}
-                    shape="rect"
-                />
+                {status === PictureLoadingState.Done && (
+                    <DrawZone2
+                        src={src}
+                        elements={elements}
+                        fitMode="fit"
+                        mode="draw"
+                        onChange={onChange}
+                        shape="rect"
+                    />
+                )}
             </div>
         </>
     )
@@ -151,9 +154,10 @@ function Editor({ initialElements }: EditorProps) {
 
 export function Default() {
     return (
-        <DrawZone2 src="https://picsum.photos/seed/drawzone/2000/1000">
+        <DrawZone2Container>
             <Controls />
             <Editor
+                src="https://picsum.photos/seed/drawzone/2000/1000"
                 initialElements={[
                     {
                         id: 'rect1',
@@ -166,6 +170,6 @@ export function Default() {
                     } as unknown as StoryZoneElement,
                 ]}
             />
-        </DrawZone2>
+        </DrawZone2Container>
     )
 }

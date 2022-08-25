@@ -1,5 +1,4 @@
-import DrawZone2, { DrawZone2Editor } from './components'
-import {} from './types'
+import DrawZone2, { DrawZone2Container } from './components'
 import type {
     DrawZone2Mode,
     DrawZone2Shape,
@@ -10,10 +9,10 @@ import type {
     Rect,
     Size,
 } from './types'
-import { useControls, useDrawZone2, useLoadImage } from './hooks'
+import { useControls, useLoadImage } from './hooks'
 
 export default DrawZone2
-export { DrawZone2, DrawZone2Editor, useControls, useDrawZone2, useLoadImage }
+export { DrawZone2Container, DrawZone2, useControls, useLoadImage }
 export type {
     Point,
     Rect,
