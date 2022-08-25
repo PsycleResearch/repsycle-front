@@ -9,7 +9,7 @@ import React, {
 import DrawZone2, { DrawZone2Container, useControls, useLoadImage } from '.'
 import type { DrawZoneElement } from '.'
 import { isEmpty } from 'lodash'
-import { PictureLoadingState } from './types'
+import { DrawZone2Shape, PictureLoadingState } from './types'
 
 export default {
     title: 'Components/DrawZone2',
@@ -60,9 +60,10 @@ interface StoryZoneElement extends DrawZoneElement {
 
 type EditorProps = {
     readonly initialElements: StoryZoneElement[]
+    readonly shape: DrawZone2Shape
     readonly src: string
 }
-function Editor({ initialElements, src }: EditorProps) {
+function Editor({ initialElements, shape, src }: EditorProps) {
     const { status, pictureSize } = useLoadImage(src)
     const [elements, setElements] = useState<Array<StoryZoneElement>>([])
 
@@ -72,7 +73,7 @@ function Editor({ initialElements, src }: EditorProps) {
 
     const buildMetas = useCallback(
         (elem: DrawZoneElement) => {
-            if (!pictureSize) return {}
+            if (!pictureSize || shape !== 'rect') return {}
 
             return {
                 width: Math.floor(
@@ -93,7 +94,7 @@ function Editor({ initialElements, src }: EditorProps) {
                 ).toString(),
             } as Record<string, string>
         },
-        [pictureSize],
+        [pictureSize, shape],
     )
 
     const onChange = useCallback(
@@ -144,7 +145,7 @@ function Editor({ initialElements, src }: EditorProps) {
                         fitMode="fit"
                         mode="draw"
                         onChange={onChange}
-                        shape="rect"
+                        shape={shape}
                     />
                 )}
             </div>
@@ -158,6 +159,7 @@ export function Default() {
             <Controls />
             <Editor
                 src="https://picsum.photos/seed/drawzone/2000/1000"
+                shape="rect"
                 initialElements={[
                     {
                         id: 'rect1',
@@ -167,6 +169,30 @@ export function Default() {
                         ],
                         color: [0, 0, 255],
                         selected: false,
+                    } as unknown as StoryZoneElement,
+                ]}
+            />
+        </DrawZone2Container>
+    )
+}
+
+export function Poly() {
+    return (
+        <DrawZone2Container>
+            <Controls />
+            <Editor
+                src="https://picsum.photos/seed/drawzone/2000/1000"
+                shape="poly"
+                initialElements={[
+                    {
+                        id: 'poly2',
+                        points: [
+                            { x: 37, y: 26 },
+                            { x: 125, y: 188 },
+                            { x: 250, y: 188 },
+                            { x: 250, y: 94 },
+                        ],
+                        color: '#00ff00',
                     } as unknown as StoryZoneElement,
                 ]}
             />

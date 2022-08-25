@@ -21,12 +21,23 @@ import {
     Size,
 } from './types'
 import interact from 'interactjs'
-import { Rect, SVG, Svg } from '@svgdotjs/svg.js'
+import {
+    ArrayXY,
+    Circle,
+    PointArrayAlias,
+    Polygon,
+    Polyline,
+    Rect,
+    SVG,
+    Svg,
+} from '@svgdotjs/svg.js'
 import { uuid4 } from '../helpers'
+import { isTouchDevice } from '../utils'
 
 import type { Interactable } from '@interactjs/types'
 
 const xns = 'http://www.w3.org/1999/xlink'
+const CIRCLE_SIZE = isTouchDevice ? 22 : 10
 
 export function DrawZone2Container({ children }: PropsWithChildren<unknown>) {
     const [state, setState] = useSetState<DrawZone2State>({
@@ -41,10 +52,10 @@ export function DrawZone2Container({ children }: PropsWithChildren<unknown>) {
 
 type DrawZone2Props = PropsWithChildren<{
     readonly disabled?: boolean
-    readonly drawOnMouseDown?: boolean
+    readonly drawOnPointerDown?: boolean
     readonly elements: DrawZoneElement[]
     readonly fitMode: DrawZoneFitMode
-    readonly initialRect?: DrawZoneElement
+    readonly initialRect?: Pick<DrawZoneElement, 'id' | 'label' | 'rect'>
     readonly mode: DrawZone2Mode
     readonly shape: DrawZone2Shape
     readonly src: string
@@ -82,7 +93,7 @@ type DrawZone2InnerProps = DrawZone2Props & {
 function DrawZone2Inner({
     children,
     disabled,
-    drawOnMouseDown,
+    drawOnPointerDown,
     elements,
     fitMode,
     initialRect,
@@ -230,10 +241,13 @@ function DrawZone2Inner({
             >
                 <SvgZone
                     disabled={disabled}
+                    drawOnPointerDown={drawOnPointerDown}
                     elements={elements}
+                    initialRect={initialRect}
                     mode={mode}
                     shape={shape}
                     onChange={localOnChange}
+                    onInitialRectChange={onInitialRectChange}
                 />
                 {canMarkerBeVisible && markerVisible && (
                     <Marker src={src} svgRef={svgContainerRef} />
@@ -246,23 +260,116 @@ function DrawZone2Inner({
 
 type SvgZoneProps = {
     readonly disabled?: boolean
+    readonly drawOnPointerDown?: boolean
     readonly elements: DrawZoneElement[]
+    readonly initialRect?: Pick<DrawZoneElement, 'id' | 'label' | 'rect'>
     readonly mode: DrawZone2Mode
     readonly shape: DrawZone2Shape
     readonly onChange: (elements: DrawZoneElement[]) => void
+    readonly onInitialRectChange?: (
+        arg: Pick<DrawZoneElement, 'id' | 'label' | 'rect'>,
+    ) => void
 }
-function SvgZone({ disabled, elements, mode, shape, onChange }: SvgZoneProps) {
+function SvgZone({
+    disabled,
+    drawOnPointerDown,
+    elements,
+    initialRect,
+    mode,
+    shape,
+    onChange,
+    onInitialRectChange,
+}: SvgZoneProps) {
     const id = useId()
     const ref = useRef<SVGSVGElement>(null)
     const startPosition = useRef<Point>()
     const dragging = useRef<boolean>(false)
     const overlayRect = useRef<Rect>()
     const overlayRect2 = useRef<Rect>()
+    const polyPoints = useRef<Circle[]>()
+    const polygon = useRef<Polygon>()
+    const polyline = useRef<Polyline>()
     const { move, scale, setPosition } = useControls()
 
     const unselectElements = useCallback(() => {
         onChange(elements.map(unSelectElement))
     }, [elements, onChange])
+
+    const pointOnPointerDown = useCallback(
+        (event: Event) => {
+            if (!polygon.current) return
+
+            event.preventDefault()
+            event.stopPropagation()
+
+            const plot = polygon.current.plot()
+
+            if (plot.length < 3) return
+
+            polygon.current.remove()
+            polygon.current = undefined
+
+            if (polyPoints.current && polyPoints.current.length > 0) {
+                polyPoints.current.forEach((p) => p.remove())
+                polyPoints.current = undefined
+            }
+
+            polyline.current?.remove()
+            polyline.current = undefined
+
+            startPosition.current = undefined
+
+            const points = plot.map(([x, y]) => ({
+                x: x / scale,
+                y: y / scale,
+            }))
+
+            const xList = points.map(({ x }) => x)
+            const yList = points.map(({ y }) => y)
+
+            const xMin = Math.min(...xList)
+            const yMin = Math.min(...yList)
+            const xMax = Math.max(...xList)
+            const yMax = Math.max(...yList)
+
+            const newElement: DrawZoneElement = {
+                id: uuid4(),
+                label: '',
+                points,
+                rect: {
+                    height: yMax - yMin,
+                    width: xMax - xMin,
+                    x: xMin,
+                    y: yMin,
+                },
+                selected: true,
+            }
+
+            onChange([...elements.map(unSelectElement), newElement])
+        },
+        [elements, onChange, scale],
+    )
+
+    const drawPoint = useCallback(
+        function drawPoint(svg: Svg, x: number, y: number): Circle {
+            const delta = CIRCLE_SIZE / 2
+
+            const point = svg
+                .circle(CIRCLE_SIZE)
+                .center(0, 0)
+                .fill({ opacity: 1, color: '#f06' })
+                .stroke({ width: 1, color: '#fff' })
+                .attr('data-draw-ignore', true)
+                .addClass('tmp-point')
+                .move(x - delta, y - delta)
+                .css('touch-action', 'none') // silence interactjs warning.
+
+            point.on('pointerdown', pointOnPointerDown)
+
+            return point
+        },
+        [pointOnPointerDown],
+    )
 
     useEffect(() => {
         const { current } = ref
@@ -274,7 +381,21 @@ function SvgZone({ disabled, elements, mode, shape, onChange }: SvgZoneProps) {
         function onPointerDown(e: globalThis.PointerEvent) {
             if (!svg.node.contains(e.target as Node)) return
 
-            if (svg.node.contains(e.target as Node) && svg.node !== e.target) {
+            if (
+                svg.node.contains(e.target as Node) &&
+                svg.node !== e.target &&
+                !move &&
+                !startPosition.current
+            ) {
+                console.log(
+                    'PSYC--HERE',
+                    svg.node.contains(e.target as Node),
+                    svg.node !== e.target,
+                    svg.node,
+                    e.target,
+                    move,
+                    startPosition.current,
+                )
                 return
             } else if (e.target === svg.node) {
                 e.preventDefault()
@@ -302,6 +423,9 @@ function SvgZone({ disabled, elements, mode, shape, onChange }: SvgZoneProps) {
             const svgRect = svg.node.getBoundingClientRect()
 
             if (shape === 'rect') {
+                e.preventDefault()
+                e.stopImmediatePropagation()
+
                 startPosition.current = {
                     x: e.clientX - svgRect.left,
                     y: e.clientY - svgRect.top,
@@ -341,12 +465,131 @@ function SvgZone({ disabled, elements, mode, shape, onChange }: SvgZoneProps) {
 
                 e.preventDefault()
             }
+
+            if (shape === 'poly') {
+                e.preventDefault()
+                e.stopImmediatePropagation()
+
+                if (!polyPoints.current?.length) {
+                    startPosition.current = {
+                        x: e.clientX - svgRect.left,
+                        y: e.clientY - svgRect.top,
+                    }
+
+                    polyPoints.current = [
+                        drawPoint(
+                            svg,
+                            startPosition.current.x,
+                            startPosition.current.y,
+                        ),
+                    ]
+                } else if (startPosition.current) {
+                    const currentPosition = {
+                        x: e.clientX - svgRect.left,
+                        y: e.clientY - svgRect.top,
+                    }
+
+                    const prev = polygon.current
+                        ? [...polygon.current.plot()]
+                        : [
+                              [
+                                  startPosition.current.x,
+                                  startPosition.current.y,
+                              ] as ArrayXY,
+                          ]
+
+                    polygon.current?.remove()
+                    polygon.current = undefined
+
+                    const start = prev[0]
+                    if (
+                        prev.length > 2 &&
+                        Math.abs(currentPosition.x - start[0]) <= 10 &&
+                        Math.abs(currentPosition.y - start[1]) <= 10
+                    ) {
+                        if (
+                            polyPoints.current &&
+                            polyPoints.current.length > 0
+                        ) {
+                            polyPoints.current.forEach((p) => p.remove())
+                            polyPoints.current = undefined
+                        }
+
+                        if (polyline.current) {
+                            polyline.current.remove()
+                            polyline.current = undefined
+                        }
+
+                        startPosition.current = undefined
+
+                        const points = prev.map(([x, y]) => ({
+                            x: x / scale,
+                            y: y / scale,
+                        }))
+
+                        const xList = points.map(({ x }) => x)
+                        const yList = points.map(({ y }) => y)
+
+                        const xMin = Math.min(...xList)
+                        const yMin = Math.min(...yList)
+                        const xMax = Math.max(...xList)
+                        const yMax = Math.max(...yList)
+
+                        const newElement: DrawZoneElement = {
+                            id: uuid4(),
+                            label: '',
+                            points,
+                            rect: {
+                                height: yMax - yMin,
+                                width: xMax - xMin,
+                                x: xMin,
+                                y: yMin,
+                            },
+                            selected: true,
+                        }
+
+                        onChange([...elements.map(unSelectElement), newElement])
+                    } else {
+                        const plotline: PointArrayAlias = [
+                            ...prev,
+                            [currentPosition.x, currentPosition.y],
+                        ]
+
+                        polygon.current = svg
+                            .polyline(plotline)
+                            .fill({
+                                color: '#f06',
+                                opacity: 0,
+                            })
+                            .stroke({
+                                color: '#f06',
+                                width: 1,
+                                linecap: 'round',
+                                linejoin: 'round',
+                            })
+                            .attr('data-draw-ignore', true)
+
+                        polyPoints.current.push(
+                            drawPoint(
+                                svg,
+                                currentPosition.x,
+                                currentPosition.y,
+                            ),
+                        )
+
+                        polyPoints.current.forEach((p) => p.front())
+
+                        startPosition.current = currentPosition
+                    }
+                }
+            }
         }
 
         function onPointerMove(this: Window, e: globalThis.PointerEvent) {
             if (e.defaultPrevented || !startPosition.current) return
 
-            if (move && dragging.current) {
+            if (move) {
+                if (!dragging.current) return
                 if (!svg.node.contains(e.target as Node)) {
                     dragging.current = false
                     return
@@ -419,12 +662,51 @@ function SvgZone({ disabled, elements, mode, shape, onChange }: SvgZoneProps) {
                 overlayRect2.current.width(`${width * 100}%`)
                 overlayRect2.current.height(`${height * 100}%`)
             }
+
+            if (shape === 'poly' && !isTouchDevice) {
+                const svgRect = svg.node.getBoundingClientRect()
+
+                const currentPosition: Point = {
+                    x: e.clientX - svgRect.left,
+                    y: e.clientY - svgRect.top,
+                }
+
+                polyline.current?.remove()
+
+                const prev = polygon.current
+                    ? [...polygon.current.plot()]
+                    : [
+                          [
+                              startPosition.current.x,
+                              startPosition.current.y,
+                          ] as ArrayXY,
+                      ]
+
+                const plotline: PointArrayAlias = [
+                    ...prev,
+                    [currentPosition.x, currentPosition.y],
+                ]
+
+                polyline.current = svg.polyline(plotline).fill('none').stroke({
+                    color: '#f06',
+                    width: 1,
+                    linecap: 'round',
+                    linejoin: 'round',
+                    dasharray: '5,5',
+                })
+
+                if (Array.isArray(polyPoints.current)) {
+                    polyPoints.current.forEach((p) => p.front())
+                }
+            }
         }
 
         function onPointerUp(this: Window, e: globalThis.PointerEvent) {
             if (e.defaultPrevented) return
 
-            if (move && dragging.current) {
+            if (move) {
+                if (!dragging.current) return false
+
                 const parent = svg.parent()
 
                 if (!parent) return
@@ -477,18 +759,22 @@ function SvgZone({ disabled, elements, mode, shape, onChange }: SvgZoneProps) {
                         ) - svgRect.top,
                 }
 
-                const label = ''
-                /*
-                if (Math.abs(currentPosition.x - startPosition.current.x) <= 2) {
-                    let lastRect = elements[elements.length - 1]
+                let label = ''
+                if (
+                    Math.abs(currentPosition.x - startPosition.current.x) <= 2
+                ) {
+                    let lastRect: Pick<
+                        DrawZoneElement,
+                        'id' | 'label' | 'rect'
+                    > = elements[elements.length - 1]
 
                     if (initialRect) {
                         lastRect = initialRect
                     }
-    
+
                     label = lastRect?.label
-    
-                    if (drawOnMouseDown && lastRect && lastRect.rect) {
+
+                    if (drawOnPointerDown && lastRect && lastRect.rect) {
                         currentPosition.x = Math.min(
                             startPosition.current.x +
                                 (lastRect.rect.width * svgRect.width) / 100,
@@ -504,7 +790,6 @@ function SvgZone({ disabled, elements, mode, shape, onChange }: SvgZoneProps) {
                         return
                     }
                 }
-                */
 
                 const xMin =
                     Math.min(startPosition.current.x, currentPosition.x) / scale
@@ -540,17 +825,15 @@ function SvgZone({ disabled, elements, mode, shape, onChange }: SvgZoneProps) {
                     selected: true,
                 }
 
-                /*
                 if (onInitialRectChange) {
                     onInitialRectChange({
-                        rect: rect,
-                        label: newRect.data('label'),
-                        id: newRect.data('id'),
+                        rect: newElement.rect,
+                        label: newElement.label,
+                        id: newElement.id,
                     })
                 }
-                */
 
-                onChange([...elements, newElement])
+                onChange([...elements.map(unSelectElement), newElement])
             }
 
             if (mode !== 'draw' || (mode === 'draw' && shape !== 'poly'))
@@ -568,10 +851,14 @@ function SvgZone({ disabled, elements, mode, shape, onChange }: SvgZoneProps) {
         }
     }, [
         disabled,
+        drawOnPointerDown,
+        drawPoint,
         elements,
+        initialRect,
         mode,
         move,
         onChange,
+        onInitialRectChange,
         scale,
         setPosition,
         shape,
@@ -641,7 +928,14 @@ function DrawElement({
         )
     }
 
-    return null
+    return (
+        <DrawPolygonElement
+            disabled={disabled}
+            element={element}
+            elements={elements}
+            onChange={onChange}
+        />
+    )
 }
 
 type DrawRectElementProps = {
@@ -714,7 +1008,7 @@ function DrawPolygonElement({
     onChange,
 }: DrawPolygonElementProps) {
     const ref = useRef<SVGPolygonElement>(null)
-    const { scale } = useControls()
+    const { move, scale } = useControls()
     const instance = useRef<Interactable>()
 
     const path = element.points
@@ -799,7 +1093,7 @@ function DrawPolygonElement({
     const onPointerDown: React.PointerEventHandler<SVGPolygonElement> =
         useCallback(
             (event) => {
-                if (disabled || event.defaultPrevented) return
+                if (disabled || event.defaultPrevented || move) return
 
                 if (!element.selected) {
                     const elem = elements.find((elem) => elem.id === element.id)
@@ -818,18 +1112,17 @@ function DrawPolygonElement({
                     onChange(newElements)
                 }
             },
-            [disabled, element, elements, onChange, setInstance],
+            [disabled, element, elements, move, onChange, setInstance],
         )
 
     useEffect(() => {
-        if (element.selected) {
+        if (element.selected && !move) {
             setInstance()
-
         } else {
             instance.current?.unset()
             instance.current = undefined
         }
-    }, [element.selected, setInstance])
+    }, [element.selected, move, setInstance])
 
     const stroke = useMemo(
         () => (element.selected ? '#2BB1FD' : '#00ff00'),
