@@ -30,14 +30,19 @@ import {
     Rect,
     SVG,
     Svg,
+    Use,
 } from '@svgdotjs/svg.js'
 import { uuid4 } from '../helpers'
 import { isTouchDevice } from '../utils'
 
-import type { Interactable } from '@interactjs/types'
+import { Interactable } from '@interactjs/types'
 
 const xns = 'http://www.w3.org/1999/xlink'
 const CIRCLE_SIZE = isTouchDevice ? 22 : 10
+
+const preventDrag = (event: DragEvent) => {
+    event.preventDefault()
+}
 
 export function DrawZone2Container({ children }: PropsWithChildren<unknown>) {
     const [state, setState] = useSetState<DrawZone2State>({
@@ -387,15 +392,6 @@ function SvgZone({
                 !move &&
                 !startPosition.current
             ) {
-                console.log(
-                    'PSYC--HERE',
-                    svg.node.contains(e.target as Node),
-                    svg.node !== e.target,
-                    svg.node,
-                    e.target,
-                    move,
-                    startPosition.current,
-                )
                 return
             } else if (e.target === svg.node) {
                 e.preventDefault()
@@ -878,6 +874,7 @@ function SvgZone({
             <SvgElements
                 disabled={disabled}
                 elements={elements}
+                shape={shape}
                 onChange={onChange}
             />
         </svg>
@@ -887,9 +884,15 @@ function SvgZone({
 type SvgElementsProps = {
     readonly disabled?: boolean
     readonly elements: DrawZoneElement[]
+    readonly shape: DrawZone2Shape
     readonly onChange: (elements: DrawZoneElement[]) => void
 }
-function SvgElements({ disabled, elements, onChange }: SvgElementsProps) {
+function SvgElements({
+    disabled,
+    elements,
+    shape,
+    onChange,
+}: SvgElementsProps) {
     return (
         <>
             {elements.map((element) => (
@@ -898,6 +901,7 @@ function SvgElements({ disabled, elements, onChange }: SvgElementsProps) {
                     disabled={disabled}
                     elements={elements}
                     element={element}
+                    shape={shape}
                     onChange={onChange}
                 />
             ))}
@@ -909,12 +913,14 @@ type DrawElementProps = {
     readonly disabled?: boolean
     readonly element: DrawZoneElement
     readonly elements: DrawZoneElement[]
+    readonly shape: DrawZone2Shape
     readonly onChange: (elements: DrawZoneElement[]) => void
 }
 function DrawElement({
     disabled,
     element,
     elements,
+    shape,
     onChange,
 }: DrawElementProps) {
     if (element.points?.length === 2) {
@@ -934,6 +940,7 @@ function DrawElement({
             element={element}
             elements={elements}
             onChange={onChange}
+            shape={shape}
         />
     )
 }
@@ -990,6 +997,7 @@ function DrawRectElement({
             disabled={disabled}
             element={newElement}
             elements={elements}
+            shape="rect"
             onChange={onChange}
         />
     )
@@ -999,30 +1007,204 @@ type DrawPolygonElementProps = {
     readonly disabled?: boolean
     readonly element: DrawZoneElement
     readonly elements: DrawZoneElement[]
+    readonly shape: DrawZone2Shape
     readonly onChange: (elements: DrawZoneElement[]) => void
 }
 function DrawPolygonElement({
     disabled,
     element,
     elements,
+    shape,
     onChange,
 }: DrawPolygonElementProps) {
     const ref = useRef<SVGPolygonElement>(null)
     const { move, scale } = useControls()
     const instance = useRef<Interactable>()
+    const handlesInstance = useRef<Interactable>()
+    const handles = useRef<Use[]>([])
+    const circles = useRef<Circle[]>([])
 
     const path = element.points
         .map((point) => [point.x * scale, point.y * scale].join(','))
         .join(' ')
 
-    const setInstance = useCallback(() => {
+    const cleanHandles = useCallback(() => {
+        handlesInstance.current?.unset()
+        handlesInstance.current = undefined
+
+        handles.current.forEach((h) => h.remove())
+        handles.current.length = 0
+
+        circles.current.forEach((h) => h.remove())
+        circles.current.length = 0
+
+        document.removeEventListener('dragstart', preventDrag)
+    }, [])
+
+    const makeHandlesGrabbable = useCallback(() => {
+        const { current } = ref
+
+        if (!current) return
+
+        const parent = current.parentNode as SVGSVGElement
+        const svg = (parent as unknown as Record<string, Svg>).instance
+        const rootMatrix = parent.getScreenCTM() as DOMMatrix
+
+        handlesInstance.current?.unset()
+
+        handlesInstance.current = interact('.point-handle')
+            .draggable({
+                onstart: function (event) {
+                    svg.css('cursor', 'grabbing')
+                    event.target.instance.css('cursor', 'grabbing')
+                },
+                onmove: function (event) {
+                    const i = event.target.getAttribute('data-index') | 0
+                    const point = current.points.getItem(i)
+
+                    point.x += event.dx / rootMatrix.a
+                    point.y += event.dy / rootMatrix.d
+
+                    if (shape === 'rect') {
+                        switch (i) {
+                            case 0: // top left
+                                handles.current[0].x(point.x)
+                                handles.current[0].y(point.y)
+                                handles.current[1].y(point.y)
+                                handles.current[3].x(point.x)
+                                break
+                            case 1: // top right
+                                handles.current[1].x(point.x)
+                                handles.current[1].y(point.y)
+                                handles.current[2].x(point.x)
+                                handles.current[0].y(point.y)
+                                break
+                            case 2: // bottom right
+                                handles.current[2].x(point.x)
+                                handles.current[2].y(point.y)
+                                handles.current[3].y(point.y)
+                                handles.current[1].x(point.x)
+                                break
+                            case 3: // bottom left
+                                handles.current[3].x(point.x)
+                                handles.current[3].y(point.y)
+                                handles.current[0].x(point.x)
+                                handles.current[2].y(point.y)
+                                break
+                        }
+
+                        const newPlot = handles.current.map(
+                            (h) => [Number(h.x()), Number(h.y())] as ArrayXY,
+                        )
+
+                        const pointsCount = current.points.numberOfItems
+                        for (let i = 0; i < pointsCount; i++) {
+                            const point = current.points.getItem(i)
+
+                            point.x = newPlot[i][0]
+                            point.y = newPlot[i][1]
+                        }
+                    } else {
+                        event.target.x.baseVal.value = point.x
+                        event.target.y.baseVal.value = point.y
+                    }
+                },
+                onend: function (event) {
+                    /*
+                event.target.instance.css('cursor', 'grab')
+                svg.css('cursor', 'crosshair')
+
+                const index = Number(
+                    event.target.getAttribute('data-index') || 0,
+                )
+
+                if (shape === 'poly') {
+                    const currentPlot = [...poly.plot()]
+
+                    const newPlot: ArrayXY[] = [
+                        ...currentPlot.slice(0, index),
+                        [
+                            Number(event.target.getAttribute('x')),
+                            Number(event.target.getAttribute('y')),
+                        ] as ArrayXY,
+                        ...currentPlot.slice(index + 1),
+                    ]
+
+                    poly.plot(newPlot)
+                }
+
+                svg.node.setAttribute('class', '')
+
+                //innerOnChange()
+                */
+                },
+                modifiers: [
+                    interact.modifiers.restrict({
+                        restriction: 'parent',
+                    }),
+                ],
+            })
+            .styleCursor(false)
+    }, [shape])
+
+    const createHandles = useCallback(() => {
+        const { current } = ref
+
+        if (!current) return
+
+        const svg = (current.parentNode as unknown as Record<string, Svg>)
+            .instance
+
+        for (let i = 0; i < current.points.numberOfItems; i++) {
+            const point = current.points.getItem(i)
+
+            const handleId = `point-handle-${i}`
+
+            const circle = svg
+                .defs()
+                .attr('data-draw-ignore', true)
+                .circle(CIRCLE_SIZE)
+                .center(0, 0)
+                .fill({ opacity: 1, color: '#0000FF' })
+                .stroke({ width: 1, color: '#fff' })
+                .css('touch-action', 'none') // silence interactjs warning.
+                .id(handleId)
+
+            const handle = svg
+                .use(circle as Circle)
+                .attr('href', `#${handleId}`, xns)
+                .addClass('point-handle')
+                .data('draw-ignore', true)
+                .x(point.x)
+                .y(point.y)
+                .data('index', i)
+
+            handle
+                .on('mousedown', function mousedown(event) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                })
+                .css('cursor', 'grab')
+
+            circles.current.push(circle)
+            handles.current.push(handle)
+        }
+
+        makeHandlesGrabbable()
+
+        document.addEventListener('dragstart', preventDrag)
+    }, [makeHandlesGrabbable])
+
+    const setupInteract = useCallback(() => {
         const { current } = ref
         if (!current || instance.current) return
+
+        createHandles()
 
         instance.current = interact(current as SVGPolygonElement).draggable({
             listeners: {
                 start() {
-                    // TODO: Remove handles
+                    cleanHandles()
                 },
                 move(event) {
                     const dx = event.dx
@@ -1037,7 +1219,7 @@ function DrawPolygonElement({
                     }
                 },
                 end() {
-                    // TODO: Handles
+                    createHandles()
                     const pointsCount = current.points.numberOfItems
                     const points = new Array<Point>()
 
@@ -1088,7 +1270,7 @@ function DrawPolygonElement({
                 }
             },
         })
-    }, [element, elements, onChange, scale])
+    }, [cleanHandles, createHandles, element, elements, onChange, scale])
 
     const onPointerDown: React.PointerEventHandler<SVGPolygonElement> =
         useCallback(
@@ -1107,22 +1289,24 @@ function DrawPolygonElement({
                         ...elements.slice(index + 1).map(unSelectElement),
                     ]
 
-                    setInstance()
+                    setupInteract()
 
                     onChange(newElements)
                 }
             },
-            [disabled, element, elements, move, onChange, setInstance],
+            [disabled, element, elements, move, onChange, setupInteract],
         )
 
     useEffect(() => {
         if (element.selected && !move) {
-            setInstance()
+            setupInteract()
         } else {
             instance.current?.unset()
             instance.current = undefined
+
+            cleanHandles()
         }
-    }, [element.selected, move, setInstance])
+    }, [cleanHandles, element.selected, move, setupInteract])
 
     const stroke = useMemo(
         () => (element.selected ? '#2BB1FD' : '#00ff00'),
@@ -1137,6 +1321,9 @@ function DrawPolygonElement({
             stroke={stroke}
             strokeOpacity={1}
             strokeWidth={2}
+            style={{
+                touchAction: 'none', // silence interactjs warning.
+            }}
         />
     )
 }
