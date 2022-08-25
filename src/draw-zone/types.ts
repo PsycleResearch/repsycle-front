@@ -1,6 +1,9 @@
-export type DrawZoneMode = 'draw' | 'move' | 'none'
+import { Dispatch, SetStateAction } from 'react'
+import { BGR } from 'src/types'
+
+export type DrawZoneMode = 'draw' | 'none'
 export type DrawZoneShape = 'rect' | 'poly' | 'none'
-export type SizeMode = 'auto' | 'fit'
+export type DrawZoneFitMode = 'auto' | 'fit'
 
 export interface Size {
     readonly width: number
@@ -10,88 +13,36 @@ export interface Point {
     readonly x: number
     readonly y: number
 }
-export interface ChangedElement {
-    readonly id: string
+export interface Rect extends Size, Point {}
+
+export interface DrawZoneElement {
+    readonly id: string | undefined
     readonly selected?: boolean
     readonly points: Point[]
     readonly label: string
-    readonly rect: {
-        readonly height: number
-        readonly width: number
-        readonly x: number
-        readonly y: number
-    }
-    readonly color?: string
+    readonly color?: BGR
+    readonly rect: Rect
 }
 
 export type DrawZoneState = {
-    readonly scale: number
-    readonly isMarkerShown: boolean
-    readonly isDisabled: boolean
-    readonly originalSize: Size | undefined
-}
-
-export const MAX_SCALE = 4
-export const SCALE_STEP = 0.25
-
-export type DrawZoneStateInternal = DrawZoneState & {
+    readonly contentHidden: boolean
     readonly logicalScale: number
+    readonly markerVisible: boolean
+    readonly move: boolean
     readonly positionTop: number
     readonly positionLeft: number
-    readonly redraw: boolean
+    readonly scale: number
+}
+export type DrawZoneStateContext = {
+    readonly state: DrawZoneState
+    readonly setState: Dispatch<
+        SetStateAction<DrawZoneState | Partial<DrawZoneState>>
+    >
 }
 
-export enum DrawZoneStateActionType {
-    RESET,
-    SET_SCALE,
-    ZOOM_IN,
-    ZOOM_OUT,
-    CHANGE_MODE,
-    CHANGE_SIZE_MODE,
-    SHOW_MARKER,
-    HIDE_MARKER,
-    DISABLE,
-    ENABLE,
-    SET_ORIGINAL_SIZE,
-    SET_POSITION,
-    FORCE_REDRAW,
+export enum PictureLoadingState {
+    Idle,
+    Loading,
+    Error,
+    Done,
 }
-
-export type DrawZoneStateAction =
-    | { readonly type: DrawZoneStateActionType.RESET }
-    | {
-          readonly type: DrawZoneStateActionType.SET_SCALE
-          readonly payload: number
-      }
-    | {
-          readonly type: DrawZoneStateActionType.ZOOM_IN
-      }
-    | {
-          readonly type: DrawZoneStateActionType.ZOOM_OUT
-      }
-    | {
-          readonly type: DrawZoneStateActionType.SHOW_MARKER
-      }
-    | {
-          readonly type: DrawZoneStateActionType.HIDE_MARKER
-      }
-    | {
-          readonly type: DrawZoneStateActionType.DISABLE
-      }
-    | {
-          readonly type: DrawZoneStateActionType.ENABLE
-      }
-    | {
-          readonly type: DrawZoneStateActionType.SET_ORIGINAL_SIZE
-          readonly payload: Size | undefined
-      }
-    | {
-          readonly type: DrawZoneStateActionType.SET_POSITION
-          readonly payload: {
-              readonly top: number
-              readonly left: number
-          }
-      }
-    | {
-          readonly type: DrawZoneStateActionType.FORCE_REDRAW
-      }

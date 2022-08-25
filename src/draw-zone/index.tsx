@@ -1,29 +1,32 @@
-import DrawZone, {
-    DrawZoneContainer,
-    DrawZoneContainerProps,
-    DrawZoneProps,
-} from './components'
-import { useDrawZone } from './hooks'
-import {
-    ChangedElement,
+import DrawZone, { DrawZoneContainer } from './components'
+import type {
+    DrawZoneElement,
+    DrawZoneFitMode,
     DrawZoneMode,
     DrawZoneShape,
     DrawZoneState,
+    PictureLoadingState,
     Point,
+    Rect,
     Size,
-    SizeMode,
 } from './types'
+import { useControls, useLoadImage } from './hooks'
 
 export default DrawZone
-export { DrawZoneContainer, useDrawZone }
+export {
+    DrawZoneContainer as DrawZoneContainer,
+    DrawZone,
+    useControls,
+    useLoadImage,
+}
 export type {
-    DrawZoneContainerProps,
-    DrawZoneProps,
-    ChangedElement,
+    DrawZoneElement,
+    DrawZoneFitMode,
     DrawZoneMode,
     DrawZoneShape,
     DrawZoneState,
+    PictureLoadingState,
     Point,
+    Rect,
     Size,
-    SizeMode,
 }

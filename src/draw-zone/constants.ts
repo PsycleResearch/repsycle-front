@@ -1,7 +1,7 @@
 export const MAX_SCALE = 4
 export const SCALE_STEP = 0.25
 
-export const DRAW_ZONE_2_INITIAL_STATE = {
+export const DRAW_ZONE_INITIAL_STATE = {
     contentHidden: false,
     logicalScale: 1,
     markerVisible: false,

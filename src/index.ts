@@ -3,18 +3,19 @@ export {
     default as DrawZone,
     DrawZoneContainer,
     // Hooks
-    useDrawZone,
+    useControls,
+    useLoadImage,
 } from './draw-zone'
 export type {
-    Size,
-    Point,
-    ChangedElement,
-    DrawZoneContainerProps,
-    DrawZoneProps,
+    DrawZoneElement,
+    DrawZoneFitMode,
     DrawZoneMode,
     DrawZoneShape,
-    SizeMode,
     DrawZoneState,
+    PictureLoadingState,
+    Point,
+    Rect,
+    Size,
 } from './draw-zone'
 export { default as ErrorBoundary } from './error-boundary'
 
