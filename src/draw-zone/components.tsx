@@ -900,16 +900,17 @@ function SvgElements({
 }: SvgElementsProps) {
     return (
         <>
-            {elements.map((element) => (
-                <DrawElement
-                    key={element.id}
-                    disabled={disabled}
-                    elements={elements}
-                    element={element}
-                    shape={shape}
-                    onChange={onChange}
-                />
-            ))}
+            {shape !== 'none' &&
+                elements.map((element) => (
+                    <DrawElement
+                        key={element.id}
+                        disabled={disabled}
+                        elements={elements}
+                        element={element}
+                        shape={shape}
+                        onChange={onChange}
+                    />
+                ))}
         </>
     )
 }
