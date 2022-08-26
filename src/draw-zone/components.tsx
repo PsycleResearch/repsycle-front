@@ -38,7 +38,8 @@ import { isTouchDevice } from '../utils'
 import { Interactable } from '@interactjs/types'
 
 const xns = 'http://www.w3.org/1999/xlink'
-const CIRCLE_SIZE = isTouchDevice ? 32 : 10
+const CIRCLE_SIZE = 10
+const CIRCLE_BORDER_SIZE = (isTouchDevice ? 33 : 11) - CIRCLE_SIZE
 const blue = '#2BB1FD'
 
 const preventDrag = (event: DragEvent) => {
@@ -369,7 +370,11 @@ function SvgZone({
                 .circle(CIRCLE_SIZE)
                 .center(0, 0)
                 .fill({ opacity: 1, color: '#f06' })
-                .stroke({ width: 1, color: '#fff' })
+                .stroke({
+                    width: CIRCLE_BORDER_SIZE,
+                    color: '#fff',
+                    opacity: 0.3,
+                })
                 .attr('data-draw-ignore', true)
                 .addClass('tmp-point')
                 .move(x - delta, y - delta)
@@ -1180,7 +1185,11 @@ function DrawPolygonElement({
                 .circle(CIRCLE_SIZE)
                 .center(0, 0)
                 .fill({ opacity: 1, color: blue })
-                .stroke({ width: 1, color: '#fff' })
+                .stroke({
+                    width: CIRCLE_BORDER_SIZE,
+                    color: '#fff',
+                    opacity: 0.3,
+                })
                 .css('touch-action', 'none') // silence interactjs warning.
                 .id(handleId)
 
