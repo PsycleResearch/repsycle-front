@@ -1332,6 +1332,7 @@ function DrawPolygonElement({
             stroke={stroke}
             strokeOpacity={1}
             strokeWidth={2}
+            fillOpacity={0}
             style={{
                 touchAction: 'none', // silence interactjs warning.
             }}
