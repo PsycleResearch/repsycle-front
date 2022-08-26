@@ -39,7 +39,7 @@ import { Interactable } from '@interactjs/types'
 
 const xns = 'http://www.w3.org/1999/xlink'
 const CIRCLE_SIZE = 10
-const CIRCLE_BORDER_SIZE = (isTouchDevice ? 33 : 11) - CIRCLE_SIZE
+const CIRCLE_BORDER_SIZE = (isTouchDevice ? 47 : 11) - CIRCLE_SIZE
 const blue = '#2BB1FD'
 
 const preventDrag = (event: DragEvent) => {
