@@ -38,7 +38,7 @@ import { isTouchDevice } from '../utils'
 import { Interactable } from '@interactjs/types'
 
 const xns = 'http://www.w3.org/1999/xlink'
-const CIRCLE_SIZE = isTouchDevice ? 22 : 10
+const CIRCLE_SIZE = isTouchDevice ? 32 : 10
 const blue = '#2BB1FD'
 
 const preventDrag = (event: DragEvent) => {
