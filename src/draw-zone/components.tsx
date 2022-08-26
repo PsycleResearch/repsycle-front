@@ -9,7 +9,7 @@ import React, {
 import { useId, usePointerPosition, useSetState } from '../hooks'
 import { DRAW_ZONE_INITIAL_STATE } from './constants'
 import { useControls, useLoadImage } from './hooks'
-import { DrawZone2Context } from './state'
+import { DrawZoneContext } from './state'
 import {
     DrawZoneElement,
     DrawZoneFitMode,
@@ -51,9 +51,9 @@ export function DrawZoneContainer({ children }: PropsWithChildren<unknown>) {
         ...DRAW_ZONE_INITIAL_STATE,
     })
     return (
-        <DrawZone2Context.Provider value={{ state, setState }}>
+        <DrawZoneContext.Provider value={{ state, setState }}>
             {children}
-        </DrawZone2Context.Provider>
+        </DrawZoneContext.Provider>
     )
 }
 

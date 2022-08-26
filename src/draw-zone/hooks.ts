@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useState } from 'react'
-import { DrawZone2Context } from './state'
+import { DrawZoneContext } from './state'
 import { PictureLoadingState, Size } from './types'
 import { MAX_SCALE, SCALE_STEP } from './constants'
 import { memoize } from 'lodash'
@@ -46,7 +46,7 @@ export function useLoadImage(src: string) {
 }
 
 export function useControls() {
-    const { state, setState } = useContext(DrawZone2Context)
+    const { state, setState } = useContext(DrawZoneContext)
 
     const zoomIn = useCallback(() => {
         setState((prev) => ({
