@@ -32,7 +32,7 @@ import {
     Svg,
     Use,
 } from '@svgdotjs/svg.js'
-import { uuid4 } from '../helpers'
+import { bgrToHex, uuid4 } from '../helpers'
 import { isTouchDevice } from '../utils'
 
 import { Interactable } from '@interactjs/types'
@@ -199,9 +199,9 @@ function DrawZoneInner({
 
             onChange(
                 elements.map((element) => {
-                    const points = element.points.map(({x, y}) => ({
+                    const points = element.points.map(({ x, y }) => ({
                         x: Math.round(x),
-                        y: Math.round(y)
+                        y: Math.round(y),
                     }))
                     const minX = Math.min(...points.map(({ x }) => x))
                     const minY = Math.min(...points.map(({ y }) => y))
@@ -1325,8 +1325,13 @@ function DrawPolygonElement({
     }, [cleanHandles, element.selected, move, setupInteract])
 
     const stroke = useMemo(
-        () => (element.selected ? blue : '#00ff00'),
-        [element.selected],
+        () =>
+            element.selected
+                ? blue
+                : element.color
+                ? bgrToHex(...element.color)
+                : '#ffffff',
+        [element.selected, element.color],
     )
 
     return (
