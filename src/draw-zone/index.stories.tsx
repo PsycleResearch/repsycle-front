@@ -6,9 +6,9 @@ import React, {
     useState,
 } from 'react'
 
-import DrawZone, { DrawZoneContainer, useControls, useLoadImage } from '.'
+import DrawZone, { DrawZoneContainer, useControls } from '.'
 import type { DrawZoneElement } from '.'
-import { DrawZoneShape, PictureLoadingState } from './types'
+import { DrawZoneShape } from './types'
 
 export default {
     title: 'Components/DrawZone',
@@ -63,7 +63,6 @@ type EditorProps = {
     readonly src: string
 }
 function Editor({ initialElements, shape, src }: EditorProps) {
-    const { status, pictureSize } = useLoadImage(src)
     const [elements, setElements] = useState<Array<StoryZoneElement>>([])
 
     useEffect(() => {
@@ -72,28 +71,18 @@ function Editor({ initialElements, shape, src }: EditorProps) {
 
     const buildMetas = useCallback(
         (elem: DrawZoneElement) => {
-            if (!pictureSize || shape !== 'rect') return {}
+            if (shape !== 'rect') return {}
 
             return {
-                width: Math.floor(
-                    (elem.rect.width * pictureSize.width) / 100,
-                ).toString(),
-                height: Math.floor(
-                    (elem.rect.height * pictureSize.height) / 100,
-                ).toString(),
+                width: elem.rect.width.toString(),
+                height: elem.rect.height.toString(),
                 diagonal: Math.floor(
-                    Math.hypot(
-                        (elem.rect.height * pictureSize.height) / 100,
-                        (elem.rect.width * pictureSize.width) / 100,
-                    ),
+                    Math.hypot(elem.rect.height, elem.rect.width),
                 ).toString(),
-                area: Math.floor(
-                    ((elem.rect.width * pictureSize.width) / 100) *
-                        ((elem.rect.height * pictureSize.height) / 100),
-                ).toString(),
+                area: Math.floor(elem.rect.width * elem.rect.height).toString(),
             } as Record<string, string>
         },
-        [pictureSize, shape],
+        [shape],
     )
 
     const onChange = useCallback(
@@ -153,16 +142,14 @@ function Editor({ initialElements, shape, src }: EditorProps) {
                     height: '500px',
                 }}
             >
-                {status === PictureLoadingState.Done && (
-                    <DrawZone
-                        src={src}
-                        elements={elements}
-                        fitMode="fit"
-                        mode="draw"
-                        onChange={onChange}
-                        shape={shape}
-                    />
-                )}
+                <DrawZone
+                    src={src}
+                    elements={elements}
+                    fitMode="fit"
+                    mode="draw"
+                    onChange={onChange}
+                    shape={shape}
+                />
             </div>
         </>
     )

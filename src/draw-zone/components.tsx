@@ -199,10 +199,14 @@ function DrawZoneInner({
 
             onChange(
                 elements.map((element) => {
-                    const minX = Math.min(...element.points.map(({ x }) => x))
-                    const minY = Math.min(...element.points.map(({ y }) => y))
-                    const maxX = Math.max(...element.points.map(({ x }) => x))
-                    const maxY = Math.max(...element.points.map(({ y }) => y))
+                    const points = element.points.map(({x, y}) => ({
+                        x: Math.round(x),
+                        y: Math.round(y)
+                    }))
+                    const minX = Math.min(...points.map(({ x }) => x))
+                    const minY = Math.min(...points.map(({ y }) => y))
+                    const maxX = Math.max(...points.map(({ x }) => x))
+                    const maxY = Math.max(...points.map(({ y }) => y))
 
                     const rect: DrawZoneElement['rect'] = {
                         height: maxY - minY,
@@ -214,7 +218,7 @@ function DrawZoneInner({
                     return {
                         ...element,
                         rect,
-                        points: element.points.filter(filterPoints(shape)),
+                        points: points.filter(filterPoints(shape)),
                     }
                 }),
             )
