@@ -303,6 +303,23 @@ function SvgZone({
     const polyline = useRef<Polyline>()
     const { contentHidden, move, scale, setPosition } = useControls()
 
+    const localOnInitialRectChange = useCallback(
+        (elem: Pick<DrawZoneElement, 'id' | 'label' | 'rect'>) => {
+            if (onInitialRectChange) {
+                onInitialRectChange({
+                    ...elem,
+                    rect: {
+                        height: Math.round(elem.rect.height),
+                        width: Math.round(elem.rect.width),
+                        x: Math.round(elem.rect.x),
+                        y: Math.round(elem.rect.y),
+                    },
+                })
+            }
+        },
+        [onInitialRectChange],
+    )
+
     const unselectElements = useCallback(() => {
         onChange(elements.map(unSelectElement))
     }, [elements, onChange])
@@ -785,13 +802,11 @@ function SvgZone({
 
                     if (drawOnPointerDown && lastRect && lastRect.rect) {
                         currentPosition.x = Math.min(
-                            startPosition.current.x +
-                                (lastRect.rect.width * svgRect.width) / 100,
+                            startPosition.current.x + lastRect.rect.width * scale,
                             svgRect.width,
                         )
                         currentPosition.y = Math.min(
-                            startPosition.current.y +
-                                (lastRect.rect.height * svgRect.height) / 100,
+                            startPosition.current.y + lastRect.rect.height * scale,
                             svgRect.height,
                         )
                     } else {
@@ -834,13 +849,11 @@ function SvgZone({
                     selected: true,
                 }
 
-                if (onInitialRectChange) {
-                    onInitialRectChange({
-                        rect: newElement.rect,
-                        label: newElement.label,
-                        id: newElement.id,
-                    })
-                }
+                localOnInitialRectChange({
+                    rect: newElement.rect,
+                    label: newElement.label,
+                    id: newElement.id,
+                })
 
                 onChange([...elements.map(unSelectElement), newElement])
             }
@@ -868,7 +881,7 @@ function SvgZone({
         mode,
         move,
         onChange,
-        onInitialRectChange,
+        localOnInitialRectChange,
         scale,
         setPosition,
         shape,
@@ -1308,7 +1321,7 @@ function DrawPolygonElement({
                 }
             },
         })
-    }, [cleanHandles, createHandles, element, elements, onChange, scale])
+    }, [cleanHandles, createHandles, element, elements, mode, onChange, scale])
 
     const onPointerDown: React.PointerEventHandler<SVGPolygonElement> =
         useCallback(
