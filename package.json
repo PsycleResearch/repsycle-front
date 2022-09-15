@@ -1,6 +1,6 @@
 {
   "name": "@psycle/repsycle",
-  "version": "0.0.26",
+  "version": "0.0.27",
   "description": "Psycle Research front-end toolkit",
   "author": "Psycle Research",
   "keywords": [
@@ -20,31 +20,33 @@
     "release": "yarn build && yarn publish",
     "clean": "rm -rf dist/",
     "storybook": "start-storybook -p 6006",
-    "build-storybook": "build-storybook",
-    "prepare": "install-peers"
+    "build-storybook": "build-storybook"
   },
   "dependencies": {
-    "@svgdotjs/svg.draggable.js": "^3.0.2",
     "@svgdotjs/svg.js": "^3.0.16",
-    "interactjs": "^1.9.20"
+    "interactjs": "^1.10.14",
+    "lodash": "^4.17.21"
   },
   "peerDependencies": {
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react": "^17.0.0",
+    "react-dom": "^17.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.15.0",
+    "@babel/helper-get-function-arity": "^7.16.7",
     "@babel/preset-env": "^7.18.2",
     "@babel/preset-typescript": "^7.17.12",
     "@rollup/plugin-commonjs": "^20.0.0",
     "@rollup/plugin-node-resolve": "^13.0.4",
     "@rollup/plugin-typescript": "^8.3.0",
-    "@storybook/addon-actions": "^6.5.8",
-    "@storybook/addon-essentials": "^6.5.8",
-    "@storybook/addon-links": "^6.5.8",
-    "@storybook/builder-webpack5": "^6.5.8",
-    "@storybook/manager-webpack5": "^6.5.8",
-    "@storybook/react": "^6.5.8",
+    "@storybook/addon-actions": "^6.5.10",
+    "@storybook/addon-essentials": "^6.5.10",
+    "@storybook/addon-links": "^6.5.10",
+    "@storybook/builder-webpack5": "^6.5.10",
+    "@storybook/manager-webpack5": "^6.5.10",
+    "@storybook/react": "^6.5.10",
+    "@types/react": "^17",
+    "@types/react-dom": "^17",
     "@typescript-eslint/eslint-plugin": "^5.21.0",
     "@typescript-eslint/parser": "^5.21.0",
     "babel-loader": "^8.2.2",
@@ -53,10 +55,12 @@
     "eslint-plugin-jsx-a11y": "^6.5.1",
     "eslint-plugin-react": "^7.29.4",
     "eslint-plugin-react-hooks": "^4.5.0",
-    "eslint-plugin-storybook": "^0.5.12",
+    "eslint-plugin-storybook": "^0.6.4",
     "eslint-plugin-unused-imports": "^2.0.0",
     "install-peers-cli": "^2.2.0",
     "prettier": "^2.6.2",
+    "react": "^17",
+    "react-dom": "^17",
     "rollup": "^2.56.3",
     "rollup-plugin-cleaner": "^1.0.0",
     "rollup-plugin-peer-deps-external": "^2.2.4",
