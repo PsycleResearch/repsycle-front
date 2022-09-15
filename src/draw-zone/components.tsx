@@ -413,6 +413,8 @@ function SvgZone({
                 unselectElements()
             }
 
+            if (mode !== 'draw' || disabled) return
+
             if (move) {
                 e.preventDefault()
                 e.stopImmediatePropagation()
@@ -426,8 +428,6 @@ function SvgZone({
 
                 return
             }
-
-            if (mode !== 'draw' || disabled) return
 
             const svgRect = svg.node.getBoundingClientRect()
 
@@ -597,6 +597,8 @@ function SvgZone({
         function onPointerMove(this: Window, e: globalThis.PointerEvent) {
             if (e.defaultPrevented || !startPosition.current) return
 
+            if (mode !== 'draw' || disabled) return
+
             if (move) {
                 if (!dragging.current) return
                 if (!svg.node.contains(e.target as Node)) {
@@ -625,8 +627,6 @@ function SvgZone({
 
                 return
             }
-
-            if (mode !== 'draw' || disabled) return
 
             const svgRect = svg.node.getBoundingClientRect()
 
@@ -888,6 +888,7 @@ function SvgZone({
             <SvgElements
                 disabled={disabled}
                 elements={elements}
+                mode={mode}
                 shape={shape}
                 onChange={onChange}
             />
@@ -898,12 +899,14 @@ function SvgZone({
 type SvgElementsProps = {
     readonly disabled?: boolean
     readonly elements: DrawZoneElement[]
+    readonly mode: DrawZoneMode
     readonly shape: DrawZoneShape
     readonly onChange: (elements: DrawZoneElement[]) => void
 }
 function SvgElements({
     disabled,
     elements,
+    mode,
     shape,
     onChange,
 }: SvgElementsProps) {
@@ -916,6 +919,7 @@ function SvgElements({
                         disabled={disabled}
                         elements={elements}
                         element={element}
+                        mode={mode}
                         shape={shape}
                         onChange={onChange}
                     />
@@ -928,6 +932,7 @@ type DrawElementProps = {
     readonly disabled?: boolean
     readonly element: DrawZoneElement
     readonly elements: DrawZoneElement[]
+    readonly mode: DrawZoneMode
     readonly shape: DrawZoneShape
     readonly onChange: (elements: DrawZoneElement[]) => void
 }
@@ -935,6 +940,7 @@ function DrawElement({
     disabled,
     element,
     elements,
+    mode,
     shape,
     onChange,
 }: DrawElementProps) {
@@ -944,6 +950,7 @@ function DrawElement({
                 disabled={disabled}
                 element={element}
                 elements={elements}
+                mode={mode}
                 onChange={onChange}
             />
         )
@@ -954,8 +961,9 @@ function DrawElement({
             disabled={disabled}
             element={element}
             elements={elements}
-            onChange={onChange}
+            mode={mode}
             shape={shape}
+            onChange={onChange}
         />
     )
 }
@@ -964,12 +972,14 @@ type DrawRectElementProps = {
     readonly disabled?: boolean
     readonly element: DrawZoneElement
     readonly elements: DrawZoneElement[]
+    readonly mode: DrawZoneMode
     readonly onChange: (elements: DrawZoneElement[]) => void
 }
 function DrawRectElement({
     disabled,
     element,
     elements,
+    mode,
     onChange,
 }: DrawRectElementProps) {
     const minX = useMemo(
@@ -1012,6 +1022,7 @@ function DrawRectElement({
             disabled={disabled}
             element={newElement}
             elements={elements}
+            mode={mode}
             shape="rect"
             onChange={onChange}
         />
@@ -1022,6 +1033,7 @@ type DrawPolygonElementProps = {
     readonly disabled?: boolean
     readonly element: DrawZoneElement
     readonly elements: DrawZoneElement[]
+    readonly mode: DrawZoneMode
     readonly shape: DrawZoneShape
     readonly onChange: (elements: DrawZoneElement[]) => void
 }
@@ -1029,6 +1041,7 @@ function DrawPolygonElement({
     disabled,
     element,
     elements,
+    mode,
     shape,
     onChange,
 }: DrawPolygonElementProps) {
@@ -1221,6 +1234,8 @@ function DrawPolygonElement({
     const setupInteract = useCallback(() => {
         const { current } = ref
         if (!current) return
+
+        if (mode !== 'draw') return
 
         createHandles()
 
