@@ -70,6 +70,7 @@ type DrawZoneProps = PropsWithChildren<{
     readonly onInitialRectChange?: (
         arg: Pick<DrawZoneElement, 'id' | 'label' | 'rect'>,
     ) => void
+    readonly style?: React.CSSProperties
 }>
 export default function DrawZone({ children, src, ...props }: DrawZoneProps) {
     const { status, pictureSize } = useLoadImage(src)
@@ -108,6 +109,7 @@ function DrawZoneInner({
     pictureSize,
     shape,
     src,
+    style,
     onChange,
     onInitialRectChange,
 }: DrawZoneInnerProps) {
@@ -236,7 +238,7 @@ function DrawZoneInner({
                 position: 'relative',
                 pointerEvents: 'auto',
                 touchAction: 'none',
-                userSelect: 'none',
+                userSelect: 'none'
             }}
             ref={containerRef}
         >
@@ -249,6 +251,7 @@ function DrawZoneInner({
                     background: `url('${src}') center center / 100% 100% no-repeat`,
                     width: `${pictureSize?.width * scale}px`,
                     height: `${pictureSize?.height * scale}px`,
+                    ...(style || {}),
                 }}
             >
                 {canMarkerBeVisible && markerVisible && (
