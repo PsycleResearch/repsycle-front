@@ -35,13 +35,13 @@ export function truncate(
 
 export function getRandomId() {
     const arr = new Uint32Array(1)
-    global.crypto.getRandomValues(arr)
+    crypto.getRandomValues(arr)
     return arr[0].toString(36)
 }
 
 export function getRandomNumber(min: number, max: number) {
     const arr = new Uint32Array(1)
-    global.crypto.getRandomValues(arr)
+    crypto.getRandomValues(arr)
     const random = arr[0]
     const range = max - min
     return Math.floor((random / (0xffffffff + 1)) * range + min)
