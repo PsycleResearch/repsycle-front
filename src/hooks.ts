@@ -24,18 +24,18 @@ export function usePointerPosition() {
     }
 
     useAnimationFrame(() => {
-        if (!global.window) return
+        if (!window) return
 
-        global.window.addEventListener('pointerenter', updatePosition, false)
-        global.window.addEventListener('pointermove', updatePosition, false)
+        window.addEventListener('pointerenter', updatePosition, false)
+        window.addEventListener('pointermove', updatePosition, false)
 
         return () => {
-            global.window.removeEventListener(
+            window.removeEventListener(
                 'pointermove',
                 updatePosition,
                 false,
             )
-            global.window.removeEventListener(
+            window.removeEventListener(
                 'pointerenter',
                 updatePosition,
                 false,
