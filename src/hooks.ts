@@ -30,16 +30,8 @@ export function usePointerPosition() {
         window.addEventListener('pointermove', updatePosition, false)
 
         return () => {
-            window.removeEventListener(
-                'pointermove',
-                updatePosition,
-                false,
-            )
-            window.removeEventListener(
-                'pointerenter',
-                updatePosition,
-                false,
-            )
+            window.removeEventListener('pointermove', updatePosition, false)
+            window.removeEventListener('pointerenter', updatePosition, false)
         }
     })
 
@@ -283,7 +275,7 @@ export function useSetState<T>(
 }
 
 export function useKeyPress(
-    targetKey: string,
+    targetKey: string | string[],
     handler: (event: KeyboardEvent) => void,
 ) {
     const handlerRef = useRef(handler)
@@ -291,7 +283,10 @@ export function useKeyPress(
 
     useEffect(() => {
         const handleDown = (event: KeyboardEvent) => {
-            if (event.key === targetKey) {
+            if (
+                (Array.isArray(targetKey) && targetKey.includes(event.key)) ||
+                event.key === targetKey
+            ) {
                 handlerRef.current.call(window, event)
             }
         }
