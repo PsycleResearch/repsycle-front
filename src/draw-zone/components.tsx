@@ -238,7 +238,7 @@ function DrawZoneInner({
                 position: 'relative',
                 pointerEvents: 'auto',
                 touchAction: 'none',
-                userSelect: 'none'
+                userSelect: 'none',
             }}
             ref={containerRef}
         >
@@ -414,6 +414,20 @@ function SvgZone({
 
         const svg = SVG(current) as Svg
 
+        if (move) {
+            svg.css({ cursor: 'grab' })
+        } else {
+            svg.css({ cursor: 'default' })
+        }
+    }, [move])
+
+    useEffect(() => {
+        const { current } = ref
+
+        if (!current) return
+
+        const svg = SVG(current) as Svg
+
         function onPointerDown(e: globalThis.PointerEvent) {
             if (!svg.node.contains(e.target as Node)) return
 
@@ -445,6 +459,8 @@ function SvgZone({
                 }
 
                 dragging.current = true
+
+                svg.css({ cursor: 'grabbing' })
 
                 return
             }
@@ -754,6 +770,7 @@ function SvgZone({
                 svg.css({ cursor: 'grab' })
 
                 dragging.current = false
+                startPosition.current = undefined
 
                 return
             }
@@ -805,11 +822,13 @@ function SvgZone({
 
                     if (drawOnPointerDown && lastRect && lastRect.rect) {
                         currentPosition.x = Math.min(
-                            startPosition.current.x + lastRect.rect.width * scale,
+                            startPosition.current.x +
+                                lastRect.rect.width * scale,
                             svgRect.width,
                         )
                         currentPosition.y = Math.min(
-                            startPosition.current.y + lastRect.rect.height * scale,
+                            startPosition.current.y +
+                                lastRect.rect.height * scale,
                             svgRect.height,
                         )
                     } else {
