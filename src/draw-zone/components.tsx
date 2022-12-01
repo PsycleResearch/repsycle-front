@@ -203,8 +203,14 @@ function DrawZoneInner({
             onChange(
                 elements.map((element) => {
                     const points = element.points.map(({ x, y }) => ({
-                        x: Math.round(x),
-                        y: Math.round(y),
+                        x: Math.max(
+                            0,
+                            Math.min(pictureSize.width, Math.round(x)),
+                        ),
+                        y: Math.max(
+                            0,
+                            Math.min(pictureSize.height, Math.round(y)),
+                        ),
                     }))
                     const minX = Math.min(...points.map(({ x }) => x))
                     const minY = Math.min(...points.map(({ y }) => y))
@@ -226,7 +232,7 @@ function DrawZoneInner({
                 }),
             )
         },
-        [contentHidden, onChange, shape],
+        [contentHidden, onChange, shape, pictureSize],
     )
 
     return (
