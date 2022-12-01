@@ -1,4 +1,4 @@
-import { BGR } from "./types"
+import { BGR } from './types'
 
 export function uuid4() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(
@@ -13,6 +13,10 @@ export function uuid4() {
 
 export function hasValue(e: unknown): boolean {
     return e !== undefined && e !== null
+}
+
+export function clamp(num: number, min: number, max: number) {
+    return Math.max(min, Math.min(max, num))
 }
 
 interface TruncateOptions {
