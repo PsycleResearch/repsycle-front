@@ -32,7 +32,7 @@ import {
     Svg,
     Use,
 } from '@svgdotjs/svg.js'
-import { bgrToHex, uuid4 } from '../helpers'
+import { bgrToHex, clamp, uuid4 } from '../helpers'
 import { isTouchDevice } from '../utils'
 
 import { Interactable } from '@interactjs/types'
@@ -203,14 +203,8 @@ function DrawZoneInner({
             onChange(
                 elements.map((element) => {
                     const points = element.points.map(({ x, y }) => ({
-                        x: Math.max(
-                            0,
-                            Math.min(pictureSize.width, Math.round(x)),
-                        ),
-                        y: Math.max(
-                            0,
-                            Math.min(pictureSize.height, Math.round(y)),
-                        ),
+                        x: clamp(Math.round(x), 0, pictureSize.width),
+                        y: clamp(Math.round(y), 0, pictureSize.height),
                     }))
                     const minX = Math.min(...points.map(({ x }) => x))
                     const minY = Math.min(...points.map(({ y }) => y))
