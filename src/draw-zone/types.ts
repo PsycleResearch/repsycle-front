@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction } from 'react'
-import { BGR } from 'src/types'
+import { BGR } from '../types'
 
 export type DrawZoneMode = 'draw' | 'none'
 export type DrawZoneShape = 'rect' | 'poly' | 'none'

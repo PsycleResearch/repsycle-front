@@ -1,2 +1,3 @@
 export const isTouchDevice =
-    window && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+    typeof window !== 'undefined' &&
+    ('ontouchstart' in window || navigator.maxTouchPoints > 0)
