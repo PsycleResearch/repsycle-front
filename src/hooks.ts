@@ -85,7 +85,7 @@ export function useCombinedRefs<TRef>(
 
 export function useFullScreen() {
     const [isFullScreen, setIsFullScreen] = useState(
-        window.matchMedia('(display-mode: fullscreen)').matches,
+        typeof window !== "undefined" && window.matchMedia('(display-mode: fullscreen)').matches,
     )
 
     const open = useCallback(() => {
