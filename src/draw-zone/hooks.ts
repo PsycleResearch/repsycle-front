@@ -6,7 +6,7 @@ import { memoize } from 'lodash'
 
 async function preloadImage(src: string): Promise<Size> {
     return await new Promise<Size>((resolve, reject) => {
-        // Use an iframe as a workarounf for multipart/x-mixed-replace images size compute
+        // Use an iframe as a workaround for multipart/x-mixed-replace images size compute
         // An ordinary image would load the multipart/x-mixed-replace twice and increase payload size
         const iframe = document.createElement('iframe')
 
