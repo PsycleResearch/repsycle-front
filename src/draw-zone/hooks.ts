@@ -5,16 +5,49 @@ import { MAX_SCALE, SCALE_STEP } from './constants'
 import { memoize } from 'lodash'
 
 async function preloadImage(src: string): Promise<Size> {
-    const ev = await new Promise<Event>((resolve, reject) => {
-        const image = new Image()
-        image.onload = resolve
-        image.onerror = reject
-        image.src = src
-    })
+    return await new Promise<Size>((resolve, reject) => {
+        // Use an iframe as a workaround for multipart/x-mixed-replace images size compute
+        // An ordinary image would load the multipart/x-mixed-replace twice and increase payload size
+        const iframe = document.createElement('iframe')
 
-    const target = ev.target as HTMLImageElement
-    const { width, height } = target
-    return { width, height }
+        iframe.onload = () => {
+            if (!iframe.contentWindow) {
+                reject('No content window')
+                iframe.remove()
+            } else {
+                const image = new Image()
+                iframe.contentWindow.document.body.appendChild(image)
+
+                image.onload = (ev) => {
+                    const target = ev.target as HTMLImageElement
+                    const { width, height } = target
+
+                    image.remove()
+                    iframe.remove()
+
+                    resolve({ width, height })
+                }
+                image.onerror = () => {
+                    reject('Failed to load image')
+                    image.remove()
+                    iframe.remove()
+                }
+                image.src = src
+            }
+        }
+
+        const html = `<body></body>`
+
+        if (typeof iframe.srcdoc !== 'undefined') {
+            iframe.srcdoc = html
+        } else if (iframe.contentWindow) {
+            iframe.contentWindow.document.open()
+            iframe.contentWindow.document.write(html)
+            iframe.contentWindow.document.close()
+        }
+
+        document.body.appendChild(iframe)
+    })
 }
 
 const preloadImageMemo = memoize(preloadImage)
