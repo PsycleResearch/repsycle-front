@@ -17,7 +17,6 @@ export type {
     Rect,
     Size,
 } from './draw-zone'
-export { default as ErrorBoundary } from './error-boundary'
 
 export * from './helpers'
 export * from './hooks'

@@ -14,7 +14,7 @@ import { useControls, useLoadImage } from './hooks'
 
 export default DrawZone
 export {
-    DrawZoneContainer as DrawZoneContainer,
+    DrawZoneContainer,
     DrawZone,
     useControls,
     useLoadImage,

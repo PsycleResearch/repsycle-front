@@ -1,8 +1,8 @@
 import { useCallback, useContext, useEffect, useState } from 'react'
 import { DrawZoneContext } from './state'
 import { PictureLoadingState, Size } from './types'
-import { MAX_SCALE, SCALE_STEP } from './constants'
 import { memoize } from 'lodash'
+import { MAX_SCALE, SCALE_STEP } from './constants'
 
 async function preloadImage(src: string): Promise<Size> {
     return await new Promise<Size>((resolve, reject) => {
@@ -148,3 +148,99 @@ export function useControls() {
         setScale,
     }
 }
+/*
+export function useControls() {
+    const context = useContext(DrawZoneContext)
+
+    if (!context)
+        throw new Error('This hook must be user withing the drawzone context')
+
+    const { state, setState } = context
+
+    const zoomIn = useCallback(() => {
+        setState((prev) => ({
+            viewBox: {
+                x: prev.viewBox.x - (prev.imageSize.width / 2 - prev.viewBox.x) * (1 / 1.2 - 1),
+                y: prev.viewBox.y - (prev.imageSize.height / 2 - prev.viewBox.y) * (1 / 1.2 - 1),
+                height: prev.viewBox.height * 1 / 1.2,
+                width: prev.viewBox.width * 1 / 1.2,
+            },
+        }))
+    }, [setState])
+
+    const zoomOut = useCallback(() => {
+        setState((prev) => ({
+            viewBox: {
+                x: prev.viewBox.x - (prev.imageSize.width / 2 - prev.viewBox.x) * 0.2,
+                y: prev.viewBox.y - (prev.imageSize.height / 2 - prev.viewBox.y) * 0.2,
+                height: prev.viewBox.height * 1.2,
+                width: prev.viewBox.width * 1.2,
+            },
+        }))
+    }, [setState])
+
+    const reset = useCallback(() => {
+        setState((prev) => ({
+            viewBox: {
+                x: 0,
+                y: 0,
+                height: prev.imageSize.height,
+                width: prev.imageSize.width,
+            },
+        }))
+    }, [setState])
+
+    const toggleContent = useCallback(() => {
+        setState((prev) => ({ contentHidden: !prev.contentHidden }))
+    }, [setState])
+
+    const toggleMarker = useCallback(() => {
+        setState((prev) => ({ markerVisible: !prev.markerVisible }))
+    }, [setState])
+
+    const toggleMove = useCallback(() => {
+        setState((prev) => ({ move: !prev.move }))
+    }, [setState])
+
+    const setImageSize = useCallback(
+        (size: Size) => {
+            setState({ imageSize: size })
+        },
+        [setState],
+    )
+
+    const setViewBox = useCallback(
+        (viewBox: SetStateAction<ViewBoxLike | Partial<ViewBoxLike>>) => {
+            setState((prev) => {
+                const newValue =
+                    typeof viewBox === 'function'
+                        ? (
+                              viewBox as (
+                                  prevState: ViewBoxLike | Partial<ViewBoxLike>,
+                              ) => ViewBoxLike | Partial<ViewBoxLike>
+                          )(prev.viewBox)
+                        : viewBox
+
+                const finalValue = { ...prev.viewBox, ...newValue }
+
+                if (isEqual(prev.viewBox, finalValue)) return prev
+
+                return { viewBox: finalValue }
+            })
+        },
+        [setState],
+    )
+
+    return {
+        ...state,
+        zoomIn,
+        zoomOut,
+        reset,
+        toggleContent,
+        toggleMarker,
+        toggleMove,
+        setImageSize,
+        setViewBox,
+    }
+}
+*/

@@ -12,7 +12,6 @@ import { useControls, useLoadImage } from './hooks'
 import { DrawZoneContext } from './state'
 import {
     DrawZoneElement,
-    DrawZoneFitMode,
     DrawZoneMode,
     DrawZoneShape,
     DrawZoneState,
@@ -36,6 +35,7 @@ import { bgrToHex, clamp, uuid4 } from '../helpers'
 import { isTouchDevice } from '../utils'
 
 import { Interactable } from '@interactjs/types'
+import { getSVGPoint } from './utils'
 
 const xns = 'http://www.w3.org/1999/xlink'
 const CIRCLE_SIZE = 10
@@ -61,7 +61,6 @@ type DrawZoneProps = PropsWithChildren<{
     readonly disabled?: boolean
     readonly drawOnPointerDown?: boolean
     readonly elements: DrawZoneElement[]
-    readonly fitMode: DrawZoneFitMode
     readonly initialRect?: Pick<DrawZoneElement, 'id' | 'label' | 'rect'>
     readonly mode: DrawZoneMode
     readonly shape: DrawZoneShape
@@ -103,7 +102,6 @@ function DrawZoneInner({
     disabled,
     drawOnPointerDown,
     elements,
-    fitMode,
     initialRect,
     mode,
     pictureSize,
@@ -113,88 +111,29 @@ function DrawZoneInner({
     onChange,
     onInitialRectChange,
 }: DrawZoneInnerProps) {
-    const {
-        contentHidden,
-        markerVisible,
-        positionTop,
-        positionLeft,
-        logicalScale,
-        scale,
-        setScale,
-    } = useControls()
+    const { contentHidden, markerVisible } = useControls()
     const svgContainerRef = useRef<HTMLDivElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const [canMarkerBeVisible, setCanMarkerBeVisible] = useState(false)
 
     useEffect(() => {
-        if (fitMode === 'auto') {
-            setScale(logicalScale)
-        } else if (containerRef.current && pictureSize) {
-            const rect = containerRef.current.getBoundingClientRect()
+        const { current } = containerRef
 
-            const minWidth = Math.min(rect.width, pictureSize.width)
-            const minHeight = Math.min(rect.height, pictureSize.height)
-
-            if (
-                pictureSize.width <= minWidth &&
-                pictureSize.height <= minHeight
-            ) {
-                const maxWidth = Math.max(rect.width, pictureSize.width)
-                const maxHeight = Math.max(rect.height, pictureSize.height)
-
-                const coef = maxWidth / minWidth
-                const coef2 = maxHeight / minHeight
-
-                if (pictureSize.height * coef <= maxHeight) {
-                    setScale(coef * logicalScale)
-                } else if (pictureSize.width * coef2 <= maxWidth) {
-                    setScale(coef2 * logicalScale)
-                } else {
-                    setScale(logicalScale)
-                }
-            } else if (
-                minWidth < pictureSize.width ||
-                minHeight < pictureSize.height
-            ) {
-                setScale(
-                    Math.min(
-                        minWidth / pictureSize.width,
-                        minHeight / pictureSize.height,
-                    ) * logicalScale,
-                )
-            }
+        const handlePointerEnter = () => {
+            setCanMarkerBeVisible(true)
         }
-    }, [containerRef, pictureSize, fitMode, logicalScale, setScale])
+        const handlePointerLeave = () => {
+            setCanMarkerBeVisible(false)
+        }
 
-    useEffect(() => {
-        const { current } = svgContainerRef
-        const { current: container } = containerRef
+        current.addEventListener('pointerenter', handlePointerEnter)
+        current.addEventListener('pointerleave', handlePointerLeave)
 
-        if (current && container) {
-            const handlePointerEnter = () => {
-                setCanMarkerBeVisible(true)
-            }
-            const handlePointerLeave = () => {
-                setCanMarkerBeVisible(false)
-            }
-
-            current.addEventListener('pointerenter', handlePointerEnter)
-            current.addEventListener('pointerleave', handlePointerLeave)
-
-            return () => {
-                current.removeEventListener('pointerenter', handlePointerEnter)
-                current.removeEventListener('pointerleave', handlePointerLeave)
-            }
+        return () => {
+            current.removeEventListener('pointerenter', handlePointerEnter)
+            current.removeEventListener('pointerleave', handlePointerLeave)
         }
     }, [])
-
-    useEffect(() => {
-        if (svgContainerRef.current) {
-            svgContainerRef.current.style.top = `${positionTop}px`
-            svgContainerRef.current.style.left = `${positionLeft}px`
-            svgContainerRef.current.style.transform = 'none'
-        }
-    }, [positionTop, positionLeft])
 
     const localOnChange = useCallback(
         (elements: DrawZoneElement[]) => {
@@ -242,21 +181,10 @@ function DrawZoneInner({
             }}
             ref={containerRef}
         >
-            <div
-                ref={svgContainerRef}
-                style={{
-                    position: 'relative',
-                    top: `${positionTop}px`,
-                    left: `${positionLeft}px`,
-                    background: `url('${src}') center center / 100% 100% no-repeat`,
-                    width: `${pictureSize?.width * scale}px`,
-                    height: `${pictureSize?.height * scale}px`,
-                    ...(style || {}),
-                }}
-            >
-                {canMarkerBeVisible && markerVisible && (
-                    <Marker src={src} svgRef={svgContainerRef} />
-                )}
+            {canMarkerBeVisible && markerVisible && (
+                <Marker src={src} svgRef={svgContainerRef} />
+            )}
+            {pictureSize && (
                 <SvgZone
                     disabled={disabled}
                     drawOnPointerDown={drawOnPointerDown}
@@ -266,9 +194,11 @@ function DrawZoneInner({
                     shape={shape}
                     onChange={localOnChange}
                     onInitialRectChange={onInitialRectChange}
+                    src={src}
+                    pictureSize={pictureSize}
                 />
-                {children}
-            </div>
+            )}
+            {children}
         </div>
     )
 }
@@ -279,7 +209,9 @@ type SvgZoneProps = {
     readonly elements: DrawZoneElement[]
     readonly initialRect?: Pick<DrawZoneElement, 'id' | 'label' | 'rect'>
     readonly mode: DrawZoneMode
+    readonly pictureSize: Size
     readonly shape: DrawZoneShape
+    readonly src: string
     readonly onChange: (elements: DrawZoneElement[]) => void
     readonly onInitialRectChange?: (
         arg: Pick<DrawZoneElement, 'id' | 'label' | 'rect'>,
@@ -291,12 +223,17 @@ function SvgZone({
     elements,
     initialRect,
     mode,
+    pictureSize,
     shape,
+    src,
     onChange,
     onInitialRectChange,
 }: SvgZoneProps) {
     const id = useId()
-    const ref = useRef<SVGSVGElement>(null)
+    const svgRef = useRef<SVGSVGElement>(null)
+    const groupRef = useRef<SVGGElement>(null)
+    const imageRef = useRef<SVGImageElement>(null)
+
     const startPosition = useRef<Point>()
     const dragging = useRef<boolean>(false)
     const overlayRect = useRef<Rect>()
@@ -305,6 +242,11 @@ function SvgZone({
     const polygon = useRef<Polygon>()
     const polyline = useRef<Polyline>()
     const { contentHidden, move, scale, setPosition } = useControls()
+
+    const activeElement = useMemo(
+        () => elements.find(({ selected }) => selected),
+        [elements],
+    )
 
     const localOnInitialRectChange = useCallback(
         (elem: Pick<DrawZoneElement, 'id' | 'label' | 'rect'>) => {
@@ -387,18 +329,21 @@ function SvgZone({
             const delta = CIRCLE_SIZE / 2
 
             const point = svg
-                .circle(CIRCLE_SIZE)
+                .circle(`${CIRCLE_SIZE}px`)
                 .center(0, 0)
                 .fill({ opacity: 1, color: '#f06' })
                 .stroke({
-                    width: CIRCLE_BORDER_SIZE,
                     color: '#fff',
                     opacity: 0.3,
                 })
                 .attr('data-draw-ignore', true)
+                .attr('stroke-width', `${CIRCLE_BORDER_SIZE}px`)
+                .attr('vector-effect', 'non-scaling-stroke')
                 .addClass('tmp-point')
                 .move(x - delta, y - delta)
-                .css('touch-action', 'none') // silence interactjs warning.
+                .css({
+                    touchAction: 'none', // silence interactjs warning.
+                })
 
             point.on('pointerdown', pointOnPointerDown)
 
@@ -408,7 +353,7 @@ function SvgZone({
     )
 
     useEffect(() => {
-        const { current } = ref
+        const { current } = svgRef
 
         if (!current) return
 
@@ -422,25 +367,26 @@ function SvgZone({
     }, [move])
 
     useEffect(() => {
-        const { current } = ref
+        const svg = svgRef.current
+        const group = groupRef.current
+        const image = imageRef.current
 
-        if (!current) return
-
-        const svg = SVG(current) as Svg
+        const $svg = SVG(svg)
 
         function onPointerDown(e: globalThis.PointerEvent) {
-            if (!svg.node.contains(e.target as Node)) return
+            if (!svg.contains(e.target as Node)) return
 
             if (contentHidden) return
 
             if (
-                svg.node.contains(e.target as Node) &&
-                svg.node !== e.target &&
+                svg.contains(e.target as Node) &&
+                group !== e.target &&
+                image !== e.target &&
                 !move &&
                 !startPosition.current
             ) {
                 return
-            } else if (e.target === svg.node) {
+            } else if (e.target === image) {
                 e.preventDefault()
                 e.stopImmediatePropagation()
 
@@ -453,31 +399,31 @@ function SvgZone({
                 e.preventDefault()
                 e.stopImmediatePropagation()
 
-                startPosition.current = {
-                    x: e.clientX,
-                    y: e.clientY,
-                }
+                startPosition.current = getSVGPoint(
+                    e.clientX,
+                    e.clientY,
+                    svg.getScreenCTM().inverse(),
+                )
 
                 dragging.current = true
 
-                svg.css({ cursor: 'grabbing' })
+                $svg.css({ cursor: 'grabbing' })
 
                 return
             }
-
-            const svgRect = svg.node.getBoundingClientRect()
 
             if (shape === 'rect') {
                 e.preventDefault()
                 e.stopImmediatePropagation()
 
-                startPosition.current = {
-                    x: e.clientX - svgRect.left,
-                    y: e.clientY - svgRect.top,
-                }
+                startPosition.current = getSVGPoint(
+                    e.clientX,
+                    e.clientY,
+                    svg.getScreenCTM().inverse(),
+                )
 
                 if (!overlayRect.current || !overlayRect2.current) {
-                    overlayRect.current = svg
+                    overlayRect.current = $svg
                         .rect(0, 0)
                         .fill({ opacity: 0 })
                         .stroke({
@@ -486,7 +432,7 @@ function SvgZone({
                             opacity: 0.7,
                             dasharray: '5,5',
                         })
-                    overlayRect2.current = svg
+                    overlayRect2.current = $svg
                         .rect(0, 0)
                         .fill({ opacity: 0 })
                         .stroke({
@@ -499,13 +445,13 @@ function SvgZone({
                 }
 
                 overlayRect.current.move(
-                    startPosition.current.x / svgRect.width,
-                    startPosition.current.y / svgRect.height,
+                    startPosition.current.x,
+                    startPosition.current.y,
                 )
 
                 overlayRect2.current.move(
-                    startPosition.current.x / svgRect.width,
-                    startPosition.current.y / svgRect.height,
+                    startPosition.current.x,
+                    startPosition.current.y,
                 )
 
                 e.preventDefault()
@@ -516,23 +462,25 @@ function SvgZone({
                 e.stopImmediatePropagation()
 
                 if (!polyPoints.current?.length) {
-                    startPosition.current = {
-                        x: e.clientX - svgRect.left,
-                        y: e.clientY - svgRect.top,
-                    }
+                    startPosition.current = getSVGPoint(
+                        e.clientX,
+                        e.clientY,
+                        svg.getScreenCTM().inverse(),
+                    )
 
                     polyPoints.current = [
                         drawPoint(
-                            svg,
+                            $svg,
                             startPosition.current.x,
                             startPosition.current.y,
                         ),
                     ]
                 } else if (startPosition.current) {
-                    const currentPosition = {
-                        x: e.clientX - svgRect.left,
-                        y: e.clientY - svgRect.top,
-                    }
+                    const currentPosition = getSVGPoint(
+                        e.clientX,
+                        e.clientY,
+                        svg.getScreenCTM().inverse(),
+                    )
 
                     const prev = polygon.current
                         ? [...polygon.current.plot()]
@@ -600,7 +548,7 @@ function SvgZone({
                             [currentPosition.x, currentPosition.y],
                         ]
 
-                        polygon.current = svg
+                        polygon.current = $svg
                             .polyline(plotline)
                             .fill({
                                 color: '#f06',
@@ -616,7 +564,7 @@ function SvgZone({
 
                         polyPoints.current.push(
                             drawPoint(
-                                svg,
+                                $svg,
                                 currentPosition.x,
                                 currentPosition.y,
                             ),
@@ -637,19 +585,20 @@ function SvgZone({
 
             if (move) {
                 if (!dragging.current) return
-                if (!svg.node.contains(e.target as Node)) {
+                if (!$svg.node.contains(e.target as Node)) {
                     dragging.current = false
                     return
                 }
 
-                const parent = svg.parent()
+                const parent = $svg.parent()
 
                 if (!parent) return
 
-                const currentPosition = {
-                    x: e.clientX,
-                    y: e.clientY,
-                }
+                const currentPosition = getSVGPoint(
+                    e.clientX,
+                    e.clientY,
+                    svg.getScreenCTM().inverse(),
+                )
                 const translationX = currentPosition.x - startPosition.current.x
                 const translationY = currentPosition.y - startPosition.current.y
 
@@ -664,57 +613,51 @@ function SvgZone({
                 return
             }
 
-            const svgRect = svg.node.getBoundingClientRect()
-
             if (
                 shape === 'rect' &&
                 overlayRect.current &&
                 overlayRect2.current
             ) {
-                const currentPosition = {
-                    x:
-                        Math.max(
-                            Math.min(e.clientX, svgRect.right),
-                            svgRect.left,
-                        ) - svgRect.left,
-                    y:
-                        Math.max(
-                            Math.min(e.clientY, svgRect.bottom),
-                            svgRect.top,
-                        ) - svgRect.top,
-                }
+                const currentPosition = getSVGPoint(
+                    e.clientX,
+                    e.clientY,
+                    svg.getScreenCTM().inverse(),
+                )
 
-                const minX =
-                    Math.min(startPosition.current.x, currentPosition.x) /
-                    svgRect.width
-                const minY =
-                    Math.min(startPosition.current.y, currentPosition.y) /
-                    svgRect.height
-                const maxX =
-                    Math.max(startPosition.current.x, currentPosition.x) /
-                    svgRect.width
-                const maxY =
-                    Math.max(startPosition.current.y, currentPosition.y) /
-                    svgRect.height
+                const minX = Math.min(
+                    startPosition.current.x,
+                    currentPosition.x,
+                )
+                const minY = Math.min(
+                    startPosition.current.y,
+                    currentPosition.y,
+                )
+                const maxX = Math.max(
+                    startPosition.current.x,
+                    currentPosition.x,
+                )
+                const maxY = Math.max(
+                    startPosition.current.y,
+                    currentPosition.y,
+                )
 
                 const width = Math.abs(maxX - minX)
                 const height = Math.abs(maxY - minY)
 
-                overlayRect.current.move(`${minX * 100}%`, `${minY * 100}%`)
-                overlayRect.current.width(`${width * 100}%`)
-                overlayRect.current.height(`${height * 100}%`)
-                overlayRect2.current.move(`${minX * 100}%`, `${minY * 100}%`)
-                overlayRect2.current.width(`${width * 100}%`)
-                overlayRect2.current.height(`${height * 100}%`)
+                overlayRect.current.move(minX, minY)
+                overlayRect.current.width(width)
+                overlayRect.current.height(height)
+                overlayRect2.current.move(minX, minY)
+                overlayRect2.current.width(width)
+                overlayRect2.current.height(height)
             }
 
             if (shape === 'poly' && !isTouchDevice) {
-                const svgRect = svg.node.getBoundingClientRect()
-
-                const currentPosition: Point = {
-                    x: e.clientX - svgRect.left,
-                    y: e.clientY - svgRect.top,
-                }
+                const currentPosition = getSVGPoint(
+                    e.clientX,
+                    e.clientY,
+                    svg.getScreenCTM().inverse(),
+                )
 
                 polyline.current?.remove()
 
@@ -732,7 +675,7 @@ function SvgZone({
                     [currentPosition.x, currentPosition.y],
                 ]
 
-                polyline.current = svg.polyline(plotline).fill('none').stroke({
+                polyline.current = $svg.polyline(plotline).fill('none').stroke({
                     color: '#f06',
                     width: 1,
                     linecap: 'round',
@@ -752,7 +695,7 @@ function SvgZone({
             if (move) {
                 if (!dragging.current) return false
 
-                const parent = svg.parent()
+                const parent = $svg.parent()
 
                 if (!parent) return
                 const grandParent = parent.parent()
@@ -767,7 +710,7 @@ function SvgZone({
                     svgRect.left - parentRect.left,
                 )
 
-                svg.css({ cursor: 'grab' })
+                $svg.css({ cursor: 'grab' })
 
                 dragging.current = false
                 startPosition.current = undefined
@@ -786,24 +729,16 @@ function SvgZone({
                 }
 
                 // Prevent drawing new rect on rect dragend...
-                if ((e.target as Node | null)?.parentNode === svg.node) {
+                if ((e.target as Node | null)?.parentNode === $svg.node) {
                     startPosition.current = undefined
                     return
                 }
 
-                const svgRect = svg.node.getBoundingClientRect()
-                const currentPosition = {
-                    x:
-                        Math.max(
-                            Math.min(e.clientX, svgRect.right),
-                            svgRect.left,
-                        ) - svgRect.left,
-                    y:
-                        Math.max(
-                            Math.min(e.clientY, svgRect.bottom),
-                            svgRect.top,
-                        ) - svgRect.top,
-                }
+                const currentPosition = getSVGPoint(
+                    e.clientX,
+                    e.clientY,
+                    svg.getScreenCTM().inverse(),
+                )
 
                 let label = ''
                 if (
@@ -821,30 +756,30 @@ function SvgZone({
                     label = lastRect?.label
 
                     if (drawOnPointerDown && lastRect && lastRect.rect) {
-                        currentPosition.x = Math.min(
-                            startPosition.current.x +
-                                lastRect.rect.width * scale,
-                            svgRect.width,
-                        )
-                        currentPosition.y = Math.min(
-                            startPosition.current.y +
-                                lastRect.rect.height * scale,
-                            svgRect.height,
-                        )
+                        currentPosition.x = startPosition.current.x
+                        currentPosition.y = startPosition.current.y
                     } else {
                         startPosition.current = undefined
                         return
                     }
                 }
 
-                const xMin =
-                    Math.min(startPosition.current.x, currentPosition.x) / scale
-                const yMin =
-                    Math.min(startPosition.current.y, currentPosition.y) / scale
-                const xMax =
-                    Math.max(startPosition.current.x, currentPosition.x) / scale
-                const yMax =
-                    Math.max(startPosition.current.y, currentPosition.y) / scale
+                const xMin = Math.min(
+                    startPosition.current.x,
+                    currentPosition.x,
+                )
+                const yMin = Math.min(
+                    startPosition.current.y,
+                    currentPosition.y,
+                )
+                const xMax = Math.max(
+                    startPosition.current.x,
+                    currentPosition.x,
+                )
+                const yMax = Math.max(
+                    startPosition.current.y,
+                    currentPosition.y,
+                )
 
                 const width = xMax - xMin
                 const height = yMax - yMin
@@ -884,12 +819,12 @@ function SvgZone({
                 startPosition.current = undefined
         }
 
-        svg.on('pointerdown', onPointerDown as unknown as EventListener)
+        $svg.on('pointerdown', onPointerDown as unknown as EventListener)
         window.addEventListener('pointerup', onPointerUp)
         window.addEventListener('pointermove', onPointerMove)
 
         return () => {
-            svg.off('pointerdown', onPointerDown as unknown as EventListener)
+            $svg.off('pointerdown', onPointerDown as unknown as EventListener)
             window.removeEventListener('pointerup', onPointerUp)
             window.removeEventListener('pointermove', onPointerMove)
         }
@@ -912,23 +847,84 @@ function SvgZone({
 
     return (
         <svg
-            ref={ref}
+            ref={svgRef}
             id={id}
             width="100%"
             height="100%"
             xmlns="http://www.w3.org/2000/svg"
-            version="1.1"
             xmlnsXlink={xns}
+            viewBox={`0 0 ${pictureSize.width} ${pictureSize.height}`}
         >
-            <SvgElements
-                disabled={disabled}
-                elements={elements}
-                mode={mode}
-                shape={shape}
-                onChange={onChange}
-            />
+            <g ref={groupRef}>
+                <image
+                    ref={imageRef}
+                    href={src}
+                    x="0"
+                    y="0"
+                    height={pictureSize.height}
+                    width={pictureSize.width}
+                />
+                <SvgElements
+                    disabled={disabled}
+                    elements={elements}
+                    mode={mode}
+                    shape={shape}
+                    onChange={onChange}
+                />
+                <polyline />
+                <HandlesElements shape={shape} activeElement={activeElement} />
+            </g>
         </svg>
     )
+}
+
+type HandlesElementsProps = {
+    readonly activeElement: DrawZoneElement | null
+    readonly shape: DrawZoneShape
+}
+function HandlesElements({ activeElement, shape }: HandlesElementsProps) {
+    const points = useMemo(() => {
+        if (!activeElement?.points) return null
+
+        if (shape === 'poly') return activeElement.points
+
+        return [
+            {
+                x: activeElement.points[0].x,
+                y: activeElement.points[0].y,
+            },
+            {
+                x: activeElement.points[0].x,
+                y: activeElement.points[1].y,
+            },
+            {
+                x: activeElement.points[1].x,
+                y: activeElement.points[1].y,
+            },
+            {
+                x: activeElement.points[1].x,
+                y: activeElement.points[0].y,
+            },
+        ]
+    }, [activeElement, shape])
+    if (!points) return null
+
+    return (
+        <>
+            {points.map((p) => (
+                <Handle key={`${p.x}-${p.y}`} point={p} />
+            ))}
+        </>
+    )
+}
+
+type HandleProps = {
+    readonly point: Point
+}
+function Handle({ point }: HandleProps) {
+    const id = useId()
+
+    return <circle cx={point.x} cy={point.y} r="20" />
 }
 
 type SvgElementsProps = {
@@ -1081,14 +1077,14 @@ function DrawPolygonElement({
     onChange,
 }: DrawPolygonElementProps) {
     const ref = useRef<SVGPolygonElement>(null)
-    const { move, scale } = useControls()
+    const { move } = useControls()
     const instance = useRef<Interactable>()
     const handlesInstance = useRef<Interactable>()
     const handles = useRef<Use[]>([])
     const circles = useRef<Circle[]>([])
 
     const path = element.points
-        .map((point) => [point.x * scale, point.y * scale].join(','))
+        .map((point) => [point.x, point.y].join(','))
         .join(' ')
 
     const cleanHandles = useCallback(() => {
@@ -1109,9 +1105,10 @@ function DrawPolygonElement({
 
         if (!current) return
 
-        const parent = current.parentNode as SVGSVGElement
-        const svg = (parent as unknown as Record<string, Svg>).instance
-        const rootMatrix = parent.getScreenCTM() as DOMMatrix
+        const parent = current.parentNode as SVGGElement
+        const grandParent = parent.parentNode as SVGSVGElement
+        const svg = (grandParent as unknown as Record<string, Svg>).instance
+        const rootMatrix = parent.getScreenCTM().inverse() as DOMMatrix
 
         handlesInstance.current?.unset()
 
@@ -1125,8 +1122,8 @@ function DrawPolygonElement({
                     const i = event.target.getAttribute('data-index') | 0
                     const point = current.points.getItem(i)
 
-                    point.x += event.dx / rootMatrix.a
-                    point.y += event.dy / rootMatrix.d
+                    point.x += event.dx * rootMatrix.a
+                    point.y += event.dy * rootMatrix.d
 
                     if (shape === 'rect') {
                         switch (i) {
@@ -1185,8 +1182,8 @@ function DrawPolygonElement({
                         const point = current.points.getItem(i)
 
                         points.push({
-                            x: point.x / scale,
-                            y: point.y / scale,
+                            x: point.x,
+                            y: point.y,
                         })
                     }
 
@@ -1212,15 +1209,16 @@ function DrawPolygonElement({
                 ],
             })
             .styleCursor(false)
-    }, [element, elements, onChange, scale, shape])
+    }, [element, elements, onChange, shape])
 
     const createHandles = useCallback(() => {
         const { current } = ref
 
         if (!current) return
 
-        const svg = (current.parentNode as unknown as Record<string, Svg>)
-            .instance
+        const svg = (
+            current.parentNode.parentNode as unknown as Record<string, Svg>
+        ).instance
 
         for (let i = 0; i < current.points.numberOfItems; i++) {
             const point = current.points.getItem(i)
@@ -1229,15 +1227,16 @@ function DrawPolygonElement({
 
             const circle = svg
                 .defs()
-                .attr('data-draw-ignore', true)
-                .circle(CIRCLE_SIZE)
+                .circle(`${CIRCLE_SIZE}px`)
                 .center(0, 0)
                 .fill({ opacity: 1, color: blue })
                 .stroke({
-                    width: CIRCLE_BORDER_SIZE,
                     color: '#fff',
                     opacity: 0.3,
                 })
+                .attr('stroke-width', `${CIRCLE_BORDER_SIZE}px`)
+                .attr('vector-effect', 'non-scaling-size')
+                .addClass('tmp-point')
                 .css('touch-action', 'none') // silence interactjs warning.
                 .id(handleId)
 
@@ -1245,7 +1244,7 @@ function DrawPolygonElement({
                 .use(circle as Circle)
                 .attr('href', `#${handleId}`, xns)
                 .addClass('point-handle')
-                .data('draw-ignore', true)
+                .attr('vector-effect', 'non-scaling-size')
                 .x(point.x)
                 .y(point.y)
                 .data('index', i)
@@ -1274,14 +1273,17 @@ function DrawPolygonElement({
 
         createHandles()
 
+        const parent = current.parentNode.parentNode as SVGSVGElement
+        const rootMatrix = parent.getScreenCTM().inverse() as DOMMatrix
+
         instance.current = interact(current as SVGPolygonElement).draggable({
             listeners: {
                 start() {
                     cleanHandles()
                 },
                 move(event) {
-                    const dx = event.dx
-                    const dy = event.dy
+                    const dx = event.dx * rootMatrix.a
+                    const dy = event.dy * rootMatrix.d
 
                     const pointsCount = current.points.numberOfItems
                     for (let i = 0; i < pointsCount; i++) {
@@ -1300,8 +1302,8 @@ function DrawPolygonElement({
                         const point = current.points.getItem(i)
 
                         points.push({
-                            x: point.x / scale,
-                            y: point.y / scale,
+                            x: point.x,
+                            y: point.y,
                         })
                     }
 
@@ -1343,7 +1345,7 @@ function DrawPolygonElement({
                 }
             },
         })
-    }, [cleanHandles, createHandles, element, elements, mode, onChange, scale])
+    }, [cleanHandles, createHandles, element, elements, mode, onChange])
 
     const onPointerDown: React.PointerEventHandler<SVGPolygonElement> =
         useCallback(
@@ -1400,7 +1402,7 @@ function DrawPolygonElement({
             points={path}
             stroke={stroke}
             strokeOpacity={1}
-            strokeWidth={2}
+            strokeWidth="2px"
             fillOpacity={0}
             style={{
                 touchAction: 'none', // silence interactjs warning.

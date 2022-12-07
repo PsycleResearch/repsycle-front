@@ -7,8 +7,7 @@ import React, {
 } from 'react'
 
 import DrawZone, { DrawZoneContainer, useControls } from '.'
-import type { DrawZoneElement } from '.'
-import { DrawZoneShape } from './types'
+import type { DrawZoneElement, DrawZoneShape } from '.'
 
 export default {
     title: 'Components/DrawZone',
@@ -37,6 +36,7 @@ function Controls() {
         zoomIn,
         zoomOut,
     } = useControls()
+
     return (
         <div>
             <button onClick={reset}>Reset</button>
@@ -138,14 +138,13 @@ function Editor({ initialElements, shape, src }: EditorProps) {
             <div
                 style={{
                     backgroundColor: '#aaa',
-                    width: '500px',
-                    height: '500px',
+                    width: '800px',
+                    height: '800px',
                 }}
             >
                 <DrawZone
                     src={src}
                     elements={elements}
-                    fitMode="fit"
                     mode="draw"
                     onChange={onChange}
                     shape={shape}
@@ -194,7 +193,7 @@ export function Poly() {
                             { x: 250, y: 188 },
                             { x: 250, y: 94 },
                         ],
-                        color: '#00ff00',
+                        color: [0, 0, 255],
                     } as unknown as StoryZoneElement,
                 ]}
             />
