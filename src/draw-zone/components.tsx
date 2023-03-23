@@ -33,13 +33,16 @@ import {
     Use,
 } from '@svgdotjs/svg.js'
 import { bgrToHex, clamp, uuid4 } from '../helpers'
-import { isTouchDevice } from '../utils'
 
 import { Interactable } from '@interactjs/types'
 
 const xns = 'http://www.w3.org/1999/xlink'
 const CIRCLE_SIZE = 10
-const CIRCLE_BORDER_SIZE = (isTouchDevice ? 47 : 11) - CIRCLE_SIZE
+function getCircleSize(pointerType: string) {
+    if (pointerType === 'mouse') return 11 - CIRCLE_SIZE
+
+    return 47 - CIRCLE_SIZE
+}
 const blue = '#2BB1FD'
 
 const preventDrag = (event: DragEvent) => {
@@ -305,6 +308,7 @@ function SvgZone({
     const polygon = useRef<Polygon>()
     const polyline = useRef<Polyline>()
     const { contentHidden, move, scale, setPosition } = useControls()
+    const pointerTypeRef = useRef<string>('mouse')
 
     const localOnInitialRectChange = useCallback(
         (elem: Pick<DrawZoneElement, 'id' | 'label' | 'rect'>) => {
@@ -391,7 +395,7 @@ function SvgZone({
                 .center(0, 0)
                 .fill({ opacity: 1, color: '#f06' })
                 .stroke({
-                    width: CIRCLE_BORDER_SIZE,
+                    width: getCircleSize(pointerTypeRef.current),
                     color: '#fff',
                     opacity: 0.3,
                 })
@@ -430,6 +434,8 @@ function SvgZone({
 
         function onPointerDown(e: globalThis.PointerEvent) {
             if (!svg.node.contains(e.target as Node)) return
+
+            pointerTypeRef.current = e.pointerType
 
             if (contentHidden) return
 
@@ -633,6 +639,8 @@ function SvgZone({
         function onPointerMove(this: Window, e: globalThis.PointerEvent) {
             if (e.defaultPrevented || !startPosition.current) return
 
+            pointerTypeRef.current = e.pointerType
+
             if (mode !== 'draw' || disabled) return
 
             if (move) {
@@ -708,7 +716,7 @@ function SvgZone({
                 overlayRect2.current.height(`${height * 100}%`)
             }
 
-            if (shape === 'poly' && !isTouchDevice) {
+            if (shape === 'poly' && e.pointerType === 'mouse') {
                 const svgRect = svg.node.getBoundingClientRect()
 
                 const currentPosition: Point = {
@@ -748,6 +756,8 @@ function SvgZone({
 
         function onPointerUp(this: Window, e: globalThis.PointerEvent) {
             if (e.defaultPrevented) return
+
+            pointerTypeRef.current = e.pointerType
 
             if (move) {
                 if (!dragging.current) return false
@@ -926,6 +936,7 @@ function SvgZone({
                 mode={mode}
                 shape={shape}
                 onChange={onChange}
+                pointerTypeRef={pointerTypeRef}
             />
         </svg>
     )
@@ -937,6 +948,7 @@ type SvgElementsProps = {
     readonly mode: DrawZoneMode
     readonly shape: DrawZoneShape
     readonly onChange: (elements: DrawZoneElement[]) => void
+    readonly pointerTypeRef: React.MutableRefObject<string>
 }
 function SvgElements({
     disabled,
@@ -944,6 +956,7 @@ function SvgElements({
     mode,
     shape,
     onChange,
+    pointerTypeRef,
 }: SvgElementsProps) {
     return (
         <>
@@ -957,6 +970,7 @@ function SvgElements({
                         mode={mode}
                         shape={shape}
                         onChange={onChange}
+                        pointerTypeRef={pointerTypeRef}
                     />
                 ))}
         </>
@@ -970,6 +984,7 @@ type DrawElementProps = {
     readonly mode: DrawZoneMode
     readonly shape: DrawZoneShape
     readonly onChange: (elements: DrawZoneElement[]) => void
+    readonly pointerTypeRef: React.MutableRefObject<string>
 }
 function DrawElement({
     disabled,
@@ -978,6 +993,7 @@ function DrawElement({
     mode,
     shape,
     onChange,
+    pointerTypeRef,
 }: DrawElementProps) {
     if (element.points?.length === 2) {
         return (
@@ -987,6 +1003,7 @@ function DrawElement({
                 elements={elements}
                 mode={mode}
                 onChange={onChange}
+                pointerTypeRef={pointerTypeRef}
             />
         )
     }
@@ -999,6 +1016,7 @@ function DrawElement({
             mode={mode}
             shape={shape}
             onChange={onChange}
+            pointerTypeRef={pointerTypeRef}
         />
     )
 }
@@ -1009,6 +1027,7 @@ type DrawRectElementProps = {
     readonly elements: DrawZoneElement[]
     readonly mode: DrawZoneMode
     readonly onChange: (elements: DrawZoneElement[]) => void
+    readonly pointerTypeRef: React.MutableRefObject<string>
 }
 function DrawRectElement({
     disabled,
@@ -1016,6 +1035,7 @@ function DrawRectElement({
     elements,
     mode,
     onChange,
+    pointerTypeRef,
 }: DrawRectElementProps) {
     const minX = useMemo(
         () => Math.min(element.points[0].x, element.points[1].x),
@@ -1060,6 +1080,7 @@ function DrawRectElement({
             mode={mode}
             shape="rect"
             onChange={onChange}
+            pointerTypeRef={pointerTypeRef}
         />
     )
 }
@@ -1071,6 +1092,7 @@ type DrawPolygonElementProps = {
     readonly mode: DrawZoneMode
     readonly shape: DrawZoneShape
     readonly onChange: (elements: DrawZoneElement[]) => void
+    readonly pointerTypeRef: React.MutableRefObject<string>
 }
 function DrawPolygonElement({
     disabled,
@@ -1079,6 +1101,7 @@ function DrawPolygonElement({
     mode,
     shape,
     onChange,
+    pointerTypeRef,
 }: DrawPolygonElementProps) {
     const ref = useRef<SVGPolygonElement>(null)
     const { move, scale } = useControls()
@@ -1234,7 +1257,7 @@ function DrawPolygonElement({
                 .center(0, 0)
                 .fill({ opacity: 1, color: blue })
                 .stroke({
-                    width: CIRCLE_BORDER_SIZE,
+                    width: getCircleSize(pointerTypeRef.current),
                     color: '#fff',
                     opacity: 0.3,
                 })
@@ -1349,6 +1372,8 @@ function DrawPolygonElement({
         useCallback(
             (event) => {
                 if (disabled || event.defaultPrevented || move) return
+
+                pointerTypeRef.current = event.pointerType
 
                 if (!element.selected) {
                     const elem = elements.find((elem) => elem.id === element.id)
